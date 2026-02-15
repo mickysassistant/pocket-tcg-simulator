@@ -1411,6 +1411,32 @@ function setupEventListeners() {
         });
     });
 
+    // Controls panel toggle (Stage 1)
+    const controlsToggle = document.querySelector('#controls-toggle');
+    const controlsPanel = document.querySelector('.controls-panel');
+    if (controlsToggle && controlsPanel) {
+        controlsToggle.addEventListener('click', () => {
+            controlsPanel.classList.toggle('collapsed');
+            // Save state to localStorage for persistence
+            const isCollapsed = controlsPanel.classList.contains('collapsed');
+            try {
+                localStorage.setItem('controlsPanelCollapsed', isCollapsed.toString());
+            } catch (e) {
+                // Ignore localStorage errors
+            }
+        });
+
+        // Restore collapsed state from localStorage
+        try {
+            const savedState = localStorage.getItem('controlsPanelCollapsed');
+            if (savedState === 'true') {
+                controlsPanel.classList.add('collapsed');
+            }
+        } catch (e) {
+            // Ignore localStorage errors
+        }
+    }
+
     // Export log (T15)
     document.querySelector('#export-log-btn')?.addEventListener('click', exportLog);
 
