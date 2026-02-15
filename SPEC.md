@@ -84,6 +84,52 @@ A browser-based battle simulator for Pokemon TCG Pocket where users can:
 - **Hand limit:** 10 cards max
 - **Bench limit:** 3 Pokemon max
 
+### Game Start Setup
+The simulator supports two distinct game start modes:
+
+#### 1. Empty State (Fresh Startup)
+- **Purpose:** Blank state for manual setup or scenario editing
+- **Initialization:** Creates empty game state with no Pokemon, cards, or configuration
+- **Board State:**
+  - No active Pokemon (null for both players)
+  - Empty bench (0/3 slots filled)
+  - Empty hand (0 cards)
+  - Empty deck (0 cards)
+  - Empty discard pile (0 cards)
+  - Energy Zone: No configured types, null current/next energy
+- **Turn State:** Turn 0, player1 as current player
+- **Coin Queue:** Pre-generated with 10 random coin flips
+- **Usage:** User can manually add cards via drag-and-drop, edit mode, or load a scenario
+
+#### 2. New Game from Deck Presets
+- **Purpose:** Start a game with properly configured decks for competitive play
+- **Initialization:** User selects deck presets for both players via "New Game" modal
+- **Board State Setup:**
+  - Deck is shuffled randomly
+  - **Active Pokemon:** First Basic Pokemon in shuffled deck is placed in active spot
+  - **Bench Pokemon:** Up to 3 additional Basic Pokemon are placed on bench (in deck order)
+  - **Hand:** 5 cards are dealt from remaining deck
+  - **Deck:** Remaining cards (after active, bench, and hand) stay in deck
+  - **Energy Zone:** Configured with deck's energy types (up to 3)
+  - **Coin Queue:** Pre-generated with 10 random coin flips
+- **Turn State:** Turn 1, player1 as current player
+- **Validation:** Deck must contain at least 1 Basic Pokemon and respect max copies (2 per card)
+- **First Turn Rules:** Player going first (player1) does NOT draw a card on turn 1
+
+#### Scenario Load Behavior
+- **When Loading a Scenario:** Full custom board state is restored exactly as saved
+- **Overrides:** Scenario data completely replaces current state (no merge)
+- **Validation:** Loaded scenario must pass state validation (version, structure, constraints)
+- **Backward Compatibility:** Scenario format version 1 is always supported
+
+#### State Transitions
+- **Fresh Startup → Empty State:** `createInitialState()` creates blank state
+- **New Game Click → Deck Select Modal:** User selects decks from presets
+- **Deck Select → Populated Game:** `startNewGameFromPresets()` builds and validates players
+- **Load Scenario Click → File Select:** User chooses JSON scenario file
+- **Scenario Load → Custom State:** `loadScenario()` validates and applies scenario
+- **Edit Mode Toggle:** Allows manual state modification without validation checks
+
 ### Win Conditions
 - **Primary:** First to 3 points wins
 - **Points awarded:**
@@ -409,21 +455,150 @@ Final Damage = max(0, Final Damage)  // Can't go below 0
 
 ---
 
-## Open Questions / Unknowns
+## Open Questions / Unknowns - Research TODOs
 
-These need verification or clarification:
+These need verification against the real Pokemon TCG Pocket app. Each item has a concrete research TODO with owner, context, and decision needed.
 
-1. **Exact turn limit behavior:** What happens at turn 30? Immediate comparison of points?
-2. **Energy Zone generation logic:** How does it decide which configured type to generate? Is it purely random or weighted by deck composition?
-3. **Simultaneous effects:** Order of resolution for complex card interactions?
-4. **Fossil retreat:** Can fossils retreat with effects that reduce cost to 0?
-5. **Pokemon Checkup edge cases:** If multiple Pokemon are KO'd during checkup, what's the promotion order?
+### High Priority Research TODOs
 
-**Strategy for unknowns:**
-- Implement baseline TCG behavior
-- Add `// TODO: Verify Pocket-specific behavior` comments
-- Create test scenarios to validate against real app
-- Update as we learn more
+1. **RESEARCH-001: Energy Zone Generation Algorithm**
+   - **Context:** Energy Zone generates 1 energy per turn from configured deck types (up to 3 types)
+   - **Current Implementation:** Pure random selection from configured types
+   - **Question:** Is energy generation random, or is it weighted by deck composition? Is there any pattern or predictability?
+   - **Owner:** Core Game Engine Team
+   - **Decision Needed:** Implement correct algorithm (random vs weighted vs other)
+   - **Impact:** High - affects game balance and strategy
+   - **Reference:** Code location: `js/engine/game-state.js:generateEnergy()`
+   - **Related TODOs:** TODO-Pocket-Verify in game-state.js
+
+2. **RESEARCH-002: Exact Turn Limit Behavior**
+   - **Context:** Game ends at turn 30, but exact behavior unclear
+   - **Current Implementation:** Immediate point comparison; tie = draw
+   - **Question:** Does the current turn complete before checking? Are there any special rules for turn 30?
+   - **Owner:** Core Game Engine Team
+   - **Decision Needed:** Confirm turn 30 win condition behavior
+   - **Impact:** Medium - affects late-game strategy
+   - **Reference:** Code location: `js/engine/game-state.js:checkWinCondition()`
+   - **Related TODOs:** TODO-Pocket-Verify in game-state.js
+
+3. **RESEARCH-003: Weakness Application to Colorless Attacks**
+   - **Context:** Weakness adds +20 damage when attacking type matches defender's weakness
+   - **Current Implementation:** Applies weakness only when attacker's element matches
+   - **Question:** Do Colorless attacks (which can be any energy type) trigger weakness if target is weak to a specific type?
+   - **Owner:** Damage Calculation Team
+   - **Decision Needed:** Confirm weakness rules for Colorless attacks
+   - **Impact:** High - affects damage calculations significantly
+   - **Reference:** Code location: `js/engine/game-state.js:calculateDamage()`
+   - **Related TODOs:** TODO-Pocket-Verify in game-state.js
+
+### Medium Priority Research TODOs
+
+4. **RESEARCH-004: Evolution Chain Field Names in Card Data**
+   - **Context:** Card data structure may use `evolvesFrom` or `stage` field to track evolution chains
+   - **Current Implementation:** Checks both `evolvesFrom` and `stage` fields
+   - **Question:** Which field is the canonical source? Are both always present?
+   - **Owner:** Card Data Team
+   - **Decision Needed:** Standardize evolution chain validation logic
+   - **Impact:** Medium - affects evolution mechanics
+   - **Reference:** Code location: `js/main.js:handleEvolveDrop()`
+   - **Related TODOs:** TODO-Pocket-Verify in main.js
+
+5. **RESEARCH-005: Pokemon Checkup Multiple KO Promotion Order**
+   - **Context:** If multiple Pokemon are KO'd during checkup, bench promotion may be needed
+   - **Current Implementation:** Not fully tested - promotion logic exists but order unclear
+   - **Question:** What is the promotion order when multiple bench Pokemon are available? Does order matter?
+   - **Owner:** Core Game Engine Team
+   - **Decision Needed:** Document and verify promotion order behavior
+   - **Impact:** Medium - affects edge-case scenarios
+   - **Reference:** Code location: `js/engine/game-state.js:processPokemonCheckup()`
+
+6. **RESEARCH-006: Ability Activation from Bench**
+   - **Context:** Some Pokemon abilities may be usable from bench
+   - **Current Implementation:** Abilities only work from Active Spot
+   - **Question:** Can any abilities be activated from bench? Which ones?
+   - **Owner:** Abilities Team
+   - **Decision Needed:** Identify bench-usable abilities and implement if needed
+   - **Impact:** Medium - affects gameplay variety
+   - **Reference:** Code location: `js/engine/game-state.js:canUseAbility()`
+   - **Related TODOs:** Multiple TODO-Pocket-Verify comments
+
+7. **RESEARCH-007: Status Effects That Block Abilities**
+   - **Context:** Physical TCG has rules about which status effects prevent ability usage
+   - **Current Implementation:** No status blocks abilities currently
+   - **Question:** Do any status effects (Sleep, Paralysis, etc.) prevent ability activation?
+   - **Owner:** Abilities Team
+   - **Decision Needed:** Add status-based ability blocking if required
+   - **Impact:** Low-Medium - affects edge-case scenarios
+   - **Reference:** Code location: `js/engine/game-state.js:canUseAbility()`
+   - **Related TODOs:** TODO-Pocket-Verify in game-state.js
+
+### Low Priority Research TODOs
+
+8. **RESEARCH-008: Fossil Pokemon Retreat with Cost-Reducing Effects**
+   - **Context:** Fossil Pokemon normally cannot retreat
+   - **Current Implementation:** Fossils cannot retreat regardless of effects
+   - **Question:** Can effects that reduce retreat cost to 0 allow fossils to retreat?
+   - **Owner:** Mechanics Edge Cases Team
+   - **Decision Needed:** Confirm fossil retreat exception rules
+   - **Impact:** Low - niche scenario
+   - **Reference:** General mechanics documentation
+
+9. **RESEARCH-009: Poison+ (Toxic) Naming and Damage**
+   - **Context:** Pocket may have a "poison+" or "toxic" status
+   - **Current Implementation:** Uses `poison+` as status key, deals 20 damage
+   - **Question:** Is the status name "poison+", "toxic", or something else? Is damage definitely 20?
+   - **Owner:** Status Effects Team
+   - **Decision Needed:** Confirm correct status identifier and damage value
+   - **Impact:** Low - affects status effect accuracy
+   - **Reference:** Code location: `js/engine/constants.js`
+   - **Related TODOs:** TODO-Pocket-Verify in constants.js
+
+10. **RESEARCH-010: Giovanni Card Detection and Effect Scope**
+    - **Context:** Giovanni is a Supporter that adds +10 damage to attacks
+    - **Current Implementation:** Not implemented - placeholder logic
+    - **Question:** How to detect Giovanni card? Check cardId, name, or effect? Does it affect bench attacks?
+    - **Owner:** Trainer Cards Team
+    - **Decision Needed:** Implement Giovanni detection and effect application
+    - **Impact:** Low-Medium - affects a specific trainer card
+    - **Reference:** Code location: `js/engine/game-state.js:calculateDamage()`
+    - **Related TODOs:** Multiple TODO-Pocket-Verify comments
+
+11. **RESEARCH-011: Simultaneous Effects Resolution Order**
+    - **Context:** Complex interactions may require specific resolution order
+    - **Current Implementation:** Not fully documented - follows implementation order
+    - **Question:** Are there specific rules for resolving simultaneous effects? Does order matter?
+    - **Owner:** Core Game Engine Team
+    - **Decision Needed:** Document resolution order if different from current
+    - **Impact:** Low - affects complex edge cases
+    - **Reference:** General mechanics documentation
+
+12. **RESEARCH-012: Attack Damage with + and × Modifiers**
+    - **Context:** Some attacks have damage like "20+" or "10×"
+    - **Current Implementation:** Only parses base numeric value (ignores +/×)
+    - **Question:** How do + and × attacks work in Pocket? What determines the bonus or multiplier?
+    - **Owner:** Damage Calculation Team
+    - **Decision Needed:** Implement modifier logic for special attack damage
+    - **Impact:** Medium - affects many attack cards
+    - **Reference:** Code location: `js/engine/game-state.js:parseDamage()`
+    - **Related TODOs:** TODO-Pocket-Verify in game-state.js
+
+### Research Strategy
+
+**Approach:**
+1. Create test scenarios in the real Pocket app to observe behavior
+2. Compare observed behavior with current implementation
+3. Document findings and update implementation as needed
+4. Mark each research TODO as RESOLVED with notes on findings
+
+**Priority Order:**
+1. High Priority (RESEARCH-001, -002, -003): Affects core gameplay
+2. Medium Priority (RESEARCH-004 through -007): Affects mechanics variety
+3. Low Priority (RESEARCH-008 through -012): Edge cases and specific cards
+
+**Documentation Updates:**
+- When a research TODO is resolved, update this section with RESOLVED status
+- Add details of findings to relevant code sections
+- Update SPEC.md game mechanics sections if behavior differs from documented
 
 ---
 
