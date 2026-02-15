@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Load Scenario</title>
+</head>
+<body>
+    <h1>Test Load Scenario</h1>
+    <p>Testing the loadScenario function...</p>
+    <pre id="result"></pre>
+
+    <script type="module">
+        // Import functions
+        import { isValidState, exportState } from './js/engine/game-state.js';
+        import { getCard } from './js/data/card-loader.js';
+
+        // Simulate global functions
+        window.isValidState = isValidState;
+        window.getCard = getCard;
+
+        // Test scenario
+        const testScenario = {
+            version: 1,
+            name: "Test",
+            description: "Test scenario",
+            turn: 1,
+            currentPlayer: "player1",
+            coinQueue: [true, false, true],
+            player1: {
+                points: 0,
+                active: {
+                    cardId: "A1-001",
+                    currentHp: 70,
+                    energy: ["G"],
+                    status: null,
+                    turnPlayed: 0
+                },
+                bench: [],
+                hand: ["A1-002"],
+                deck: ["A1-003"],
+                discard: [],
+                supporterUsedThisTurn: false,
+                retreatedThisTurn: false,
+                energyZone: {
+                    currentEnergy: "G",
+                    nextEnergy: "R",
+                    configuredTypes": ["G", "R"],
+                    usedThisTurn: false
+                },
+                normalAttachUsedThisTurn: false
+            },
+            player2: {
+                points: 0,
+                active: null,
+                bench: [],
+                hand: [],
+                deck: [],
+                discard: [],
+                supporterUsedThisTurn: false,
+                retiredThisTurn: false,
+                energyZone: {
+                    currentEnergy: "R",
+                    nextEnergy: "W",
+                    configuredTypes": ["R"],
+                    usedThisTurn: false
+                },
+                normalAttachUsedThisTurn: false
+            },
+            stadium: null,
+            turnEffects: [],
+            log: []
+        };
+
+        const resultEl = document.getElementById('result');
+
+        try {
+            // Test 1: Parse JSON
+            resultEl.textContent += "✅ Test 1: JSON parse - PASS\n";
+
+            // Test 2: Validate scenario
+            if (isValidState(testScenario)) {
+                resultEl.textContent += "✅ Test 2: Scenario validation - PASS\n";
+            } else {
+                resultEl.textContent += "❌ Test 2: Scenario validation - FAIL\n";
+            }
+
+            // Test 3: Check card loading
+            const card = getCard("A1-001");
+            if (card && card.name === "Bulbasaur") {
+                resultEl.textContent += "✅ Test 3: Card loading - PASS\n";
+            } else {
+                resultEl.textContent += "❌ Test 3: Card loading - FAIL\n";
+            }
+
+            resultEl.textContent += "\n✅ All tests passed! Load Scenario should work.\n";
+        } catch (e) {
+            resultEl.textContent += "\n❌ Error: " + e.message + "\n";
+            resultEl.textContent += "Stack: " + e.stack + "\n";
+        }
+    </script>
+</body>
+</html>

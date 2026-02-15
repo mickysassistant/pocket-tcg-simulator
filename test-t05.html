@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T05 Test - Game State Model</title>
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #16213e;
+      border-radius: 8px;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #e94560;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .pass {
+      background: #2d5a27;
+      border-left: 4px solid #4CAF50;
+    }
+    .fail {
+      background: #5a2727;
+      border-left: 4px solid #f44336;
+    }
+    pre {
+      background: #0f3460;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      max-height: 300px;
+    }
+    .summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: #e94560;
+      color: white;
+      border-radius: 8px;
+      font-size: 18px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 T05 Test - Game State Model</h1>
+
+  <div>
+    <button id="run-all">Run All Tests</button>
+    <button id="run-initial-state">Test: createInitialState()</button>
+    <button id="run-player">Test: createPlayer()</button>
+    <button id="run-pokemon">Test: createPokemon()</button>
+    <button id="run-clone">Test: cloneState()</button>
+    <button id="run-validation">Test: validateState()</button>
+    <button id="run-spec-format">Test: SPEC.md Format</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script type="module">
+    import {
+      createInitialState,
+      createPlayer,
+      createPokemon,
+      cloneState,
+      validateState,
+      isValidState,
+      addLogEntry,
+      exportState
+    } from './js/engine/game-state.js';
+
+    let testCount = 0;
+    let passCount = 0;
+
+    function addResult(testName, passed, message = '') {
+      testCount++;
+      if (passed) passCount++;
+
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `
+        <strong>${passed ? '✅' : '❌'} ${testName}</strong>
+        ${message ? `<br><small>${message}</small>` : ''}
+      `;
+      document.getElementById('results').appendChild(resultDiv);
+    }
+
+    function addSection(title) {
+      const section = document.createElement('div');
+      section.className = 'test-section';
+      section.innerHTML = `<h2>${title}</h2>`;
+      document.getElementById('results').appendChild(section);
+    }
+
+    function showSummary() {
+      const summary = document.createElement('div');
+      summary.className = 'summary';
+      summary.innerHTML = `
+        <h3>Test Summary</h3>
+        <p>Total: ${testCount} | Passed: ${passCount} | Failed: ${testCount - passCount}</p>
+        <p>${passCount === testCount ? '🎉 All tests passed!' : '⚠️ Some tests failed'}</p>
+      `;
+      document.getElementById('results').appendChild(summary);
+    }
+
+    function runAllTests() {
+      document.getElementById('results').innerHTML = '';
+      testCount = 0;
+      passCount = 0;
+
+      runInitialStateTest();
+      runPlayerTest();
+      runPokemonTest();
+      runCloneTest();
+      runValidationTest();
+      runSpecFormatTest();
+
+      showSummary();
+    }
+
+    function runInitialStateTest() {
+      addSection('Test 1: createInitialState()');
+
+      try {
+        const state = createInitialState();
+
+        // Check required fields
+        addResult('State has version', state.version === 1, `Version: ${state.version}`);
+        addResult('State has turn', typeof state.turn === 'number', `Turn: ${state.turn}`);
+        addResult('Turn starts at 0', state.turn === 0, `Turn: ${state.turn}`);
+        addResult('State has currentPlayer', typeof state.currentPlayer === 'string', `Current player: ${state.currentPlayer}`);
+        addResult('Player 1 starts', state.currentPlayer === 'player1', `Current player: ${state.currentPlayer}`);
+
+        // Check coin queue
+        addResult('Coin queue exists', Array.isArray(state.coinQueue), `Type: ${typeof state.coinQueue}`);
+        addResult('Coin queue has 10 coins', state.coinQueue.length === 10, `Length: ${state.coinQueue.length}`);
+        addResult('Coin queue has valid values', state.coinQueue.every(c => typeof c === 'boolean'), 'All values are boolean');
+
+        // Check players
+        addResult('Player 1 exists', !!state.player1, 'Player 1 exists');
+        addResult('Player 2 exists', !!state.player2, 'Player 2 exists');
+        addResult('Players are different objects', state.player1 !== state.player2, 'Different references');
+
+        // Check empty state
+        addResult('Player 1 points at 0', state.player1.points === 0, `Points: ${state.player1.points}`);
+        addResult('Player 2 points at 0', state.player2.points === 0, `Points: ${state.player2.points}`);
+        addResult('Player 1 active is null', state.player1.active === null, `Active: ${state.player1.active}`);
+        addResult('Player 2 active is null', state.player2.active === null, `Active: ${state.player2.active}`);
+        addResult('Player 1 bench is empty', state.player1.bench.length === 0, `Bench length: ${state.player1.bench.length}`);
+        addResult('Player 2 bench is empty', state.player2.bench.length === 0, `Bench length: ${state.player2.bench.length}`);
+        addResult('Player 1 hand is empty', state.player1.hand.length === 0, `Hand length: ${state.player1.hand.length}`);
+        addResult('Player 2 hand is empty', state.player2.hand.length === 0, `Hand length: ${state.player2.hand.length}`);
+        addResult('Player 1 deck is empty', state.player1.deck.length === 0, `Deck length: ${state.player1.deck.length}`);
+        addResult('Player 2 deck is empty', state.player2.deck.length === 0, `Deck length: ${state.player2.deck.length}`);
+        addResult('Player 1 discard is empty', state.player1.discard.length === 0, `Discard length: ${state.player1.discard.length}`);
+        addResult('Player 2 discard is empty', state.player2.discard.length === 0, `Discard length: ${state.player2.discard.length}`);
+
+        // Check stadium and log
+        addResult('Stadium is null', state.stadium === null, `Stadium: ${state.stadium}`);
+        addResult('Log is empty', state.log.length === 0, `Log length: ${state.log.length}`);
+        addResult('Turn effects is empty', state.turnEffects.length === 0, `Turn effects length: ${state.turnEffects.length}`);
+
+      } catch (error) {
+        addResult('createInitialState()', false, `Error: ${error.message}`);
+      }
+    }
+
+    function runPlayerTest() {
+      addSection('Test 2: createPlayer()');
+
+      try {
+        const player1 = createPlayer('Test Player 1');
+        const player2 = createPlayer('Test Player 2');
+
+        addResult('Player has 0 points', player1.points === 0, `Points: ${player1.points}`);
+        addResult('Player active is null', player1.active === null, `Active: ${player1.active}`);
+        addResult('Player bench is empty array', Array.isArray(player1.bench) && player1.bench.length === 0, `Bench: ${JSON.stringify(player1.bench)}`);
+        addResult('Player hand is empty array', Array.isArray(player1.hand) && player1.hand.length === 0, `Hand: ${JSON.stringify(player1.hand)}`);
+        addResult('Player deck is empty array', Array.isArray(player1.deck) && player1.deck.length === 0, `Deck: ${JSON.stringify(player1.deck)}`);
+        addResult('Player discard is empty array', Array.isArray(player1.discard) && player1.discard.length === 0, `Discard: ${JSON.stringify(player1.discard)}`);
+
+        addResult('Energy zone exists', !!player1.energyZone, 'Energy zone exists');
+        addResult('Energy zone currentEnergy is null', player1.energyZone.currentEnergy === null, `Current energy: ${player1.energyZone.currentEnergy}`);
+        addResult('Energy zone nextEnergy is null', player1.energyZone.nextEnergy === null, `Next energy: ${player1.energyZone.nextEnergy}`);
+        addResult('Energy zone configuredTypes is empty', player1.energyZone.configuredTypes.length === 0, `Configured types: ${JSON.stringify(player1.energyZone.configuredTypes)}`);
+        addResult('Energy zone usedThisTurn is false', player1.energyZone.usedThisTurn === false, `Used this turn: ${player1.energyZone.usedThisTurn}`);
+
+        addResult('supporterUsedThisTurn is false', player1.supporterUsedThisTurn === false, `Supporter used: ${player1.supporterUsedThisTurn}`);
+        addResult('retreatedThisTurn is false', player1.retreatedThisTurn === false, `Retreated: ${player1.retreatedThisTurn}`);
+        addResult('normalAttachUsedThisTurn is false', player1.normalAttachUsedThisTurn === false, `Normal attach: ${player1.normalAttachUsedThisTurn}`);
+
+        // Check that two player objects are independent
+        player1.points = 5;
+        addResult('Players are independent', player2.points === 0, `Player 2 points: ${player2.points}`);
+
+      } catch (error) {
+        addResult('createPlayer()', false, `Error: ${error.message}`);
+      }
+    }
+
+    function runPokemonTest() {
+      addSection('Test 3: createPokemon()');
+
+      try {
+        const pokemon = createPokemon('A1-003', 5);
+
+        addResult('Pokemon has cardId', pokemon.cardId === 'A1-003', `Card ID: ${pokemon.cardId}`);
+        addResult('Pokemon has currentHp', typeof pokemon.currentHp === 'number', `Current HP: ${pokemon.currentHp}`);
+        addResult('Pokemon energy is empty array', Array.isArray(pokemon.energy) && pokemon.energy.length === 0, `Energy: ${JSON.stringify(pokemon.energy)}`);
+        addResult('Pokemon status is null', pokemon.status === null, `Status: ${pokemon.status}`);
+        addResult('Pokemon has turnPlayed', pokemon.turnPlayed === 5, `Turn played: ${pokemon.turnPlayed}`);
+        addResult('Pokemon lastEvolved is null', pokemon.lastEvolved === null, `Last evolved: ${pokemon.lastEvolved}`);
+        addResult('Pokemon tool is null', pokemon.tool === null, `Tool: ${pokemon.tool}`);
+        addResult('Pokemon effects is empty array', Array.isArray(pokemon.effects) && pokemon.effects.length === 0, `Effects: ${JSON.stringify(pokemon.effects)}`);
+
+        // Test default turnPlayed
+        const pokemonDefault = createPokemon('A1-001');
+        addResult('Default turnPlayed is 0', pokemonDefault.turnPlayed === 0, `Turn played: ${pokemonDefault.turnPlayed}`);
+
+        // Test with energy
+        const pokemonWithEnergy = createPokemon('A1-004', 10);
+        pokemonWithEnergy.energy = ['G', 'G', 'W'];
+        addResult('Pokemon can have energy', pokemonWithEnergy.energy.length === 3, `Energy: ${JSON.stringify(pokemonWithEnergy.energy)}`);
+
+      } catch (error) {
+        addResult('createPokemon()', false, `Error: ${error.message}`);
+      }
+    }
+
+    function runCloneTest() {
+      addSection('Test 4: cloneState()');
+
+      try {
+        const state = createInitialState();
+        state.player1.points = 2;
+        state.player1.active = createPokemon('A1-003', 5);
+        state.player1.active.energy = ['G', 'G'];
+        state.turn = 10;
+
+        const cloned = cloneState(state);
+
+        addResult('Cloned state exists', !!cloned, 'Cloned state exists');
+        addResult('Cloned state has same structure', typeof cloned === 'object', 'Type: object');
+        addResult('Cloned turn matches', cloned.turn === state.turn, `Turn: ${cloned.turn}`);
+        addResult('Cloned player1 points match', cloned.player1.points === state.player1.points, `Points: ${cloned.player1.points}`);
+        addResult('Cloned active exists', !!cloned.player1.active, 'Active exists');
+        addResult('Cloned active cardId matches', cloned.player1.active.cardId === state.player1.active.cardId, `Card ID: ${cloned.player1.active.cardId}`);
+        addResult('Cloned active energy matches', JSON.stringify(cloned.player1.active.energy) === JSON.stringify(state.player1.active.energy), `Energy: ${JSON.stringify(cloned.player1.active.energy)}`);
+
+        // Test immutability
+        cloned.turn = 99;
+        cloned.player1.points = 88;
+        addResult('Original state unchanged (turn)', state.turn === 10, `Original turn: ${state.turn}`);
+        addResult('Original state unchanged (points)', state.player1.points === 2, `Original points: ${state.player1.points}`);
+
+        addResult('Cloned state has different reference', cloned !== state, 'Different references');
+
+      } catch (error) {
+        addResult('cloneState()', false, `Error: ${error.message}`);
+      }
+    }
+
+    function runValidationTest() {
+      addSection('Test 5: validateState()');
+
+      try {
+        // Test valid state
+        const validState = createInitialState();
+        const validResult = validateState(validState);
+        addResult('Valid state passes validation', validResult.valid, `Errors: ${JSON.stringify(validResult.errors)}`);
+
+        // Test invalid version
+        const invalidVersion = cloneState(validState);
+        invalidVersion.version = 999;
+        const versionResult = validateState(invalidVersion);
+        addResult('Invalid version caught', !versionResult.valid, `Errors: ${versionResult.errors.join(', ')}`);
+
+        // Test invalid turn
+        const invalidTurn = cloneState(validState);
+        invalidTurn.turn = -1;
+        const turnResult = validateState(invalidTurn);
+        addResult('Invalid turn caught', !turnResult.valid, `Errors: ${turnResult.errors.join(', ')}`);
+
+        // Test invalid currentPlayer
+        const invalidPlayer = cloneState(validState);
+        invalidPlayer.currentPlayer = 'player3';
+        const playerResult = validateState(invalidPlayer);
+        addResult('Invalid currentPlayer caught', !playerResult.valid, `Errors: ${playerResult.errors.join(', ')}`);
+
+        // Test invalid bench size
+        const invalidBench = cloneState(validState);
+        invalidBench.player1.bench = [createPokemon('A1-001'), createPokemon('A1-002'), createPokemon('A1-003'), createPokemon('A1-004')];
+        const benchResult = validateState(invalidBench);
+        addResult('Invalid bench size caught', !benchResult.valid, `Errors: ${benchResult.errors.join(', ')}`);
+
+        // Test invalid hand size
+        const invalidHand = cloneState(validState);
+        invalidHand.player1.hand = Array(11).fill('A1-001');
+        const handResult = validateState(invalidHand);
+        addResult('Invalid hand size caught', !handResult.valid, `Errors: ${handResult.errors.join(', ')}`);
+
+        // Test isValidState shortcut
+        const isValid = isValidState(validState);
+        addResult('isValidState() returns true for valid state', isValid === true, `Result: ${isValid}`);
+
+        const isInvalid = isValidState(invalidVersion);
+        addResult('isValidState() returns false for invalid state', isInvalid === false, `Result: ${isInvalid}`);
+
+      } catch (error) {
+        addResult('validateState()', false, `Error: ${error.message}`);
+      }
+    }
+
+    function runSpecFormatTest() {
+      addSection('Test 6: SPEC.md Format Compliance');
+
+      try {
+        const state = createInitialState();
+
+        // Add some data to test format
+        state.turn = 5;
+        state.player1.points = 1;
+        state.player1.active = createPokemon('A1-003', 1);
+        state.player1.active.currentHp = 160;
+        state.player1.active.energy = ['G', 'G'];
+        state.player1.active.status = null;
+        state.player1.bench = [createPokemon('A1-001', 0)];
+        state.player1.bench[0].currentHp = 70;
+        state.player1.hand = ['A1-131', 'A1-224'];
+        state.player1.deck = ['A1-004', 'A1-005'];
+        state.player1.discard = ['A1-220'];
+        state.player1.energyZone.currentEnergy = 'G';
+        state.player1.energyZone.nextEnergy = 'W';
+        state.player1.energyZone.configuredTypes = ['G', 'W'];
+
+        // Check all required fields from SPEC.md
+        const requiredFields = [
+          'version', 'turn', 'currentPlayer', 'coinQueue', 'player1', 'player2', 'stadium', 'turnEffects', 'log'
+        ];
+
+        const missingFields = requiredFields.filter(field => !(field in state));
+        addResult('All top-level fields present', missingFields.length === 0, `Missing: ${missingFields.join(', ')}`);
+
+        // Check player structure
+        const requiredPlayerFields = [
+          'points', 'active', 'bench', 'hand', 'deck', 'discard', 'energyZone', 'supporterUsedThisTurn', 'retreatedThisTurn', 'normalAttachUsedThisTurn'
+        ];
+
+        const missingPlayer1Fields = requiredPlayerFields.filter(field => !(field in state.player1));
+        addResult('All player1 fields present', missingPlayer1Fields.length === 0, `Missing: ${missingPlayer1Fields.join(', ')}`);
+
+        const missingPlayer2Fields = requiredPlayerFields.filter(field => !(field in state.player2));
+        addResult('All player2 fields present', missingPlayer2Fields.length === 0, `Missing: ${missingPlayer2Fields.join(', ')}`);
+
+        // Check energy zone structure
+        const requiredEnergyFields = ['currentEnergy', 'nextEnergy', 'configuredTypes', 'usedThisTurn'];
+        const missingEnergyFields = requiredEnergyFields.filter(field => !(field in state.player1.energyZone));
+        addResult('All energyZone fields present', missingEnergyFields.length === 0, `Missing: ${missingEnergyFields.join(', ')}`);
+
+        // Check Pokemon structure
+        if (state.player1.active) {
+          const requiredPokemonFields = ['cardId', 'currentHp', 'energy', 'status', 'turnPlayed', 'lastEvolved', 'tool', 'effects'];
+          const missingPokemonFields = requiredPokemonFields.filter(field => !(field in state.player1.active));
+          addResult('All active Pokemon fields present', missingPokemonFields.length === 0, `Missing: ${missingPokemonFields.join(', ')}`);
+        }
+
+        // Test addLogEntry
+        const logEntry = {
+          action: 'draw',
+          card: 'A1-131',
+          details: 'Drew Potion'
+        };
+        const stateWithLog = addLogEntry(state, logEntry);
+        addResult('Log entry added', stateWithLog.log.length === 1, `Log length: ${stateWithLog.log.length}`);
+        addResult('Log entry has action', stateWithLog.log[0].action === 'draw', `Action: ${stateWithLog.log[0].action}`);
+        addResult('Log entry has timestamp', !!stateWithLog.log[0].timestamp, `Timestamp: ${stateWithLog.log[0].timestamp}`);
+        addResult('Log entry has turn', stateWithLog.log[0].turn === 5, `Turn: ${stateWithLog.log[0].turn}`);
+        addResult('Log entry has player', stateWithLog.log[0].player === 'player1', `Player: ${stateWithLog.log[0].player}`);
+
+        // Test exportState
+        const exported = exportState(state);
+        addResult('Export removes name', !exported.name, `Name: ${exported.name}`);
+        addResult('Export removes description', !exported.description, `Description: ${exported.description}`);
+        addResult('Export preserves version', exported.version === state.version, `Version: ${exported.version}`);
+        addResult('Export preserves turn', exported.turn === state.turn, `Turn: ${exported.turn}`);
+
+        // Test JSON serialization
+        const json = JSON.stringify(state, null, 2);
+        addResult('State is JSON serializable', !!json, `JSON length: ${json.length}`);
+        addResult('State can be parsed back', JSON.parse(json).version === state.version, `Parsed version: ${JSON.parse(json).version}`);
+
+        // Show sample JSON for manual inspection
+        const sampleDiv = document.createElement('div');
+        sampleDiv.className = 'test-result pass';
+        sampleDiv.innerHTML = `
+          <strong>Sample State JSON:</strong>
+          <pre>${JSON.stringify(state, null, 2)}</pre>
+        `;
+        document.getElementById('results').appendChild(sampleDiv);
+
+      } catch (error) {
+        addResult('SPEC.md Format Test', false, `Error: ${error.message}`);
+      }
+    }
+
+    // Wire up buttons
+    document.getElementById('run-all').addEventListener('click', runAllTests);
+    document.getElementById('run-initial-state').addEventListener('click', runInitialStateTest);
+    document.getElementById('run-player').addEventListener('click', runPlayerTest);
+    document.getElementById('run-pokemon').addEventListener('click', runPokemonTest);
+    document.getElementById('run-clone').addEventListener('click', runCloneTest);
+    document.getElementById('run-validation').addEventListener('click', runValidationTest);
+    document.getElementById('run-spec-format').addEventListener('click', runSpecFormatTest);
+  </script>
+</body>
+</html>

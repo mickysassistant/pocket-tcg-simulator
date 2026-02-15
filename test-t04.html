@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 04 Test - Card Rendering</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; }
+        h2 { color: #555; margin-top: 20px; }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .test-result {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .test-result.pass { background: #e8f5e9; }
+        .test-result.fail { background: #ffebee; }
+        #summary {
+            background: #2196F3;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .test-card-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task 04 Test - Card Rendering</h1>
+    <div id="summary">Loading...</div>
+
+    <div class="test-section">
+        <h2>Test 1: Card Loading from CDN</h2>
+        <div id="test1-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: HP Badge Display</h2>
+        <div id="test2-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Energy Display</h2>
+        <div id="test3-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Empty Slot Placeholder</h2>
+        <div id="test4-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Visual Test - Rendered Cards</h2>
+        <div id="test5-results"></div>
+        <div class="test-card-container">
+            <h3>Venusaur (Active Pokemon)</h3>
+            <div id="test-active-card"></div>
+
+            <h3>Empty Slot (Placeholder)</h3>
+            <div id="test-empty-slot"></div>
+
+            <h3>Status Effect (Burn)</h3>
+            <div id="test-status-card"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { loadCards, getCard, getCardImage, getCardCount } from './js/data/card-loader.js';
+
+        const tests = {
+            passed: 0,
+            failed: 0,
+            total: 0
+        };
+
+        function addResult(containerId, testName, passed, details = '') {
+            tests.total++;
+            if (passed) {
+                tests.passed++;
+                document.getElementById(containerId).innerHTML +=
+                    `<div class="test-result pass">✅ ${testName}</div>`;
+            } else {
+                tests.failed++;
+                document.getElementById(containerId).innerHTML +=
+                    `<div class="test-result fail">❌ ${testName}${details ? ': ' + details : ''}</div>`;
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const percentage = Math.round((tests.passed / tests.total) * 100) || 0;
+            summary.textContent = `Tests: ${tests.passed}/${tests.total} passed (${percentage}%)`;
+            summary.style.background = tests.failed === 0 ? '#4CAF50' : '#f44336';
+        }
+
+        // Helper function from main.js
+        function renderPokemon(pokemon, container) {
+            if (!pokemon || !pokemon.cardId) {
+                container.innerHTML = '<div class="empty-slot">Empty</div>';
+                return;
+            }
+
+            const card = getCard(pokemon.cardId);
+            if (!card) {
+                console.warn('Card not found:', pokemon.cardId);
+                container.innerHTML = '<div class="empty-slot">Unknown</div>';
+                return;
+            }
+
+            const imageUrl = getCardImage(pokemon.cardId, 'small');
+            const maxHp = card.hp || 0;
+
+            container.innerHTML = `
+                <div class="pokemon-card" data-card-id="${pokemon.cardId}">
+                    <img src="${imageUrl}" alt="${card.name}" loading="lazy" />
+                    <div class="hp-badge">${pokemon.currentHp}/${maxHp}</div>
+                    <div class="energy-display">
+                        ${(pokemon.energy || []).map(e => `<span class="energy energy-${e}">${e}</span>`).join('')}
+                    </div>
+                    ${pokemon.status ? `<div class="status-badge status-${pokemon.status}">${pokemon.status}</div>` : ''}
+                </div>
+            `;
+        }
+
+        async function runTests() {
+            console.log('Loading cards...');
+            await loadCards();
+            console.log(`Cards loaded: ${getCardCount()}`);
+
+            // Test 1: Card Loading from CDN
+            addResult('test1-results', 'Cards load successfully', getCardCount() > 0, `${getCardCount()} cards`);
+
+            const testCard = getCard('A1-003');
+            addResult('test1-results', 'Can retrieve card by ID', testCard !== null);
+            if (testCard) {
+                addResult('test1-results', 'Card image URL generated', getCardImage('A1-003') !== null);
+                addResult('test1-results', 'Card image URL is valid HTTP', getCardImage('A1-003').startsWith('http'));
+            }
+
+            // Test 2: HP Badge Display
+            if (testCard) {
+                addResult('test2-results', 'HP value available', testCard.hp !== undefined && testCard.hp !== null);
+                addResult('test2-results', 'HP value is number', typeof testCard.hp === 'number');
+
+                const testPokemon = { cardId: 'A1-003', currentHp: 160, energy: [] };
+                const activeContainer = document.getElementById('test-active-card');
+                renderPokemon(testPokemon, activeContainer);
+
+                setTimeout(() => {
+                    const hpBadge = activeContainer.querySelector('.hp-badge');
+                    addResult('test2-results', 'HP badge rendered in DOM', hpBadge !== null);
+                    if (hpBadge) {
+                        addResult('test2-results', 'HP badge shows correct value', hpBadge.textContent === '160/180');
+                    }
+                }, 500);
+            }
+
+            // Test 3: Energy Display
+            const energyContainer = document.getElementById('test-status-card');
+            const energyPokemon = {
+                cardId: 'A1-003',
+                currentHp: 160,
+                energy: ['G', 'G', 'G'],
+                status: 'burn'
+            };
+            renderPokemon(energyPokemon, energyContainer);
+
+            setTimeout(() => {
+                const energyDisplay = energyContainer.querySelector('.energy-display');
+                addResult('test3-results', 'Energy display rendered in DOM', energyDisplay !== null);
+                if (energyDisplay) {
+                    const energyCircles = energyDisplay.querySelectorAll('.energy');
+                    addResult('test3-results', 'Correct number of energy circles', energyCircles.length === 3);
+                    addResult('test3-results', 'Energy has correct type class', energyDisplay.querySelector('.energy-G') !== null);
+                }
+            }, 500);
+
+            // Test 4: Empty Slot Placeholder
+            const emptyContainer = document.getElementById('test-empty-slot');
+            renderPokemon(null, emptyContainer);
+
+            setTimeout(() => {
+                const emptySlot = emptyContainer.querySelector('.empty-slot');
+                addResult('test4-results', 'Empty slot rendered for null pokemon', emptySlot !== null);
+            }, 500);
+
+            // Test 5: Status Badge
+            setTimeout(() => {
+                const statusBadge = energyContainer.querySelector('.status-badge');
+                addResult('test5-results', 'Status badge rendered in DOM', statusBadge !== null);
+                if (statusBadge) {
+                    addResult('test5-results', 'Status shows correct value', statusBadge.textContent.toLowerCase() === 'burn');
+                    addResult('test5-results', 'Status has correct type class', statusBadge.classList.contains('status-burn'));
+                }
+            }, 500);
+
+            // Add CSS from battlefield.css
+            const style = document.createElement('style');
+            style.textContent = `
+                .empty-slot {
+                    width: 100px;
+                    height: 145px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: rgba(255, 255, 255, 0.3);
+                    font-size: 12px;
+                    border: 1px dashed rgba(255, 255, 255, 0.2);
+                    border-radius: 8px;
+                    background: #333;
+                }
+                .pokemon-card {
+                    width: 100px;
+                    height: 145px;
+                    position: relative;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                    overflow: hidden;
+                }
+                .pokemon-card img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    border-radius: 8px;
+                }
+                .hp-badge {
+                    position: absolute;
+                    top: -10px;
+                    right: 5px;
+                    background: linear-gradient(90deg, #4CAF50, #45a049);
+                    color: white;
+                    padding: 3px 10px;
+                    border-radius: 12px;
+                    font-weight: bold;
+                    font-size: 11px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                    z-index: 10;
+                }
+                .energy-display {
+                    position: absolute;
+                    bottom: 5px;
+                    left: 5px;
+                    display: flex;
+                    gap: 3px;
+                    z-index: 10;
+                }
+                .energy {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 9px;
+                    font-weight: bold;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                    border: 2px solid rgba(255, 255, 255, 0.8);
+                }
+                .energy-G { background: linear-gradient(135deg, #4CAF50, #2E7D32); }
+                .status-badge {
+                    position: absolute;
+                    top: 5px;
+                    left: 5px;
+                    padding: 3px 8px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    font-size: 10px;
+                    color: white;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                    text-transform: capitalize;
+                    z-index: 10;
+                }
+                .status-burn { background: linear-gradient(135deg, #FF5722, #E64A19); }
+            `;
+            document.head.appendChild(style);
+        }
+
+        runTests().catch(console.error);
+    </script>
+</body>
+</html>

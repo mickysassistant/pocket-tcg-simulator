@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T11: Evolution - Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 { color: #4ecca3; }
+    h2 { color: #a8e6cf; margin-top: 30px; }
+    .test-result {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+    }
+    .pass { background: #2ecc71; color: #fff; }
+    .fail { background: #e74c3c; color: #fff; }
+    .test-details {
+      background: #2d2d44;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .summary {
+      background: #3498db;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 4px;
+      font-size: 18px;
+    }
+    code {
+      background: #444;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h1>T11: Evolution - Test Suite</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    import {
+      createInitialState,
+      cloneState,
+      canEvolve,
+      evolve,
+      isEvolutionCard,
+      getValidEvolutions
+    } from './js/engine/game-state.js';
+    import { getCard, loadCards, getAllCards } from './js/data/card-loader.js';
+
+    // Test results tracker
+    const results = [];
+    let passCount = 0;
+    let failCount = 0;
+
+    function assert(condition, testName, details = '') {
+      if (condition) {
+        passCount++;
+        results.push({ pass: true, name: testName, details });
+        console.log(`✓ ${testName}`);
+      } else {
+        failCount++;
+        results.push({ pass: false, name: testName, details });
+        console.error(`✗ ${testName}`);
+        if (details) console.error(`  ${details}`);
+      }
+    }
+
+    function assertEqual(actual, expected, testName) {
+      const condition = JSON.stringify(actual) === JSON.stringify(expected);
+      assert(condition, testName,
+        `Expected: ${JSON.stringify(expected)}, Got: ${JSON.stringify(actual)}`);
+    }
+
+    // Wait for card data to load
+    await loadCards();
+
+    console.log('=== T11: Evolution Tests ===\n');
+
+    // Test 1: Basic -> Stage 1 evolution validation
+    console.log('Test 1: Basic -> Stage 1 evolution validation');
+    {
+      const state = createInitialState();
+      state.turn = 2; // Not first turn
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (Basic)
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002']; // Ivysaur (Stage 1)
+
+      const canEv = canEvolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(canEv, 'Can evolve Bulbasaur to Ivysaur', 'A1-001 -> A1-002 should be valid');
+    }
+
+    // Test 2: Stage 1 -> Stage 2 evolution validation
+    console.log('\nTest 2: Stage 1 -> Stage 2 evolution validation');
+    {
+      const state = createInitialState();
+      state.turn = 5;
+      state.player1.active = {
+        cardId: 'A1-002', // Ivysaur (Stage 1)
+        currentHp: 90,
+        energy: ['G', 'G', 'G'],
+        status: null,
+        turnPlayed: 2,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-003']; // Venusaur (Stage 2)
+
+      const canEv = canEvolve(state, 'player1', 'active', 'A1-003', getCard);
+      assert(canEv, 'Can evolve Ivysaur to Venusaur', 'A1-002 -> A1-003 should be valid');
+    }
+
+    // Test 3: Can't evolve on first turn
+    console.log('\nTest 3: Can\'t evolve on first turn');
+    {
+      const state = createInitialState();
+      state.turn = 0; // First turn
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (Basic)
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 0,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002']; // Ivysaur (Stage 1)
+
+      const canEv = canEvolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(!canEv, 'Cannot evolve on first turn', 'turn=0 should block evolution');
+    }
+
+    // Test 4: Can't evolve the turn Pokemon was played
+    console.log('\nTest 4: Can\'t evolve the turn Pokemon was played');
+    {
+      const state = createInitialState();
+      state.turn = 2;
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (Basic)
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 2, // Played this turn
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+
+      const canEv = canEvolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(!canEv, 'Cannot evolve on turn played', 'turnPlayed=2 with turn=2 should block evolution');
+    }
+
+    // Test 5: Can't evolve twice in same turn
+    console.log('\nTest 5: Can\'t evolve twice in same turn');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (Basic)
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: 3, // Already evolved this turn
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+
+      const canEv = canEvolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(!canEv, 'Cannot evolve twice in one turn', 'lastEvolved=3 with turn=3 should block evolution');
+    }
+
+    // Test 6: Invalid evolution stage mismatch
+    console.log('\nTest 6: Invalid evolution stage mismatch');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (Basic, evolves from nothing)
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-003']; // Venusaur (Stage 2, evolves from Ivysaur)
+
+      const canEv = canEvolve(state, 'player1', 'active', 'A1-003', getCard);
+      assert(!canEv, 'Cannot skip evolution stage', 'Basic -> Stage 2 should be invalid');
+    }
+
+    // Test 7: Status cured on evolve
+    console.log('\nTest 7: Status cured on evolve');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (Basic)
+        currentHp: 30, // 30 damage
+        energy: ['G', 'G'],
+        status: 'poison',
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(newState.player1.active.status === null, 'Status cured on evolve',
+        'poison should be cleared after evolution');
+    }
+
+    // Test 8: Damage preserved on evolve
+    console.log('\nTest 8: Damage preserved on evolve');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (Basic, 60 HP)
+        currentHp: 30, // 30 damage taken
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002']; // Ivysaur (90 HP)
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      const ivysaurCard = getCard('A1-002');
+      // 30 damage preserved: 90 - 30 = 60 HP
+      assert(newState.player1.active.currentHp === 60, 'Damage preserved on evolve',
+        `Expected 60 HP (90-30), got ${newState.player1.active.currentHp}`);
+    }
+
+    // Test 9: Energy preserved on evolve
+    console.log('\nTest 9: Energy preserved on evolve');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001',
+        currentHp: 60,
+        energy: ['G', 'G', 'R', 'W'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      assertEqual(newState.player1.active.energy, ['G', 'G', 'R', 'W'],
+        'Energy preserved on evolve');
+    }
+
+    // Test 10: Evolution card removed from hand
+    console.log('\nTest 10: Evolution card removed from hand');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001',
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002', 'A1-003', 'A1-131'];
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(newState.player1.hand.length === 2, 'Evolution card removed from hand',
+        `Expected 2 cards in hand, got ${newState.player1.hand.length}`);
+      assert(!newState.player1.hand.includes('A1-002'), 'Evolution card not in hand',
+        'A1-002 should be removed from hand');
+    }
+
+    // Test 11: Evolve bench Pokemon
+    console.log('\nTest 11: Evolve bench Pokemon');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.bench[0] = {
+        cardId: 'A1-001',
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+
+      const newState = evolve(state, 'player1', 0, 'A1-002', getCard);
+      assert(newState.player1.bench[0].cardId === 'A1-002', 'Bench Pokemon evolved',
+        `Expected cardId A1-002, got ${newState.player1.bench[0].cardId}`);
+    }
+
+    // Test 12: lastEvolved tracking
+    console.log('\nTest 12: lastEvolved tracking');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001',
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(newState.player1.active.lastEvolved === 3, 'lastEvolved tracked correctly',
+        `Expected lastEvolved=3, got ${newState.player1.active.lastEvolved}`);
+    }
+
+    // Test 13: isEvolutionCard helper
+    console.log('\nTest 13: isEvolutionCard helper');
+    {
+      const isBasic = isEvolutionCard('A1-001', getCard);
+      const isStage1 = isEvolutionCard('A1-002', getCard);
+      const isStage2 = isEvolutionCard('A1-003', getCard);
+
+      assert(!isBasic, 'isEvolutionCard returns false for Basic', 'A1-001 is Basic');
+      assert(isStage1, 'isEvolutionCard returns true for Stage 1', 'A1-002 is Stage 1');
+      assert(isStage2, 'isEvolutionCard returns true for Stage 2', 'A1-003 is Stage 2');
+    }
+
+    // Test 14: getValidEvolutions helper
+    console.log('\nTest 14: getValidEvolutions helper');
+    {
+      const handCards = ['A1-001', 'A1-002', 'A1-003', 'A1-131'];
+      const validEvolutions = getValidEvolutions('A1-001', handCards, getCard);
+
+      assert(validEvolutions.length === 1, 'getValidEvolutions returns 1 valid evolution',
+        `Expected 1 evolution, got ${validEvolutions.length}`);
+      assert(validEvolutions[0] === 'A1-002', 'getValidEvolutions returns correct card',
+        `Expected A1-002, got ${validEvolutions[0]}`);
+    }
+
+    // Test 15: Evolution log entry created
+    console.log('\nTest 15: Evolution log entry created');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001',
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+      const logLength = state.log.length;
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(newState.log.length === logLength + 1, 'Log entry added',
+        `Expected ${logLength + 1} log entries, got ${newState.log.length}`);
+      assert(newState.log[logLength].action === 'evolve', 'Log entry has correct action',
+        `Expected action 'evolve', got ${newState.log[logLength].action}`);
+    }
+
+    // Test 16: Damage doesn't exceed new HP (KO protection)
+    console.log('\nTest 16: Damage doesn\'t exceed new HP (KO protection)');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001', // Bulbasaur (60 HP)
+        currentHp: 0, // KO'd
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002']; // Ivysaur (90 HP)
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      assert(newState.player1.active.currentHp >= 0, 'HP not negative after evolve',
+        `HP should be >= 0, got ${newState.player1.active.currentHp}`);
+    }
+
+    // Test 17: Empty bench handled
+    console.log('\nTest 17: Empty bench handled');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.bench[1] = null; // Empty slot
+      state.player1.hand = ['A1-002'];
+
+      const newState = evolve(state, 'player1', 1, 'A1-002', getCard);
+      assert(newState.player1.bench[1] === null, 'Empty bench slot remains null',
+        'Evolution should not create Pokemon in empty slot');
+    }
+
+    // Test 18: State validation after evolution
+    console.log('\nTest 18: State validation after evolution');
+    {
+      const state = createInitialState();
+      state.turn = 3;
+      state.player1.active = {
+        cardId: 'A1-001',
+        currentHp: 60,
+        energy: ['G', 'G'],
+        status: null,
+        turnPlayed: 1,
+        lastEvolved: null,
+        tool: null,
+        effects: []
+      };
+      state.player1.hand = ['A1-002'];
+
+      const newState = evolve(state, 'player1', 'active', 'A1-002', getCard);
+      const validation = validateState(newState);
+      assert(validation.valid, 'State valid after evolution',
+        validation.errors.length > 0 ? validation.errors.join(', ') : '');
+    }
+
+    // Summary
+    console.log('\n=== Summary ===');
+    console.log(`Total: ${passCount + failCount}`);
+    console.log(`Passed: ${passCount}`);
+    console.log(`Failed: ${failCount}`);
+
+    // Render results
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = `
+      <div class="summary">
+        <strong>Total Tests:</strong> ${passCount + failCount} |
+        <strong>Passed:</strong> ${passCount} |
+        <strong>Failed:</strong> ${failCount}
+      </div>
+    `;
+
+    results.forEach(result => {
+      const div = document.createElement('div');
+      div.className = `test-result ${result.pass ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <strong>${result.pass ? '✓' : '✗'}</strong> ${result.name}
+        ${result.details ? `<div class="test-details">${result.details}</div>` : ''}
+      `;
+      resultsDiv.appendChild(div);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "name": "T19d: Evolution Cures Status + Preserves State",
+  "description": "Tests that evolution cures all status effects while preserving damage counters and attached energy.",
+  "turn": 3,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false, true, false, true, true, false],
+  "player1": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-001",
+      "currentHp": 60,
+      "energy": ["G", "G", "W"],
+      "status": ["poison", "burn"],
+      "turnPlayed": 0,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [],
+    "hand": ["A1-002"],
+    "deck": ["A1-003", "A1-004"],
+    "discard": ["A1-220"],
+    "energyZone": {
+      "currentEnergy": "G",
+      "nextEnergy": "G",
+      "configuredTypes": ["G", "W"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "player2": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-015",
+      "currentHp": 140,
+      "energy": ["R", "R"],
+      "status": null,
+      "turnPlayed": 1,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [],
+    "hand": ["A1-131"],
+    "deck": ["A1-016", "A1-017"],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": "R",
+      "nextEnergy": "R",
+      "configuredTypes": ["R"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": [
+    {
+      "turn": 3,
+      "player": "player1",
+      "action": "startTurn"
+    }
+  ],
+  "_expectedBehavior": {
+    "description": "When Bulbasaur (A1-001) evolves to Ivysaur (A1-002), status effects should be cured (poison, burn removed). Energy (G, G, W) should be preserved. HP should remain at 60 (assuming 0 damage taken).",
+    "expectedStatusAfterEvolve": null,
+    "expectedEnergyCount": 3,
+    "expectedHp": 90
+  },
+  "_todoPocketVerify": false,
+  "_verifiedWithApp": false
+}

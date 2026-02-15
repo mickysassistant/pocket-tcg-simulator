@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>T16 - Coin Flip System Tests</title>
+  <style>
+    body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
+    .pass { color: #2ecc71; } .fail { color: #e74c3c; }
+    h1 { color: #f1c40f; } h2 { color: #3498db; margin-top: 20px; }
+    .summary { font-size: 18px; margin-top: 20px; padding: 10px; border: 2px solid; border-radius: 8px; }
+    .summary.ok { border-color: #2ecc71; } .summary.err { border-color: #e74c3c; }
+    #coin-demo { margin-top: 30px; padding: 15px; background: #16213e; border-radius: 8px; }
+    .coin-item { display: inline-block; width: 40px; height: 40px; border-radius: 50%;
+      line-height: 40px; text-align: center; margin: 3px; cursor: pointer; font-size: 18px; }
+    .coin-item.heads { background: #f1c40f; border: 2px solid #f39c12; }
+    .coin-item.tails { background: #7f8c8d; border: 2px solid #95a5a6; }
+    button { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; margin: 5px;
+      background: #3498db; color: white; font-size: 14px; }
+    button:hover { background: #2980b9; }
+  </style>
+</head>
+<body>
+  <h1>🪙 T16 - Coin Flip System Tests</h1>
+  <div id="results"></div>
+  <div id="summary"></div>
+  <div id="coin-demo">
+    <h2>Interactive Demo</h2>
+    <p>Click coins to toggle. Click "Flip" to consume next coin.</p>
+    <div id="demo-queue"></div>
+    <div style="margin-top:10px">
+      <button id="btn-flip">Flip Next Coin</button>
+      <button id="btn-refill">Refill Queue</button>
+    </div>
+    <div id="demo-log" style="margin-top:10px; color:#95a5a6;"></div>
+  </div>
+
+  <script type="module">
+    import { generateCoins, flipCoin, flipCoinWithLog, flipCoins, editCoin,
+             toggleCoin, refillCoins, remainingCoins, getQueue } from './js/engine/coin.js';
+
+    const el = (id) => document.getElementById(id);
+    let passed = 0, failed = 0;
+    const out = [];
+
+    function assert(c, n) { if(c){passed++;out.push(`<div class="pass">✅ ${n}</div>`);}
+      else{failed++;out.push(`<div class="fail">❌ ${n}</div>`);} }
+    function eq(a, b, n) { assert(JSON.stringify(a)===JSON.stringify(b), n); }
+    function makeState(q, log=false) {
+      const s = { coinQueue: [...q] };
+      if(log){s.log=[];s.turn=0;s.currentPlayer='player1';}
+      return s;
+    }
+
+    // --- Tests ---
+    out.push('<h2>generateCoins</h2>');
+    { const c=generateCoins(10); eq(c.length,10,'generates 10'); assert(c.every(x=>typeof x==='boolean'),'all boolean'); }
+    { eq(generateCoins().length,10,'default 10'); }
+
+    out.push('<h2>flipCoin</h2>');
+    { const s=makeState([true,false,true]); eq(flipCoin(s),true,'returns first'); eq(s.coinQueue.length,2,'queue shrinks'); }
+    { const s=makeState([]); const r=flipCoin(s); assert(typeof r==='boolean','auto-refills'); eq(s.coinQueue.length,9,'9 remaining'); }
+
+    out.push('<h2>flipCoin logging</h2>');
+    { const s={coinQueue:[true,false],log:[],turn:3,currentPlayer:'player2'};
+      flipCoin(s); eq(s.log.length,1,'1 entry'); eq(s.log[0].action,'coinFlip','action=coinFlip');
+      eq(s.log[0].result,true,'result=true'); eq(s.log[0].turn,3,'turn=3'); eq(s.log[0].player,'player2','player=p2');
+      assert(s.log[0].details.includes('Heads'),'details=Heads'); }
+    { const s=makeState([true]); flipCoin(s); assert(!s.log,'no log when absent'); }
+
+    out.push('<h2>flipCoinWithLog</h2>');
+    { const s={coinQueue:[true,false,true]}; const{result,coinQueue}=flipCoinWithLog(s);
+      eq(result,true,'returns first'); eq(coinQueue.length,2,'queue shrinks'); eq(s.coinQueue.length,3,'original unchanged'); }
+
+    out.push('<h2>flipCoins</h2>');
+    { const s={coinQueue:[true,true,false,true],log:[],turn:1,currentPlayer:'player1'};
+      const r=flipCoins(s,3); eq(r,[true,true,false],'correct sequence'); eq(s.log.length,3,'3 log entries'); }
+
+    out.push('<h2>editCoin</h2>');
+    { const s=makeState([true,true,true]); editCoin(s,1,false); eq(s.coinQueue[1],false,'edits index'); eq(s.coinQueue[0],true,'others intact'); }
+    { const s=makeState([true]); editCoin(s,99,false); eq(s.coinQueue.length,1,'OOB no change'); }
+
+    out.push('<h2>toggleCoin</h2>');
+    { const s=makeState([true,false]); toggleCoin(s,0); eq(s.coinQueue[0],false,'H→T'); toggleCoin(s,1); eq(s.coinQueue[1],true,'T→H'); }
+
+    out.push('<h2>refillCoins</h2>');
+    { const s=makeState([true]); refillCoins(s); eq(s.coinQueue.length,10,'refills to 10'); }
+    { const s=makeState([]); refillCoins(s,5); eq(s.coinQueue.length,5,'custom count'); }
+
+    out.push('<h2>remainingCoins / getQueue</h2>');
+    eq(remainingCoins(makeState([true,false,true])),3,'remaining=3');
+    eq(remainingCoins({coinQueue:undefined}),0,'undefined=0');
+    { const s=makeState([true,false]); const q=getQueue(s); eq(q,[true,false],'copy matches'); q[0]=false; eq(s.coinQueue[0],true,'is a copy'); }
+
+    out.push('<h2>UI: coin preview</h2>');
+    { const s=makeState([true,false,true,false,true]); eq(getQueue(s).slice(0,3),[true,false,true],'first 3 shown'); }
+
+    // Summary
+    el('results').innerHTML = out.join('');
+    const total = passed + failed;
+    el('summary').className = `summary ${failed ? 'err' : 'ok'}`;
+    el('summary').textContent = `🪙 ${passed}/${total} passed${failed ? `, ${failed} FAILED` : ' — ALL PASSED'}`;
+
+    // --- Interactive demo ---
+    const demoState = { coinQueue: generateCoins(10), log: [], turn: 0, currentPlayer: 'player1' };
+
+    function renderDemo() {
+      const q = getQueue(demoState);
+      el('demo-queue').innerHTML = q.map((c,i) =>
+        `<span class="coin-item ${c?'heads':'tails'}" data-i="${i}">${c?'🪙':'✖️'}</span>`
+      ).join('') || '<em>Empty — click Refill</em>';
+      el('demo-queue').querySelectorAll('.coin-item').forEach(coin => {
+        coin.addEventListener('click', () => {
+          toggleCoin(demoState, parseInt(coin.dataset.i));
+          renderDemo();
+        });
+      });
+    }
+
+    el('btn-flip').addEventListener('click', () => {
+      if (remainingCoins(demoState) === 0) { el('demo-log').textContent = 'Queue empty! Click Refill.'; return; }
+      const r = flipCoin(demoState);
+      el('demo-log').textContent = `Flipped: ${r ? 'Heads 🪙' : 'Tails ✖️'} (${remainingCoins(demoState)} remaining)`;
+      renderDemo();
+    });
+
+    el('btn-refill').addEventListener('click', () => {
+      refillCoins(demoState);
+      el('demo-log').textContent = 'Queue refilled with 10 random coins.';
+      renderDemo();
+    });
+
+    renderDemo();
+  </script>
+</body>
+</html>

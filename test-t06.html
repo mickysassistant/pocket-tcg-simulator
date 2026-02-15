@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 06 Test: Scenario Load/Save + Editor UI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            margin-top: 30px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .test-count {
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .scenario-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task 06 Test: Scenario Load/Save + Editor UI</h1>
+    <p class="test-count">Tests will run automatically...</p>
+
+    <div id="results"></div>
+
+    <div class="test-section">
+        <h2>Manual Testing Controls</h2>
+        <p>Use these controls to manually test the functionality:</p>
+
+        <h3>1. Load Scenario</h3>
+        <p>Copy the test scenario JSON below and use the "Edit" button in the main app to paste it:</p>
+        <textarea id="test-scenario-json"></textarea>
+        <br><br>
+        <button onclick="copyToClipboard()">Copy Test Scenario</button>
+        <button onclick="openSimulator()">Open Simulator</button>
+
+        <h3>2. Test Scenario JSON</h3>
+        <pre id="test-scenario-display"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results Summary</h2>
+        <div id="summary"></div>
+    </div>
+
+    <script type="module">
+        // Import game state functions
+        import {
+            createInitialState,
+            cloneState,
+            isValidState,
+            exportState
+        } from './js/engine/game-state.js';
+
+        // Test results tracking
+        const results = [];
+        let passed = 0;
+        let failed = 0;
+
+        /**
+         * Add test result
+         */
+        function addResult(test, passed, message) {
+            results.push({ test, passed, message });
+        }
+
+        /**
+         * Display results
+         */
+        function displayResults() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>Test Results</h2>';
+
+            results.forEach(r => {
+                const div = document.createElement('div');
+                div.className = `test-result ${r.passed ? 'pass' : 'fail'}`;
+                div.innerHTML = `
+                    <strong>${r.test}</strong>: ${r.passed ? '✓ PASS' : '✗ FAIL'}
+                    <br>${r.message}
+                `;
+                resultsDiv.appendChild(div);
+            });
+
+            // Update summary
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.innerHTML = `
+                <p><strong>Total Tests:</strong> ${results.length}</p>
+                <p style="color: #155724"><strong>Passed:</strong> ${passed}</p>
+                <p style="color: #721c24"><strong>Failed:</strong> ${failed}</p>
+                <p><strong>Success Rate:</strong> ${((passed / results.length) * 100).toFixed(1)}%</p>
+            `;
+
+            // Update test count
+            document.querySelector('.test-count').textContent =
+                `${results.length} tests completed (${passed} passed, ${failed} failed)`;
+        }
+
+        /**
+         * Run a single test
+         */
+        function runTest(name, testFn) {
+            try {
+                const result = testFn();
+                if (result) {
+                    addResult(name, true, result);
+                    passed++;
+                } else {
+                    addResult(name, true, 'Test passed');
+                    passed++;
+                }
+            } catch (e) {
+                addResult(name, false, e.message);
+                failed++;
+            }
+        }
+
+        // Test scenario
+        const testScenario = {
+            version: 1,
+            name: "Test T06 Scenario",
+            description: "Test scenario for Task 06",
+            turn: 1,
+            currentPlayer: "player1",
+            coinQueue: [true, false, true],
+            player1: {
+                points: 0,
+                active: {
+                    cardId: "A1-003",
+                    currentHp: 160,
+                    energy: ["G", "G"],
+                    status: null,
+                    turnPlayed: 0
+                },
+                bench: [],
+                hand: [],
+                deck: [],
+                discard: [],
+                supporterUsedThisTurn: false,
+                retreatedThisTurn: false,
+                energyZone: {
+                    currentEnergy: "G",
+                    nextEnergy: "R",
+                    configuredTypes: ["G", "R"],
+                    usedThisTurn: false
+                },
+                normalAttachUsedThisTurn: false
+            },
+            player2: {
+                points: 0,
+                active: null,
+                bench: [],
+                hand: [],
+                deck: [],
+                discard: [],
+                supporterUsedThisTurn: false,
+                retreatedThisTurn: false,
+                energyZone: {
+                    currentEnergy: null,
+                    nextEnergy: null,
+                    configuredTypes: [],
+                    usedThisTurn: false
+                },
+                normalAttachUsedThisTurn: false
+            },
+            stadium: null,
+            turnEffects: [],
+            log: []
+        };
+
+        // Display test scenario
+        document.getElementById('test-scenario-json').value =
+            JSON.stringify(testScenario, null, 2);
+        document.getElementById('test-scenario-display').textContent =
+            JSON.stringify(testScenario, null, 2);
+
+        /**
+         * Test 1: createInitialState creates valid state
+         */
+        runTest('Test 1: createInitialState creates valid state', () => {
+            const state = createInitialState();
+            if (!isValidState(state)) {
+                throw new Error('State validation failed');
+            }
+            if (state.version !== 1) {
+                throw new Error('Expected version 1');
+            }
+            return `Created state with turn ${state.turn}`;
+        });
+
+        /**
+         * Test 2: cloneState creates independent copy
+         */
+        runTest('Test 2: cloneState creates independent copy', () => {
+            const state = createInitialState();
+            const cloned = cloneState(state);
+
+            // Modify original
+            state.turn = 99;
+
+            // Check clone is unchanged
+            if (cloned.turn !== 0) {
+                throw new Error('Clone was affected by original modification');
+            }
+            return 'Clone is independent from original';
+        });
+
+        /**
+         * Test 3: isValidState validates test scenario
+         */
+        runTest('Test 3: isValidState validates test scenario', () => {
+            if (!isValidState(testScenario)) {
+                throw new Error('Test scenario failed validation');
+            }
+            return 'Test scenario is valid';
+        });
+
+        /**
+         * Test 4: exportState removes metadata
+         */
+        runTest('Test 4: exportState removes metadata', () => {
+            const state = createInitialState();
+            const exported = exportState(state);
+
+            // Check that internal metadata is not exported
+            if (exported.metadata !== undefined) {
+                throw new Error('Metadata should not be exported');
+            }
+            return 'Exported state has no metadata';
+        });
+
+        /**
+         * Test 5: JSON.stringify/parse works for scenarios
+         */
+        runTest('Test 5: JSON.stringify/parse works for scenarios', () => {
+            const json = JSON.stringify(testScenario);
+            const parsed = JSON.parse(json);
+
+            if (!isValidState(parsed)) {
+                throw new Error('Parsed scenario failed validation');
+            }
+            if (parsed.turn !== testScenario.turn) {
+                throw new Error('Turn value changed during JSON roundtrip');
+            }
+            return `Scenario (${json.length} chars) survives JSON roundtrip`;
+        });
+
+        /**
+         * Test 6: State structure matches SPEC.md
+         */
+        runTest('Test 6: State structure matches SPEC.md', () => {
+            const state = createInitialState();
+
+            // Check top-level properties
+            const topLevelProps = ['version', 'name', 'description', 'turn', 'currentPlayer',
+                                  'coinQueue', 'player1', 'player2', 'stadium', 'turnEffects', 'log'];
+            for (const prop of topLevelProps) {
+                if (!(prop in state)) {
+                    throw new Error(`Missing property: ${prop}`);
+                }
+            }
+
+            // Check player structure
+            const playerProps = ['points', 'active', 'bench', 'hand', 'deck', 'discard',
+                                 'supporterUsedThisTurn', 'retreatedThisTurn',
+                                 'energyZone', 'normalAttachUsedThisTurn'];
+            for (const prop of playerProps) {
+                if (!(prop in state.player1)) {
+                    throw new Error(`Player missing property: ${prop}`);
+                }
+            }
+
+            // Check energy zone structure
+            const energyProps = ['currentEnergy', 'nextEnergy', 'configuredTypes', 'usedThisTurn'];
+            for (const prop of energyProps) {
+                if (!(prop in state.player1.energyZone)) {
+                    throw new Error(`Energy zone missing property: ${prop}`);
+                }
+            }
+
+            return 'All required properties present';
+        });
+
+        /**
+         * Test 7: Coin queue structure
+         */
+        runTest('Test 7: Coin queue structure', () => {
+            const state = createInitialState();
+
+            if (!Array.isArray(state.coinQueue)) {
+                throw new Error('Coin queue should be an array');
+            }
+            if (state.coinQueue.length === 0) {
+                throw new Error('Coin queue should not be empty');
+            }
+            if (!state.coinQueue.every(c => typeof c === 'boolean')) {
+                throw new Error('All coins should be boolean');
+            }
+            return `Coin queue has ${state.coinQueue.length} coins`;
+        });
+
+        /**
+         * Test 8: Player constraints (bench max 3)
+         */
+        runTest('Test 8: Player constraints (bench max 3)', () => {
+            const state = createInitialState();
+
+            // Add 3 Pokemon to bench (valid)
+            state.player1.bench = [
+                { cardId: 'A1-001', currentHp: 80, energy: [], status: null, turnPlayed: 0 },
+                { cardId: 'A1-002', currentHp: 80, energy: [], status: null, turnPlayed: 0 },
+                { cardId: 'A1-003', currentHp: 160, energy: [], status: null, turnPlayed: 0 }
+            ];
+
+            if (!isValidState(state)) {
+                throw new Error('Valid bench configuration failed validation');
+            }
+
+            // Add 4th Pokemon (invalid)
+            state.player1.bench.push({
+                cardId: 'A1-004', currentHp: 90, energy: [], status: null, turnPlayed: 0
+            });
+
+            if (isValidState(state)) {
+                throw new Error('Overfull bench should fail validation');
+            }
+            return 'Bench size constraint enforced';
+        });
+
+        /**
+         * Test 9: Player constraints (hand max 10)
+         */
+        runTest('Test 9: Player constraints (hand max 10)', () => {
+            const state = createInitialState();
+
+            // Add 10 cards to hand (valid)
+            state.player1.hand = Array(10).fill('A1-001');
+
+            if (!isValidState(state)) {
+                throw new Error('Valid hand configuration failed validation');
+            }
+
+            // Add 11th card (invalid)
+            state.player1.hand.push('A1-002');
+
+            if (isValidState(state)) {
+                throw new Error('Overfull hand should fail validation');
+            }
+            return 'Hand size constraint enforced';
+        });
+
+        /**
+         * Test 10: Player constraints (deck max 20)
+         */
+        runTest('Test 10: Player constraints (deck max 20)', () => {
+            const state = createInitialState();
+
+            // Add 20 cards to deck (valid)
+            state.player1.deck = Array(20).fill('A1-001');
+
+            if (!isValidState(state)) {
+                throw new Error('Valid deck configuration failed validation');
+            }
+
+            // Add 21st card (invalid)
+            state.player1.deck.push('A1-002');
+
+            if (isValidState(state)) {
+                throw new Error('Overfull deck should fail validation');
+            }
+            return 'Deck size constraint enforced';
+        });
+
+        /**
+         * Test 11: Active Pokemon validation
+         */
+        runTest('Test 11: Active Pokemon validation', () => {
+            const state = createInitialState();
+
+            // Valid active Pokemon
+            state.player1.active = {
+                cardId: 'A1-003',
+                currentHp: 160,
+                energy: ['G', 'G'],
+                status: null,
+                turnPlayed: 0
+            };
+
+            if (!isValidState(state)) {
+                throw new Error('Valid active Pokemon failed validation');
+            }
+
+            // Negative HP (invalid)
+            state.player1.active.currentHp = -10;
+
+            if (isValidState(state)) {
+                throw new Error('Negative HP should fail validation');
+            }
+            return 'Active Pokemon validation works';
+        });
+
+        /**
+         * Test 12: Energy zone validation
+         */
+        runTest('Test 12: Energy zone validation', () => {
+            const state = createInitialState();
+
+            // Valid energy zone
+            state.player1.energyZone = {
+                currentEnergy: 'G',
+                nextEnergy: 'R',
+                configuredTypes: ['G', 'R'],
+                usedThisTurn: false
+            };
+
+            if (!isValidState(state)) {
+                throw new Error('Valid energy zone failed validation');
+            }
+
+            return 'Energy zone validation works';
+        });
+
+        /**
+         * Test 13: Boolean flags validation
+         */
+        runTest('Test 13: Boolean flags validation', () => {
+            const state = createInitialState();
+
+            // Valid boolean flags
+            state.player1.supporterUsedThisTurn = true;
+            state.player1.retreatedThisTurn = true;
+            state.player1.energyZone.usedThisTurn = true;
+            state.player1.normalAttachUsedThisTurn = true;
+
+            if (!isValidState(state)) {
+                throw new Error('Valid boolean flags failed validation');
+            }
+
+            // Invalid flag type
+            state.player1.supporterUsedThisTurn = 'yes';
+
+            if (isValidState(state)) {
+                throw new Error('Non-boolean flag should fail validation');
+            }
+            return 'Boolean flag validation works';
+        });
+
+        /**
+         * Test 14: Turn number validation
+         */
+        runTest('Test 14: Turn number validation', () => {
+            const state = createInitialState();
+
+            // Valid turn numbers
+            state.turn = 0;
+            if (!isValidState(state)) {
+                throw new Error('Turn 0 should be valid');
+            }
+
+            state.turn = 10;
+            if (!isValidState(state)) {
+                throw new Error('Turn 10 should be valid');
+            }
+
+            // Negative turn (invalid)
+            state.turn = -1;
+            if (isValidState(state)) {
+                throw new Error('Negative turn should fail validation');
+            }
+            return 'Turn number validation works';
+        });
+
+        /**
+         * Test 15: Current player validation
+         */
+        runTest('Test 15: Current player validation', () => {
+            const state = createInitialState();
+
+            // Valid current players
+            state.currentPlayer = 'player1';
+            if (!isValidState(state)) {
+                throw new Error('player1 should be valid');
+            }
+
+            state.currentPlayer = 'player2';
+            if (!isValidState(state)) {
+                throw new Error('player2 should be valid');
+            }
+
+            // Invalid current player
+            state.currentPlayer = 'player3';
+            if (isValidState(state)) {
+                throw new Error('Invalid player should fail validation');
+            }
+            return 'Current player validation works';
+        });
+
+        /**
+         * Test 16: Test scenario with full board
+         */
+        runTest('Test 16: Test scenario with full board', () => {
+            const scenario = {
+                version: 1,
+                name: "Full Board Test",
+                description: "Test with full bench",
+                turn: 5,
+                currentPlayer: "player1",
+                coinQueue: [true, false, true, false, true],
+                player1: {
+                    points: 1,
+                    active: {
+                        cardId: "A1-003",
+                        currentHp: 80,
+                        energy: ["G", "G", "G"],
+                        status: null,
+                        turnPlayed: 0
+                    },
+                    bench: [
+                        { cardId: "A1-001", currentHp: 80, energy: [], status: null, turnPlayed: 1 },
+                        { cardId: "A1-002", currentHp: 80, energy: [], status: null, turnPlayed: 1 },
+                        { cardId: "A1-004", currentHp: 90, energy: [], status: null, turnPlayed: 2 }
+                    ],
+                    hand: ["A1-005", "A1-006"],
+                    deck: Array(18).fill('A1-007'),
+                    discard: [],
+                    supporterUsedThisTurn: false,
+                    retreatedThisTurn: false,
+                    energyZone: {
+                        currentEnergy: "G",
+                        nextEnergy: "R",
+                        configuredTypes: ["G", "R"],
+                        usedThisTurn: false
+                    },
+                    normalAttachUsedThisTurn: false
+                },
+                player2: {
+                    points: 0,
+                    active: {
+                        cardId: "A1-006",
+                        currentHp: 140,
+                        energy: ["R"],
+                        status: "poison",
+                        turnPlayed: 0
+                    },
+                    bench: [],
+                    hand: Array(5).fill('A1-008'),
+                    deck: Array(15).fill('A1-009'),
+                    discard: ["A1-010"],
+                    supporterUsedThisTurn: false,
+                    retreatedThisTurn: false,
+                    energyZone: {
+                        currentEnergy: "R",
+                        nextEnergy: "W",
+                        configuredTypes: ["R", "W"],
+                        usedThisTurn: false
+                    },
+                    normalAttachUsedThisTurn: false
+                },
+                stadium: null,
+                turnEffects: [],
+                log: []
+            };
+
+            if (!isValidState(scenario)) {
+                throw new Error('Full board scenario failed validation');
+            }
+            return 'Full board scenario is valid';
+        });
+
+        /**
+         * Test 17: Test scenario with KO
+         */
+        runTest('Test 17: Test scenario with KO', () => {
+            const scenario = {
+                version: 1,
+                name: "KO Test",
+                description: "Test with KO'd Pokemon",
+                turn: 3,
+                currentPlayer: "player1",
+                coinQueue: [true, false],
+                player1: {
+                    points: 1,
+                    active: {
+                        cardId: "A1-003",
+                        currentHp: 0,  // KO'd
+                        energy: ["G"],
+                        status: null,
+                        turnPlayed: 0
+                    },
+                    bench: [],
+                    hand: [],
+                    deck: Array(20).fill('A1-001'),
+                    discard: [],
+                    supporterUsedThisTurn: false,
+                    retreatedThisTurn: false,
+                    energyZone: {
+                        currentEnergy: "G",
+                        nextEnergy: null,
+                        configuredTypes: ["G"],
+                        usedThisTurn: false
+                    },
+                    normalAttachUsedThisTurn: false
+                },
+                player2: {
+                    points: 0,
+                    active: null,
+                    bench: [],
+                    hand: [],
+                    deck: Array(20).fill('A1-001'),
+                    discard: [],
+                    supporterUsedThisTurn: false,
+                    retreatedThisTurn: false,
+                    energyZone: {
+                        currentEnergy: null,
+                        nextEnergy: null,
+                        configuredTypes: [],
+                        usedThisTurn: false
+                    },
+                    normalAttachUsedThisTurn: false
+                },
+                stadium: null,
+                turnEffects: [],
+                log: []
+            };
+
+            if (!isValidState(scenario)) {
+                throw new Error('KO scenario failed validation');
+            }
+            return 'KO scenario is valid';
+        });
+
+        /**
+         * Test 18: Status effects validation
+         */
+        runTest('Test 18: Status effects validation', () => {
+            const validStatuses = ['poison', 'poison+', 'burn', 'sleep', 'paralysis', 'confusion', null];
+
+            const state = createInitialState();
+            state.player1.active = {
+                cardId: "A1-003",
+                currentHp: 160,
+                energy: [],
+                status: null,
+                turnPlayed: 0
+            };
+
+            // Test all valid statuses
+            for (const status of validStatuses) {
+                state.player1.active.status = status;
+                if (!isValidState(state)) {
+                    throw new Error(`Status "${status}" should be valid`);
+                }
+            }
+
+            // Test invalid status
+            state.player1.active.status = 'invalid_status';
+            if (isValidState(state)) {
+                throw new Error('Invalid status should fail validation');
+            }
+            return 'Status validation works';
+        });
+
+        /**
+         * Test 19: Energy array validation
+         */
+        runTest('Test 19: Energy array validation', () => {
+            const validTypes = ['G', 'R', 'W', 'L', 'P', 'F', 'D', 'M', 'C'];
+
+            const state = createInitialState();
+            state.player1.active = {
+                cardId: "A1-003",
+                currentHp: 160,
+                energy: [],
+                status: null,
+                turnPlayed: 0
+            };
+
+            // Test empty energy
+            if (!isValidState(state)) {
+                throw new Error('Empty energy should be valid');
+            }
+
+            // Test single energy
+            state.player1.active.energy = ['G'];
+            if (!isValidState(state)) {
+                throw new Error('Single energy should be valid');
+            }
+
+            // Test multiple energies
+            state.player1.active.energy = ['G', 'R', 'W', 'L'];
+            if (!isValidState(state)) {
+                throw new Error('Multiple energies should be valid');
+            }
+
+            // Test all valid types
+            for (const type of validTypes) {
+                state.player1.active.energy = [type];
+                if (!isValidState(state)) {
+                    throw new Error(`Energy type "${type}" should be valid`);
+                }
+            }
+
+            // Test invalid energy type
+            state.player1.active.energy = ['X'];
+            if (isValidState(state)) {
+                throw new Error('Invalid energy type should fail validation');
+            }
+            return 'Energy array validation works';
+        });
+
+        /**
+         * Test 20: Scenario name and description
+         */
+        runTest('Test 20: Scenario name and description', () => {
+            const state = createInitialState();
+
+            state.name = "My Awesome Scenario";
+            state.description = "A test scenario with a description";
+
+            if (!isValidState(state)) {
+                throw new Error('Scenario with name/description failed validation');
+            }
+            return 'Scenario name and description work';
+        });
+
+        // Display results after all tests
+        displayResults();
+    </script>
+
+    <script>
+        function copyToClipboard() {
+            const textarea = document.getElementById('test-scenario-json');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Test scenario copied to clipboard!');
+        }
+
+        function openSimulator() {
+            window.open('/', '_blank');
+        }
+    </script>
+</body>
+</html>

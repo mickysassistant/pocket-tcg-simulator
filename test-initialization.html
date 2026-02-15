@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Simulator Initialization</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+        }
+        .pass { border-left: 5px solid #4ade80; background: rgba(74, 222, 128, 0.1); }
+        .fail { border-left: 5px solid #f87171; background: rgba(248, 113, 113, 0.1); }
+        .loading { border-left: 5px solid #fbbf24; background: rgba(251, 191, 36, 0.1); }
+        pre {
+            background: #0f0f1a;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simulator Initialization Test</h1>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function addTest(name, status, message) {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            div.innerHTML = `<strong>${name}</strong>: ${message}`;
+            results.appendChild(div);
+        }
+
+        // Test 1: Check if we can load main.js as a module
+        async function testModuleLoad() {
+            addTest('Module Load', 'loading', 'Loading js/main.js...');
+            try {
+                const module = await import('./js/main.js');
+                addTest('Module Load', 'pass', 'Module loaded successfully');
+                return module;
+            } catch (e) {
+                addTest('Module Load', 'fail', `Failed: ${e.message}`);
+                return null;
+            }
+        }
+
+        // Test 2: Check if functions exist
+        async function testFunctions(module) {
+            if (!module) {
+                addTest('Functions Check', 'fail', 'Skipped - module not loaded');
+                return;
+            }
+            const functions = ['loadCards', 'getCard', 'createInitialState'];
+            const missing = functions.filter(fn => typeof module[fn] !== 'function');
+            if (missing.length === 0) {
+                addTest('Functions Check', 'pass', 'All required functions exist');
+            } else {
+                addTest('Functions Check', 'fail', `Missing functions: ${missing.join(', ')}`);
+            }
+        }
+
+        // Test 3: Check i18n files
+        async function testI18n() {
+            addTest('i18n Files', 'loading', 'Checking i18n files...');
+            try {
+                const [es, en] = await Promise.all([
+                    fetch('js/i18n/es.json').then(r => r.json()),
+                    fetch('js/i18n/en.json').then(r => r.json())
+                ]);
+                addTest('i18n Files', 'pass', `Loaded ES (${Object.keys(es).length} keys) and EN (${Object.keys(en).length} keys)`);
+            } catch (e) {
+                addTest('i18n Files', 'fail', `Failed: ${e.message}`);
+            }
+        }
+
+        // Test 4: Check card data
+        async function testCardData() {
+            addTest('Card Data', 'loading', 'Checking card data access...');
+            try {
+                const response = await fetch('/data/A1.json');
+                const cards = await response.json();
+                addTest('Card Data', 'pass', `Loaded ${cards.length} cards from A1.json`);
+            } catch (e) {
+                addTest('Card Data', 'fail', `Failed: ${e.message}`);
+            }
+        }
+
+        // Run all tests
+        async function runTests() {
+            await testModuleLoad();
+            await testFunctions();
+            await testI18n();
+            await testCardData();
+        }
+
+        runTests();
+    </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>T08 Test: Drag & Drop + Move Validation</title>
+    <style>
+        body { font-family: system-ui; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .test-section { background: white; padding: 16px; border-radius: 8px; margin: 10px 0; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        button { padding: 8px 16px; margin: 4px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #4CAF50; color: white; }
+        #results { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 4px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; font-size: 12px; }
+        .pass { color: #4CAF50; } .fail { color: #f44336; } .info { color: #90CAF9; }
+    </style>
+</head>
+<body>
+<h1>T08 Test: Drag &amp; Drop + Move Validation</h1>
+<div class="test-section">
+    <button id="run-btn" class="btn-primary">Run All Tests</button>
+</div>
+<div class="test-section"><div id="results">Click Run...</div></div>
+
+<script type="module">
+import {
+    createInitialState, cloneState
+} from './js/engine/game-state.js';
+import {
+    MOVE,
+    canPlayToActive, canPlayToBench, canAttachEnergy, canRetreat, canEvolve,
+    executePlayToActive, executePlayToBench, executeAttachEnergy, executeRetreat, executeEvolve
+} from './js/engine/moves.js';
+import { loadCards, getCard } from './js/data/card-loader.js';
+
+const R = document.getElementById('results');
+let passed = 0, failed = 0;
+
+function log(msg, cls='info') { R.innerHTML += `<span class="${cls}">${msg}</span>\n`; }
+function ok(cond, msg) {
+    if (cond) { passed++; log('✓ ' + msg, 'pass'); }
+    else      { failed++; log('✗ ' + msg, 'fail'); }
+}
+
+async function run() {
+    R.innerHTML = ''; passed = 0; failed = 0;
+    log('Loading cards...');
+    await loadCards();
+    log('Cards loaded.\n');
+
+    // helpers
+    function mkState() { return createInitialState(); }
+    const bulbasaur = getCard('A1-001'); // Basic Grass
+
+    // ========== canPlayToActive ==========
+    log('=== canPlayToActive ===');
+    {
+        const s = mkState();
+        s.player1.hand = ['A1-001'];
+        ok(canPlayToActive(s, 'player1', 0).valid, 'Valid when active empty & card in hand');
+        ok(!canPlayToActive(s, 'player1', 5).valid, 'Invalid hand index');
+        s.player1.active = { cardId: 'A1-001', currentHp: 70, energy: [], status: null, turnPlayed: 0 };
+        ok(!canPlayToActive(s, 'player1', 0).valid, 'Invalid when active occupied');
+    }
+
+    // ========== canPlayToBench ==========
+    log('\n=== canPlayToBench ===');
+    {
+        const s = mkState();
+        s.player1.hand = ['A1-001'];
+        ok(canPlayToBench(s, 'player1', 0).valid, 'Valid when bench has space');
+        s.player1.bench = [{},{},{}]; // 3 = max
+        ok(!canPlayToBench(s, 'player1', 0).valid, 'Invalid when bench full');
+    }
+
+    // ========== canAttachEnergy ==========
+    log('\n=== canAttachEnergy ===');
+    {
+        const s = mkState();
+        s.turn = 0;
+        ok(!canAttachEnergy(s, 'player1').valid, 'No energy on turn 0 going first');
+        s.player2.energyZone.currentEnergy = 'W';
+        ok(canAttachEnergy(s, 'player2').valid, 'Player2 CAN attach on turn 0');
+        s.player2.energyZone.usedThisTurn = true;
+        ok(!canAttachEnergy(s, 'player2').valid, 'Blocked if already used');
+    }
+
+    // ========== canRetreat ==========
+    log('\n=== canRetreat ===');
+    {
+        const s = mkState();
+        s.player1.active = { cardId: 'A1-001', currentHp: 70, energy: ['G'], status: null, turnPlayed: 0 };
+        s.player1.bench = [{ cardId: 'A1-002', currentHp: 60, energy: [], status: null, turnPlayed: 0 }];
+        ok(canRetreat(s, 'player1', 0).valid, 'Valid retreat');
+        s.player1.retreatedThisTurn = true;
+        ok(!canRetreat(s, 'player1', 0).valid, 'Cannot retreat twice');
+        s.player1.retreatedThisTurn = false;
+        s.player1.active.status = 'sleep';
+        ok(!canRetreat(s, 'player1', 0).valid, 'Cannot retreat while asleep');
+        s.player1.active.status = 'paralysis';
+        ok(!canRetreat(s, 'player1', 0).valid, 'Cannot retreat while paralyzed');
+    }
+
+    // ========== canEvolve ==========
+    log('\n=== canEvolve ===');
+    {
+        const s = mkState();
+        s.turn = 0;
+        s.player1.hand = ['A1-002'];
+        s.player1.active = { cardId: 'A1-001', currentHp: 70, energy: [], status: null, turnPlayed: 0 };
+        ok(!canEvolve(s, 'player1', 0, 'active').valid, 'No evolve on turn 0/1');
+        s.turn = 2;
+        ok(canEvolve(s, 'player1', 0, 'active').valid, 'Can evolve on turn 2+');
+        s.player1.active.turnPlayed = 2;
+        ok(!canEvolve(s, 'player1', 0, 'active').valid, 'Cannot evolve same turn played');
+        s.player1.active.turnPlayed = 0;
+        s.player1.active.lastEvolved = 2;
+        ok(!canEvolve(s, 'player1', 0, 'active').valid, 'Cannot evolve twice same turn');
+    }
+
+    // ========== executePlayToActive ==========
+    log('\n=== executePlayToActive ===');
+    {
+        const s = mkState();
+        s.player1.hand = ['A1-001'];
+        const ns = executePlayToActive(s, 'player1', 0, bulbasaur);
+        ok(ns.player1.active !== null, 'Active now occupied');
+        ok(ns.player1.active.cardId === 'A1-001', 'Correct card');
+        ok(ns.player1.active.currentHp === bulbasaur.hp, 'HP set from card data');
+        ok(ns.player1.hand.length === 0, 'Card removed from hand');
+        ok(ns.log.length > s.log.length, 'Log entry added');
+    }
+
+    // ========== executePlayToBench ==========
+    log('\n=== executePlayToBench ===');
+    {
+        const s = mkState();
+        s.player1.hand = ['A1-001'];
+        const ns = executePlayToBench(s, 'player1', 0, bulbasaur);
+        ok(ns.player1.bench.length === 1, 'Bench has 1 Pokemon');
+        ok(ns.player1.hand.length === 0, 'Card removed from hand');
+    }
+
+    // ========== executeAttachEnergy ==========
+    log('\n=== executeAttachEnergy ===');
+    {
+        const s = mkState();
+        s.turn = 1;
+        s.player1.energyZone.currentEnergy = 'G';
+        s.player1.active = { cardId: 'A1-001', currentHp: 70, energy: [], status: null, turnPlayed: 0 };
+        const ns = executeAttachEnergy(s, 'player1', 'active');
+        ok(ns.player1.active.energy.length === 1, 'Energy attached');
+        ok(ns.player1.active.energy[0] === 'G', 'Correct energy type');
+        ok(ns.player1.energyZone.currentEnergy === null, 'Energy zone cleared');
+        ok(ns.player1.energyZone.usedThisTurn === true, 'Flag set');
+    }
+
+    // ========== executeRetreat ==========
+    log('\n=== executeRetreat ===');
+    {
+        const s = mkState();
+        s.player1.active = { cardId: 'A1-001', currentHp: 70, energy: ['G','G'], status: 'poison', turnPlayed: 0 };
+        s.player1.bench = [{ cardId: 'A1-002', currentHp: 60, energy: [], status: null, turnPlayed: 0 }];
+        const ns = executeRetreat(s, 'player1', 0, 1, [0]); // discard 1 energy
+        ok(ns.player1.active.cardId === 'A1-002', 'Bench mon now active');
+        ok(ns.player1.bench[0].cardId === 'A1-001', 'Old active now bench');
+        ok(ns.player1.bench[0].status === null, 'Status cured on retreat');
+        ok(ns.player1.bench[0].energy.length === 1, 'Energy discarded for cost');
+        ok(ns.player1.retreatedThisTurn === true, 'Retreat flag set');
+    }
+
+    // ========== executeEvolve ==========
+    log('\n=== executeEvolve ===');
+    {
+        const s = mkState();
+        s.turn = 3;
+        s.player1.hand = ['A1-002'];
+        s.player1.active = { cardId: 'A1-001', currentHp: 50, energy: ['G'], status: 'poison', turnPlayed: 0 };
+        const evoCard = getCard('A1-002') || { hp: 90 }; // Ivysaur or fallback
+        const ns = executeEvolve(s, 'player1', 0, 'active', evoCard);
+        ok(ns.player1.active.cardId === 'A1-002', 'Evolution applied');
+        ok(ns.player1.active.status === null, 'Status cured');
+        ok(ns.player1.active.energy.length === 1, 'Energy preserved');
+        ok(ns.player1.active.lastEvolved === 3, 'lastEvolved set');
+        ok(ns.player1.hand.length === 0, 'Evo card removed from hand');
+    }
+
+    // Summary
+    log(`\n========================================`);
+    log(`Total: ${passed + failed} | ✓ ${passed} | ✗ ${failed}`, failed === 0 ? 'pass' : 'fail');
+}
+
+document.getElementById('run-btn').addEventListener('click', run);
+</script>
+</body>
+</html>

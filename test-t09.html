@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>T09 Tests - Damage Calculation + Weakness</title>
+    <style>
+        body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
+        .pass { color: #4CAF50; }
+        .fail { color: #f44336; }
+        .section { margin: 15px 0 5px; font-weight: bold; color: #7986cb; font-size: 16px; }
+        .result { margin-left: 20px; }
+        #summary { margin-top: 20px; padding: 15px; border-radius: 8px; font-size: 18px; }
+        .summary-pass { background: #1b5e20; }
+        .summary-fail { background: #b71c1c; }
+    </style>
+</head>
+<body>
+<h1>T09: Damage Calculation + Weakness</h1>
+<div id="results"></div>
+<div id="summary"></div>
+
+<script type="module">
+import { loadCards, getCard } from './js/data/card-loader.js';
+import {
+    createInitialState,
+    createPlayer,
+    createPokemon,
+    cloneState,
+    calculateDamage,
+    executeAttack,
+    canAttack,
+    applyDamage
+} from './js/engine/game-state.js';
+
+const results = document.getElementById('results');
+const summary = document.getElementById('summary');
+let passed = 0, failed = 0;
+
+function assert(condition, msg) {
+    if (condition) {
+        passed++;
+        results.innerHTML += `<div class="result pass">✅ ${msg}</div>`;
+    } else {
+        failed++;
+        results.innerHTML += `<div class="result fail">❌ ${msg}</div>`;
+    }
+}
+
+function section(title) {
+    results.innerHTML += `<div class="section">${title}</div>`;
+}
+
+async function runTests() {
+    await loadCards();
+
+    const bulbasaur = getCard('A1-001');   // Grass, 70 HP, Vine Whip 40 (GC)
+    const charmander = getCard('A1-033');  // Fire, 60 HP, weak to Water, Ember 30 (R)
+    const squirtle = getCard('A1-053');    // Water, 60 HP, weak to Lightning, Water Gun 20 (W)
+
+    // ========================================================================
+    section('1. calculateDamage() - Basic');
+    // ========================================================================
+
+    // Bulbasaur (Grass) attacks Charmander (Fire, weak to Water) - no weakness
+    const dmg1 = calculateDamage(bulbasaur, charmander, 0);
+    assert(dmg1 === 40, `Bulbasaur → Charmander = 40 (no weakness), got ${dmg1}`);
+
+    // Charmander (Fire) attacks Bulbasaur (Grass, weak to Fire) - weakness +20
+    const dmg2 = calculateDamage(charmander, bulbasaur, 0);
+    assert(dmg2 === 50, `Charmander → Bulbasaur = 50 (30 + weakness 20), got ${dmg2}`);
+
+    // Squirtle (Water) attacks Charmander (Fire, weak to Water) - weakness +20
+    const dmg3 = calculateDamage(squirtle, charmander, 0);
+    assert(dmg3 === 40, `Squirtle → Charmander = 40 (20 + weakness 20), got ${dmg3}`);
+
+    // Squirtle (Water) attacks Bulbasaur (Grass, weak to Fire) - no weakness
+    const dmg4 = calculateDamage(squirtle, bulbasaur, 0);
+    assert(dmg4 === 20, `Squirtle → Bulbasaur = 20 (no weakness), got ${dmg4}`);
+
+    // ========================================================================
+    section('2. calculateDamage() - Modifiers');
+    // ========================================================================
+
+    // Giovanni +10
+    const dmg5 = calculateDamage(bulbasaur, charmander, 0, { giovanni: 10 });
+    assert(dmg5 === 50, `Bulbasaur → Charmander + Giovanni = 50 (40 + 10), got ${dmg5}`);
+
+    // Giovanni +10 + weakness +20
+    const dmg6 = calculateDamage(charmander, bulbasaur, 0, { giovanni: 10 });
+    assert(dmg6 === 60, `Charmander → Bulbasaur + Giovanni = 60 (30 + 20 + 10), got ${dmg6}`);
+
+    // Other modifier
+    const dmg7 = calculateDamage(bulbasaur, charmander, 0, { other: 20 });
+    assert(dmg7 === 60, `Bulbasaur → Charmander + other(20) = 60 (40 + 20), got ${dmg7}`);
+
+    // Combined: Giovanni + other + weakness
+    const dmg8 = calculateDamage(squirtle, charmander, 0, { giovanni: 10, other: 5 });
+    assert(dmg8 === 55, `Squirtle → Charmander + Giovanni + other = 55 (20 + 20 + 10 + 5), got ${dmg8}`);
+
+    // ========================================================================
+    section('3. calculateDamage() - Edge Cases');
+    // ========================================================================
+
+    // Invalid attack index
+    const dmg9 = calculateDamage(bulbasaur, charmander, 99);
+    assert(dmg9 === 0, `Invalid attack index returns 0, got ${dmg9}`);
+
+    // No modifiers object
+    const dmg10 = calculateDamage(bulbasaur, charmander, 0);
+    assert(dmg10 === 40, `No modifiers still calculates base + weakness, got ${dmg10}`);
+
+    // ========================================================================
+    section('4. canAttack() - Energy Check');
+    // ========================================================================
+
+    // Bulbasaur needs [G, C] to use Vine Whip
+    let st = createInitialState();
+    st.player1.active = { cardId: 'A1-001', currentHp: 70, energy: ['G', 'C'], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+    st.player2.active = { cardId: 'A1-033', currentHp: 60, energy: [], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+
+    assert(canAttack(st, 0, getCard) === true, 'Bulbasaur with [G,C] can use Vine Whip');
+
+    // Not enough energy
+    st.player1.active.energy = ['G'];
+    assert(canAttack(st, 0, getCard) === false, 'Bulbasaur with only [G] cannot use Vine Whip');
+
+    // Colorless satisfied by any type
+    st.player1.active.energy = ['G', 'R'];
+    assert(canAttack(st, 0, getCard) === true, 'Bulbasaur with [G,R] can use Vine Whip (R satisfies C)');
+
+    // No active
+    st.player1.active = null;
+    assert(canAttack(st, 0, getCard) === false, 'No active = cannot attack');
+
+    // ========================================================================
+    section('5. applyDamage()');
+    // ========================================================================
+
+    let st2 = createInitialState();
+    st2.player1.active = { cardId: 'A1-001', currentHp: 70, energy: [], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+    st2.player2.active = { cardId: 'A1-033', currentHp: 60, energy: [], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+
+    // Apply 20 damage
+    let st3 = applyDamage(st2, 'player2', 20, 'test');
+    assert(st3.player2.active.currentHp === 40, `60 - 20 = 40 HP, got ${st3.player2.active.currentHp}`);
+
+    // Apply KO damage
+    let st4 = applyDamage(st2, 'player2', 100, 'test-ko');
+    assert(st4.player2.active === null, 'KO removes active Pokemon');
+    assert(st4.player1.points >= 1, `KO awards points to opponent, got ${st4.player1.points}`);
+
+    // Immutability: original state unchanged
+    assert(st2.player2.active.currentHp === 60, `Original state unchanged: ${st2.player2.active.currentHp}`);
+
+    // ========================================================================
+    section('6. executeAttack() - Full Flow');
+    // ========================================================================
+
+    let st5 = createInitialState();
+    st5.turn = 2;
+    st5.currentPlayer = 'player1';
+    st5.player1.active = { cardId: 'A1-001', currentHp: 70, energy: ['G', 'C'], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+    st5.player1.attackedThisTurn = false;
+    st5.player2.active = { cardId: 'A1-033', currentHp: 60, energy: ['R'], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+
+    let st6 = executeAttack(st5, 0, getCard);
+    // Bulbasaur Vine Whip = 40 damage (no weakness: Grass vs Fire)
+    assert(st6.player2.active.currentHp === 20, `After Vine Whip: 60 - 40 = 20 HP, got ${st6.player2.active?.currentHp}`);
+    assert(st6.player1.attackedThisTurn === true, 'attackedThisTurn set to true');
+
+    // Weakness attack: Squirtle Water Gun vs Charmander
+    let st7 = createInitialState();
+    st7.turn = 2;
+    st7.currentPlayer = 'player1';
+    st7.player1.active = { cardId: 'A1-053', currentHp: 60, energy: ['W'], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+    st7.player1.attackedThisTurn = false;
+    st7.player2.active = { cardId: 'A1-033', currentHp: 60, energy: ['R'], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+
+    let st8 = executeAttack(st7, 0, getCard);
+    // Water Gun 20 + weakness 20 = 40 total
+    assert(st8.player2.active.currentHp === 20, `After Water Gun (weakness): 60 - 40 = 20 HP, got ${st8.player2.active?.currentHp}`);
+
+    // Attack that causes KO
+    let st9 = createInitialState();
+    st9.turn = 5;
+    st9.currentPlayer = 'player1';
+    st9.player1.active = { cardId: 'A1-001', currentHp: 70, energy: ['G', 'C'], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+    st9.player1.attackedThisTurn = false;
+    st9.player2.active = { cardId: 'A1-033', currentHp: 30, energy: ['R'], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+
+    let st10 = executeAttack(st9, 0, getCard);
+    // Vine Whip 40 vs 30 HP = KO
+    assert(st10.player2.active === null, 'KO: active Pokemon removed');
+    assert(st10.player1.points >= 1, `KO awards points, got ${st10.player1.points}`);
+
+    // ========================================================================
+    section('7. hasEnoughEnergy() via canAttack');
+    // ========================================================================
+
+    // Empty energy cost (some attacks have no cost)
+    let st11 = createInitialState();
+    st11.player1.active = { cardId: 'A1-001', currentHp: 70, energy: [], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+    st11.player2.active = { cardId: 'A1-033', currentHp: 60, energy: [], status: null, turnPlayed: 0, lastEvolved: null, tool: null, effects: [] };
+
+    // Bulbasaur needs [G, C], has []
+    assert(canAttack(st11, 0, getCard) === false, 'Empty energy cannot attack');
+
+    // Excess energy is fine
+    st11.player1.active.energy = ['G', 'C', 'G', 'W'];
+    assert(canAttack(st11, 0, getCard) === true, 'Excess energy still works');
+
+    // ========================================================================
+    // Summary
+    // ========================================================================
+    summary.textContent = `Results: ${passed} passed, ${failed} failed (${passed + failed} total)`;
+    summary.className = failed === 0 ? 'summary-pass' : 'summary-fail';
+}
+
+runTests().catch(e => {
+    results.innerHTML += `<div class="fail">❌ Error: ${e.message}</div>`;
+    console.error(e);
+});
+</script>
+</body>
+</html>

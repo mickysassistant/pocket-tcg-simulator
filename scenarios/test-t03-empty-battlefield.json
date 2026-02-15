@@ -1,0 +1,26 @@
+{
+  "name": "Test T03: Empty Battlefield Rendering",
+  "description": "Test scenario to verify that the empty battlefield renders correctly with all zones visible and properly positioned.",
+  "taskId": "T03",
+  "testDate": "2026-02-11",
+  "successCriteria": {
+    "battlefieldLayout": "PASS - HTML structure matches DEVGUIDE.md specification",
+    "zonesVisible": "PASS - All zones have visible borders/backgrounds",
+    "responsive": "PASS - Uses flexbox and relative units (vh/vw)",
+    "actionLogScrollable": "PASS - Action log is separate aside with overflow-y: auto"
+  },
+  "verificationSteps": [
+    "1. Navigate to http://192.168.0.29:3000",
+    "2. Verify battlefield displays with player zones (top/bottom)",
+    "3. Verify center zone with active zones and stadium zone",
+    "4. Verify all zones have visible borders (dashed, 2px)",
+    "5. Verify action log on right side is scrollable",
+    "6. Verify controls panel at bottom"
+  ],
+  "expectedZones": {
+    "player1": ["active", "bench", "hand", "deck", "discard", "energy"],
+    "player2": ["active", "bench", "hand", "deck", "discard", "energy"],
+    "center": ["stadium"]
+  },
+  "notes": "HTML structure is complete. All CSS files load successfully (200 status). Battlefield uses flexbox for responsive layout. Zones have visible dashed borders with 30-50% opacity."
+}

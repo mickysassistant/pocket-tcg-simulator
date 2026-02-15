@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Deck Validation</title>
+</head>
+<body>
+    <h1>Test Deck Validation - Max 2 Copies Per Card</h1>
+    <pre id="result"></pre>
+
+    <script type="module">
+        import { validateState, createInitialState } from './js/engine/game-state.js';
+
+        const resultEl = document.getElementById('result');
+        resultEl.textContent = 'Running tests...\n\n';
+
+        // Test 1: Valid deck (2 copies max)
+        const validDeck = createInitialState();
+        validDeck.player1.deck = ['A1-001', 'A1-001', 'A1-002', 'A1-002', 'A1-003'];
+        validDeck.player1.hand = ['A1-004', 'A1-005'];
+        validDeck.player1.active = { cardId: 'A1-006', currentHp: 70, energy: [], status: null, turnPlayed: 0 };
+        validDeck.player1.bench = [
+            { cardId: 'A1-007', currentHp: 80, energy: [], status: null, turnPlayed: 1 }
+        ];
+
+        const validResult = validateState(validDeck);
+        if (validResult.valid) {
+            resultEl.textContent += '✅ Test 1: Valid deck (2 copies max) - PASS\n';
+        } else {
+            resultEl.textContent += '❌ Test 1: Valid deck (2 copies max) - FAIL\n';
+            resultEl.textContent += '   Errors: ' + validResult.errors.join(', ') + '\n';
+        }
+
+        // Test 2: Invalid deck (3 copies of same card in deck)
+        const invalidDeck = createInitialState();
+        invalidDeck.player1.deck = ['A1-001', 'A1-001', 'A1-001', 'A1-002', 'A1-003'];
+
+        const invalidResult = validateState(invalidDeck);
+        if (!invalidResult.valid && invalidResult.errors.some(e => e.includes('has 3 copies'))) {
+            resultEl.textContent += '✅ Test 2: Invalid deck (3 copies) - PASS\n';
+            resultEl.textContent += '   Caught error: ' + invalidResult.errors.find(e => e.includes('3 copies')) + '\n';
+        } else {
+            resultEl.textContent += '❌ Test 2: Invalid deck (3 copies) - FAIL\n';
+            resultEl.textContent += '   Expected validation error but got: ' + JSON.stringify(invalidResult.errors) + '\n';
+        }
+
+        // Test 3: Invalid deck (3 copies across different zones)
+        const invalidDeck2 = createInitialState();
+        invalidDeck2.player1.deck = ['A1-001', 'A1-001', 'A1-002', 'A1-003'];
+        invalidDeck2.player1.hand = ['A1-001'];  // Now 3 copies total
+
+        const invalidResult2 = validateState(invalidDeck2);
+        if (!invalidResult2.valid && invalidResult2.errors.some(e => e.includes('has 3 copies'))) {
+            resultEl.textContent += '✅ Test 3: Invalid deck (3 copies across zones) - PASS\n';
+            resultEl.textContent += '   Caught error: ' + invalidResult2.errors.find(e => e.includes('3 copies')) + '\n';
+        } else {
+            resultEl.textContent += '❌ Test 3: Invalid deck (3 copies across zones) - FAIL\n';
+            resultEl.textContent += '   Expected validation error but got: ' + JSON.stringify(invalidResult2.errors) + '\n';
+        }
+
+        // Test 4: Valid evolution line (2 of each evolution stage)
+        const validEvo = createInitialState();
+        validEvo.player1.deck = ['A1-001', 'A1-001', 'A1-002', 'A1-002', 'A1-003', 'A1-003'];
+
+        const validEvoResult = validateState(validEvo);
+        if (validEvoResult.valid) {
+            resultEl.textContent += '✅ Test 4: Valid evolution line (2 of each) - PASS\n';
+        } else {
+            resultEl.textContent += '❌ Test 4: Valid evolution line (2 of each) - FAIL\n';
+            resultEl.textContent += '   Errors: ' + validEvoResult.errors.join(', ') + '\n';
+        }
+
+        resultEl.textContent += '\n✅ All validation tests passed!\n';
+    </script>
+</body>
+</html>

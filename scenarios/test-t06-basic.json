@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "name": "Test T06: Basic Scenario",
+  "description": "Test scenario for Task 06",
+  "turn": 1,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false],
+  "player1": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-003",
+      "currentHp": 160,
+      "energy": ["G", "G"],
+      "status": null,
+      "turnPlayed": 0
+    },
+    "bench": [
+      {
+        "cardId": "A1-001",
+        "currentHp": 80,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 1
+      }
+    ],
+    "hand": ["A1-002"],
+    "deck": [],
+    "discard": [],
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "energyZone": {
+      "currentEnergy": "G",
+      "nextEnergy": "R",
+      "configuredTypes": ["G", "R"],
+      "usedThisTurn": false
+    },
+    "normalAttachUsedThisTurn": false
+  },
+  "player2": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-006",
+      "currentHp": 140,
+      "energy": ["R"],
+      "status": null,
+      "turnPlayed": 0
+    },
+    "bench": [],
+    "hand": ["A1-007"],
+    "deck": [],
+    "discard": [],
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "energyZone": {
+      "currentEnergy": "R",
+      "nextEnergy": "W",
+      "configuredTypes": ["R", "W"],
+      "usedThisTurn": false
+    },
+    "normalAttachUsedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": []
+}

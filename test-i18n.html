@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>i18n Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        h1 { color: #333; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>i18n Test - T07</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Load Translations</h2>
+        <div id="test1-result">Pending...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Apply Translations (Current: <span id="current-lang">es</span>)</h2>
+        <div data-i18n="game.opponent">Opponent</div>
+        <div data-i18n="game.you">You</div>
+        <div data-i18n="game.points">Points</div>
+        <div data-i18n="game.deck">Deck</div>
+        <div data-i18n="ui.play">Play</div>
+        <div data-i18n="ui.pause">Pause</div>
+        <div data-i18n="ui.actionLog">Action Log</div>
+        <div id="test2-result" class="success">Applied!</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Language Switch</h2>
+        <button id="lang-btn">🌐 Switch Language</button>
+        <p>Click the button above. Text should change between Spanish and English.</p>
+        <div id="test3-result">Pending...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>All Translated Keys (25 total)</h2>
+        <ul id="keys-list"></ul>
+    </div>
+
+    <script type="module">
+        const translations = { es: {}, en: {} };
+        let currentLanguage = 'es';
+
+        async function loadTranslations() {
+            try {
+                const es = await fetch('js/i18n/es.json').then(r => r.json());
+                const en = await fetch('js/i18n/en.json').then(r => r.json());
+                translations.es = es;
+                translations.en = en;
+
+                document.getElementById('test1-result').innerHTML = '<span class="success">✅ Translations loaded successfully</span>';
+
+                // List all keys
+                const allKeys = [...Object.keys(es.game).map(k => 'game.' + k),
+                                ...Object.keys(es.ui).map(k => 'ui.' + k)].sort();
+                document.getElementById('keys-list').innerHTML = allKeys.map(k => `<li><code>${k}</code></li>`).join('');
+
+                applyTranslations();
+            } catch (e) {
+                document.getElementById('test1-result').innerHTML = `<span class="error">❌ Error: ${e.message}</span>`;
+            }
+        }
+
+        function applyTranslations() {
+            const t = translations[currentLanguage];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                const parts = key.split('.');
+                let value = t;
+                for (const part of parts) {
+                    value = value[part];
+                    if (!value) break;
+                }
+                if (value) el.textContent = value;
+            });
+            document.getElementById('current-lang').textContent = currentLanguage;
+        }
+
+        document.getElementById('lang-btn').addEventListener('click', () => {
+            currentLanguage = currentLanguage === 'es' ? 'en' : 'es';
+            applyTranslations();
+            document.getElementById('test3-result').innerHTML = `<span class="success">✅ Switched to ${currentLanguage.toUpperCase()}</span>`;
+        });
+
+        loadTranslations();
+    </script>
+</body>
+</html>
