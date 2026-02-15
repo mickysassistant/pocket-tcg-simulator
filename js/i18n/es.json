@@ -53,7 +53,8 @@
     "setupInterface": "Configurando interfaz...",
     "loadingScenario": "Cargando escenario...",
     "savingScenario": "Guardando escenario...",
-    "readingFile": "Leyendo archivo..."
+    "readingFile": "Leyendo archivo...",
+    "newGame": "Nueva Partida"
   },
   "edit": {
     "title": "Editar Pokémon",
@@ -215,5 +216,22 @@
       "trainerNoValidTarget": "No hay un objetivo válido disponible para esta carta",
       "trainerConditionNotMet": "No se cumplen las condiciones para jugar esta carta"
     }
+  },
+  "newGame": {
+    "title": "Iniciar Nueva Partida",
+    "selectDeckPlayer1": "Seleccionar Mazo para el Jugador 1",
+    "selectDeckPlayer2": "Seleccionar Mazo para el Jugador 2",
+    "deckPreview": "Vista Previa del Mazo",
+    "deckSize": "Cartas: {size}",
+    "energyTypes": "Tipos de Energía: {types}",
+    "startGame": "Iniciar Partida",
+    "cancel": "Cancelar",
+    "deckSelectRequired": "Por favor, selecciona un mazo para {player}",
+    "invalidDeck": "Mazo seleccionado inválido",
+    "gameStarted": "Partida iniciada correctamente",
+    "noDecksAvailable": "No hay mazos disponibles",
+    "selectDeckLabel": "Elige un mazo",
+    "player1Deck": "Mazo del Jugador 1",
+    "player2Deck": "Mazo del Jugador 2"
   }
 }

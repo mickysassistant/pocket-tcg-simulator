@@ -53,7 +53,8 @@
     "setupInterface": "Setting up interface...",
     "loadingScenario": "Loading scenario...",
     "savingScenario": "Saving scenario...",
-    "readingFile": "Reading file..."
+    "readingFile": "Reading file...",
+    "newGame": "New Game"
   },
   "edit": {
     "title": "Edit Pokemon",
@@ -205,5 +206,22 @@
       "trainerNoValidTarget": "No valid target available for this card",
       "trainerConditionNotMet": "Conditions to play this card are not met"
     }
+  },
+  "newGame": {
+    "title": "Start New Game",
+    "selectDeckPlayer1": "Select Deck for Player 1",
+    "selectDeckPlayer2": "Select Deck for Player 2",
+    "deckPreview": "Deck Preview",
+    "deckSize": "Cards: {size}",
+    "energyTypes": "Energy Types: {types}",
+    "startGame": "Start Game",
+    "cancel": "Cancel",
+    "deckSelectRequired": "Please select a deck for {player}",
+    "invalidDeck": "Invalid deck selected",
+    "gameStarted": "Game started successfully",
+    "noDecksAvailable": "No decks available",
+    "selectDeckLabel": "Choose a deck",
+    "player1Deck": "Player 1 Deck",
+    "player2Deck": "Player 2 Deck"
   }
 }

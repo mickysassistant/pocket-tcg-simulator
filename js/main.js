@@ -3,6 +3,11 @@
 
 import { loadCards, getCard, getCardImage, getCardCount } from './data/card-loader.js';
 import {
+    getAllDeckPresets,
+    getDeckPreset,
+    validateDeckPreset
+} from './data/deck-presets.js';
+import {
     createInitialState,
     cloneState,
     isValidState,
@@ -73,6 +78,9 @@ let trainerModalState = null; // { playerId, handIndex, cardId, card, selectedTa
 
 // Retreat modal state (Stage 2)
 let retreatModalState = null; // { playerId, benchIndex, retreatCost, selectedEnergyIndices }
+
+// New game modal state (Stage 3)
+let newGameModalState = null; // { player1DeckId, player2DeckId }
 
 // i18n
 let currentLanguage = 'es';
@@ -1106,6 +1114,192 @@ function saveScenario() {
 function openScenarioEditor() {
     document.querySelector('#scenario-json').value = JSON.stringify(exportState(state), null, 2);
     document.querySelector('#scenario-modal').classList.add('active');
+}
+
+// ============================================================================
+// STAGE 3: NEW GAME FROM DECK PRESETS
+// ============================================================================
+
+function isBasicPokemonCard(card) {
+    if (!card) return false;
+    return card.supertype === 'Pokémon' && card.subtype === 'Basic';
+}
+
+function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+function buildPlayerFromPreset(playerName, preset, turnPlayed = 0) {
+    const validation = validateDeckPreset(preset);
+    if (!validation.valid) {
+        throw new Error(`${t('newGame.invalidDeck')}: ${validation.errors.join(', ')}`);
+    }
+
+    const missingCards = preset.deck.filter(cardId => !getCard(cardId));
+    if (missingCards.length > 0) {
+        throw new Error(`${t('newGame.invalidDeck')}: missing cards ${missingCards.join(', ')}`);
+    }
+
+    const shuffledDeck = shuffleArray(preset.deck);
+    const basicIndices = shuffledDeck
+        .map((cardId, idx) => ({ cardId, idx, card: getCard(cardId) }))
+        .filter(entry => isBasicPokemonCard(entry.card));
+
+    if (basicIndices.length === 0) {
+        throw new Error(`${t('newGame.invalidDeck')}: no basic Pokemon`);
+    }
+
+    const activePick = basicIndices[0];
+    const remainingAfterActive = shuffledDeck.filter((_, idx) => idx !== activePick.idx);
+
+    const bench = [];
+    const benchCandidates = remainingAfterActive
+        .map((cardId, idx) => ({ cardId, idx, card: getCard(cardId) }))
+        .filter(entry => isBasicPokemonCard(entry.card));
+
+    const benchIndicesToRemove = [];
+    for (let i = 0; i < Math.min(3, benchCandidates.length); i++) {
+        const candidate = benchCandidates[i];
+        bench.push({
+            cardId: candidate.cardId,
+            currentHp: candidate.card.hp,
+            energy: [],
+            status: null,
+            turnPlayed
+        });
+        benchIndicesToRemove.push(candidate.idx);
+    }
+
+    const deckAfterSetup = remainingAfterActive.filter((_, idx) => !benchIndicesToRemove.includes(idx));
+    const hand = deckAfterSetup.slice(0, Math.min(5, deckAfterSetup.length));
+    const deck = deckAfterSetup.slice(hand.length);
+
+    return {
+        points: 0,
+        active: {
+            cardId: activePick.cardId,
+            currentHp: activePick.card.hp,
+            energy: [],
+            status: null,
+            turnPlayed
+        },
+        bench,
+        hand,
+        deck,
+        discard: [],
+        energyZone: {
+            currentEnergy: preset.energyTypes[0] || null,
+            nextEnergy: preset.energyTypes[1] || preset.energyTypes[0] || null,
+            configuredTypes: [...preset.energyTypes],
+            usedThisTurn: false
+        },
+        supporterUsedThisTurn: false,
+        retreatedThisTurn: false,
+        normalAttachUsedThisTurn: false,
+        attackedThisTurn: false
+    };
+}
+
+function startNewGameFromPresets(player1DeckId, player2DeckId) {
+    const preset1 = getDeckPreset(player1DeckId);
+    const preset2 = getDeckPreset(player2DeckId);
+
+    if (!preset1 || !preset2) {
+        throw new Error(t('newGame.invalidDeck'));
+    }
+
+    const newState = createInitialState();
+    newState.name = 'New game from presets';
+    newState.description = `${preset1.name} vs ${preset2.name}`;
+    newState.turn = 1;
+    newState.currentPlayer = 'player1';
+    newState.player1 = buildPlayerFromPreset('Player 1', preset1, 0);
+    newState.player2 = buildPlayerFromPreset('Player 2', preset2, 0);
+
+    if (!isValidState(newState)) {
+        throw new Error(t('newGame.invalidDeck'));
+    }
+
+    state = newState;
+    hideGameOverBanner();
+    render(state);
+    logInfo(t('newGame.gameStarted'));
+}
+
+function clearNewGameValidationError() {
+    const err = document.querySelector('#new-game-validation-error');
+    if (err) err.textContent = '';
+}
+
+function setNewGameValidationError(msg) {
+    const err = document.querySelector('#new-game-validation-error');
+    if (err) err.textContent = msg || '';
+}
+
+function renderDeckPresetSelectors() {
+    const presets = getAllDeckPresets();
+    const select1 = document.querySelector('#deck-select-player1');
+    const select2 = document.querySelector('#deck-select-player2');
+
+    [select1, select2].forEach(select => {
+        if (!select) return;
+        select.innerHTML = `<option value="">${t('newGame.selectDeckLabel')}</option>`;
+        presets.forEach(preset => {
+            const option = document.createElement('option');
+            option.value = preset.id;
+            option.textContent = `${preset.name} (${preset.deck.length})`;
+            select.appendChild(option);
+        });
+    });
+}
+
+function openNewGameModal() {
+    renderDeckPresetSelectors();
+    clearNewGameValidationError();
+    newGameModalState = { player1DeckId: '', player2DeckId: '' };
+    document.querySelector('#new-game-modal')?.classList.add('active');
+}
+
+function closeNewGameModal() {
+    document.querySelector('#new-game-modal')?.classList.remove('active');
+    newGameModalState = null;
+    clearNewGameValidationError();
+}
+
+function confirmStartNewGame() {
+    const player1DeckId = document.querySelector('#deck-select-player1')?.value;
+    const player2DeckId = document.querySelector('#deck-select-player2')?.value;
+
+    if (!player1DeckId) {
+        setNewGameValidationError(t('newGame.deckSelectRequired', { player: t('game.player1') }));
+        return;
+    }
+
+    if (!player2DeckId) {
+        setNewGameValidationError(t('newGame.deckSelectRequired', { player: t('game.player2') }));
+        return;
+    }
+
+    try {
+        startNewGameFromPresets(player1DeckId, player2DeckId);
+        closeNewGameModal();
+    } catch (error) {
+        setNewGameValidationError(error.message || t('newGame.invalidDeck'));
+    }
+}
+
+function setupNewGameModalListeners() {
+    document.querySelector('#new-game-btn')?.addEventListener('click', openNewGameModal);
+    document.querySelector('#new-game-cancel-btn')?.addEventListener('click', closeNewGameModal);
+    document.querySelector('#new-game-start-btn')?.addEventListener('click', confirmStartNewGame);
+
+    document.querySelector('#deck-select-player1')?.addEventListener('change', clearNewGameValidationError);
+    document.querySelector('#deck-select-player2')?.addEventListener('change', clearNewGameValidationError);
 }
 
 // ============================================================================
@@ -2178,6 +2372,7 @@ async function init() {
         setupEditModalListeners();
         setupTrainerModalListeners();
         setupRetreatModalListeners();
+        setupNewGameModalListeners();
         render(state);
         console.log('✅ Interface ready');
 

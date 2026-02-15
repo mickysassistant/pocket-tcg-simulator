@@ -170,6 +170,7 @@
             </div>
             
             <div class="controls-right">
+                <button id="new-game-btn" class="btn-primary" data-i18n="ui.newGame">New Game</button>
                 <button id="load-btn" class="btn-secondary" data-i18n="ui.loadScenario">Load Scenario</button>
                 <button id="save-btn" class="btn-secondary" data-i18n="ui.saveScenario">Save Scenario</button>
                 <button id="edit-btn" class="btn-secondary" data-i18n="ui.editMode">Edit Mode</button>
@@ -370,6 +371,52 @@
             <div class="modal-actions">
                 <button id="retreat-confirm-btn" class="btn-primary" data-i18n="retreat.confirmRetreat">Confirm Retreat</button>
                 <button id="retreat-cancel-btn" class="btn-secondary" data-i18n="retreat.cancelRetreat">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Game Modal (Stage 3) -->
+    <div id="new-game-modal" class="modal-overlay">
+        <div class="modal-content new-game-content">
+            <h2 data-i18n="newGame.title">Start New Game</h2>
+            
+            <div class="new-game-deck-selection">
+                <!-- Player 1 Deck Selection -->
+                <div class="deck-selector" data-player="player1">
+                    <h3 data-i18n="newGame.selectDeckPlayer1">Select Deck for Player 1</h3>
+                    <select id="deck-select-player1" class="deck-select">
+                        <option value="" data-i18n="newGame.selectDeckLabel">Choose a deck</option>
+                        <!-- Deck options will be populated by JavaScript -->
+                    </select>
+                    <div id="deck-preview-player1" class="deck-preview hidden">
+                        <div class="deck-preview-info">
+                            <span data-i18n="newGame.deckSize">Cards: {size}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player 2 Deck Selection -->
+                <div class="deck-selector" data-player="player2">
+                    <h3 data-i18n="newGame.selectDeckPlayer2">Select Deck for Player 2</h3>
+                    <select id="deck-select-player2" class="deck-select">
+                        <option value="" data-i18n="newGame.selectDeckLabel">Choose a deck</option>
+                        <!-- Deck options will be populated by JavaScript -->
+                    </select>
+                    <div id="deck-preview-player2" class="deck-preview hidden">
+                        <div class="deck-preview-info">
+                            <span data-i18n="newGame.deckSize">Cards: {size}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation Error -->
+            <div id="new-game-validation-error" class="new-game-validation-error"></div>
+
+            <!-- Actions -->
+            <div class="modal-actions">
+                <button id="new-game-start-btn" class="btn-primary" data-i18n="newGame.startGame">Start Game</button>
+                <button id="new-game-cancel-btn" class="btn-secondary" data-i18n="newGame.cancel">Cancel</button>
             </div>
         </div>
     </div>

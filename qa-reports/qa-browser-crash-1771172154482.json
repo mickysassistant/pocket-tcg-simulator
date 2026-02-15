@@ -1,0 +1,6 @@
+{
+  "timestamp": "2026-02-15T16:15:54.481Z",
+  "status": "CRASH",
+  "error": "page.waitForTimeout: Target page, context or browser has been closed",
+  "stack": "page.waitForTimeout: Target page, context or browser has been closed\n    at runBrowserQA (/home/deckie/.openclaw/workspace/pocket-tcg-simulator/test-qa-browser.mjs:64:20)"
+}
