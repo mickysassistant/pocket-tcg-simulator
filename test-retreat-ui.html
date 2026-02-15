@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 2 Retreat UI Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .test-section {
+            background: #2c3e50;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #f39c12;
+        }
+        .test-case {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        .test-case.pass {
+            border-left-color: #27ae60;
+        }
+        .test-case.fail {
+            border-left-color: #e74c3c;
+        }
+        .test-case h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .test-result.success {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+        .test-result.error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .test-iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Stage 2 Retreat UI - Test Suite</h1>
+
+    <div class="test-section">
+        <h2>1. Test Retreat Modal UI Components</h2>
+        <p>This test checks that the retreat modal HTML elements exist in the DOM.</p>
+        <button onclick="testModalComponents()">Test Components</button>
+        <div id="test-components-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Retreat Button in Attack Panel</h2>
+        <p>This test checks that a retreat button is present in the attack panel.</p>
+        <button onclick="testRetreatButton()">Test Retreat Button</button>
+        <div id="test-retreat-button-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Retreat Translations</h2>
+        <p>This test checks that all retreat-related translations exist in both ES and EN.</p>
+        <button onclick="testRetreatTranslations()">Test Translations</button>
+        <div id="test-translations-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Manual Integration Test</h2>
+        <p>Load the simulator and test retreat flow manually:</p>
+        <ol>
+            <li>Load a scenario with an active Pokemon and bench Pokemon</li>
+            <li>Verify retreat button appears in attack panel</li>
+            <li>Click retreat button</li>
+            <li>Select a bench Pokemon</li>
+            <li>Select energy cards to discard (matching retreat cost)</li>
+            <li>Confirm retreat</li>
+            <li>Verify Pokemon swapped correctly</li>
+            <li>Verify energy discarded correctly</li>
+            <li>Save and load scenario to verify persistence</li>
+        </ol>
+        <button onclick="loadSimulator()">Open Simulator in New Window</button>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Test Retreat Validation</h2>
+        <p>Test various retreat validation scenarios:</p>
+        <button onclick="testRetreatValidation()">Run Validation Tests</button>
+        <div id="test-validation-result"></div>
+    </div>
+
+    <script>
+        // Test 1: Modal Components
+        async function testModalComponents() {
+            const resultDiv = document.getElementById('test-components-result');
+            resultDiv.innerHTML = '<p>Running tests...</p>';
+
+            const components = [
+                'retreat-modal',
+                'retreat-active-img',
+                'retreat-active-name',
+                'retreat-cost-value',
+                'retreat-bench-options',
+                'retreat-energy-list',
+                'retreat-energy-status',
+                'retreat-validation-error',
+                'retreat-confirm-btn',
+                'retreat-cancel-btn'
+            ];
+
+            let passed = 0;
+            let failed = 0;
+            let results = [];
+
+            // Since we can't access the simulator DOM directly, we'll check the HTML file
+            try {
+                const response = await fetch('index.html');
+                const html = await response.text();
+
+                components.forEach(component => {
+                    const found = html.includes(`id="${component}"`);
+                    if (found) {
+                        passed++;
+                        results.push(`<div class="test-result success">✓ Found component: ${component}</div>`);
+                    } else {
+                        failed++;
+                        results.push(`<div class="test-result error">✗ Missing component: ${component}</div>`);
+                    }
+                });
+            } catch (e) {
+                results.push(`<div class="test-result error">✗ Failed to load index.html: ${e.message}</div>`);
+                failed++;
+            }
+
+            resultDiv.innerHTML = `
+                <h3>Results: ${passed} passed, ${failed} failed</h3>
+                ${results.join('')}
+            `;
+        }
+
+        // Test 2: Retreat Button
+        async function testRetreatButton() {
+            const resultDiv = document.getElementById('test-retreat-button-result');
+            resultDiv.innerHTML = '<p>Running tests...</p>';
+
+            try {
+                const response = await fetch('index.html');
+                const html = await response.text();
+
+                // Check for retreat button class or retreat modal
+                const hasRetreatButton = html.includes('retreat-button') || html.includes('retreat-modal');
+
+                if (hasRetreatButton) {
+                    resultDiv.innerHTML = '<div class="test-result success">✓ Retreat button/modal found in HTML</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="test-result error">✗ Retreat button/modal not found in HTML</div>';
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="test-result error">✗ Failed to check: ${e.message}</div>`;
+            }
+        }
+
+        // Test 3: Translations
+        async function testRetreatTranslations() {
+            const resultDiv = document.getElementById('test-translations-result');
+            resultDiv.innerHTML = '<p>Running tests...</p>';
+
+            const requiredKeys = [
+                'retreat.title',
+                'retreat.retreatCost',
+                'retreat.selectBenchPokemon',
+                'retreat.discardEnergy',
+                'retreat.discardInstructions',
+                'retreat.discardComplete',
+                'retreat.discardIncomplete',
+                'retreat.discardExcess',
+                'retreat.confirmRetreat',
+                'retreat.cancelRetreat',
+                'retreat.retreatSuccess',
+                'retreat.noBenchPokemon',
+                'retreat.cannotRetreat',
+                'retreat.energyInsufficient',
+                'retreat.energyMismatch',
+                'retreat.statusBlocksRetreat'
+            ];
+
+            let enPassed = 0;
+            let enFailed = 0;
+            let esPassed = 0;
+            let esFailed = 0;
+            let results = [];
+
+            try {
+                const [enResponse, esResponse] = await Promise.all([
+                    fetch('js/i18n/en.json'),
+                    fetch('js/i18n/es.json')
+                ]);
+
+                const en = await enResponse.json();
+                const es = await esResponse.json();
+
+                // Check English translations
+                requiredKeys.forEach(key => {
+                    const parts = key.split('.');
+                    let value = en;
+                    for (const part of parts) {
+                        if (value && value[part]) {
+                            value = value[part];
+                        } else {
+                            value = null;
+                            break;
+                        }
+                    }
+                    if (value !== null) {
+                        enPassed++;
+                    } else {
+                        enFailed++;
+                        results.push(`<div class="test-result error">✗ EN missing: ${key}</div>`);
+                    }
+                });
+
+                // Check Spanish translations
+                requiredKeys.forEach(key => {
+                    const parts = key.split('.');
+                    let value = es;
+                    for (const part of parts) {
+                        if (value && value[part]) {
+                            value = value[part];
+                        } else {
+                            value = null;
+                            break;
+                        }
+                    }
+                    if (value !== null) {
+                        esPassed++;
+                    } else {
+                        esFailed++;
+                        results.push(`<div class="test-result error">✗ ES missing: ${key}</div>`);
+                    }
+                });
+
+                if (enFailed === 0 && esFailed === 0) {
+                    results.push(`<div class="test-result success">✓ All translations present (${enPassed} keys in EN, ${esPassed} keys in ES)</div>`);
+                }
+
+            } catch (e) {
+                results.push(`<div class="test-result error">✗ Failed to load translations: ${e.message}</div>`);
+            }
+
+            resultDiv.innerHTML = `
+                <h3>Results: EN (${enPassed}/${enPassed + enFailed}), ES (${esPassed}/${esPassed + esFailed})</h3>
+                ${results.join('')}
+            `;
+        }
+
+        // Load simulator in new window
+        function loadSimulator() {
+            window.open('index.html', '_blank');
+        }
+
+        // Test 5: Retreat Validation
+        async function testRetreatValidation() {
+            const resultDiv = document.getElementById('test-validation-result');
+            resultDiv.innerHTML = '<p>Running validation tests...</p>';
+
+            const validationTests = [
+                {
+                    name: 'Cannot retreat without bench Pokemon',
+                    expected: 'error'
+                },
+                {
+                    name: 'Cannot retreat with insufficient energy',
+                    expected: 'error'
+                },
+                {
+                    name: 'Cannot retreat while paralyzed',
+                    expected: 'error'
+                },
+                {
+                    name: 'Cannot retreat while asleep',
+                    expected: 'error'
+                },
+                {
+                    name: 'Can retreat with sufficient energy and bench',
+                    expected: 'success'
+                },
+                {
+                    name: 'Free retreat (cost 0) requires no energy',
+                    expected: 'success'
+                }
+            ];
+
+            const results = validationTests.map(test => {
+                return `
+                    <div class="test-case">
+                        <h3>${test.name}</h3>
+                        <p><strong>Expected:</strong> ${test.expected}</p>
+                        <p><strong>Manual verification required:</strong> Test this scenario in the simulator</p>
+                        <p><strong>Status:</strong> <em>Pending manual verification</em></p>
+                    </div>
+                `;
+            });
+
+            resultDiv.innerHTML = `
+                <p><strong>Note:</strong> These tests require manual verification in the simulator. Load a scenario and test each case.</p>
+                ${results.join('')}
+            `;
+        }
+    </script>
+</body>
+</html>

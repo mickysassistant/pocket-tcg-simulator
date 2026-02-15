@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "turn": 1,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false],
+  "player1": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-003",
+      "currentHp": 180,
+      "energy": [],
+      "status": null,
+      "turnPlayed": 0,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [
+      {
+        "cardId": "A1-001",
+        "currentHp": 60,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 0,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      },
+      {
+        "cardId": "A1-002",
+        "currentHp": 110,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 0,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      },
+      {
+        "cardId": "A1-004",
+        "currentHp": 140,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 0,
+        "lastEvolved": null,
+        "tool": null,
+      "effects": []
+      }
+    ],
+    "hand": ["A1-005", "A1-006", "A1-007", "A1-008", "A1-009"],
+    "deck": [],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": "G",
+      "nextEnergy": "R",
+      "configuredTypes": ["G", "R", "W"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false
+  },
+  "player2": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-010",
+      "currentHp": 120,
+      "energy": [],
+      "status": null,
+      "turnPlayed": 0,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [
+      {
+        "cardId": "A1-011",
+        "currentHp": 100,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 0,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      }
+    ],
+    "hand": ["A1-012", "A1-013"],
+    "deck": [],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": "R",
+      "nextEnergy": "W",
+      "configuredTypes": ["R", "W", "L"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": [],
+  "winner": null
+}

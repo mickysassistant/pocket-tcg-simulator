@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 14: Win Conditions + Points - Tests</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #4ecca3; }
+        h2 { color: #eee; border-bottom: 1px solid #4ecca3; padding-bottom: 5px; }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: #16213e;
+        }
+        .test-result {
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+        }
+        .pass { color: #4ecca3; }
+        .fail { color: #e94560; }
+        button {
+            background: #4ecca3;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover { background: #3db892; }
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .assertion {
+            margin: 3px 0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task 14: Win Conditions + Points</h1>
+    <p>Testing win conditions, point tracking, simultaneous KO, and turn limit tie-breaker.</p>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearOutput()">Clear Output</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script type="module">
+        import { createInitialState, checkWinCondition, endTurn, handleKOPokemon } from './js/engine/game-state.js';
+        import { getCard } from './js/data/card-loader.js';
+        import { POINTS_TO_WIN, TURN_LIMIT } from './js/engine/constants.js';
+
+        // Load cards first
+        let cardsLoaded = false;
+        window.getCard = getCard; // Make available to module
+
+        async function init() {
+            try {
+                await import('./js/data/card-loader.js').then(module => {
+                    return module.loadCards();
+                });
+                cardsLoaded = true;
+                log('Cards loaded successfully');
+            } catch (e) {
+                log('Error loading cards: ' + e.message);
+            }
+        }
+
+        function log(message) {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.textContent = message;
+            output.appendChild(div);
+        }
+
+        function logTestResult(testName, passed, details = '') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            div.innerHTML = `<strong>${passed ? 'PASS' : 'FAIL'}:</strong> ${testName}${details ? ` - ${details}` : ''}`;
+            output.appendChild(div);
+        }
+
+        function assertEquals(actual, expected, testName, assertionNum) {
+            const passed = JSON.stringify(actual) === JSON.stringify(expected);
+            logTestResult(`${testName} - Assertion ${assertionNum}`, passed,
+                `Expected: ${JSON.stringify(expected)}, Got: ${JSON.stringify(actual)}`);
+            return passed;
+        }
+
+        function assertTrue(condition, testName, assertionNum) {
+            logTestResult(`${testName} - Assertion ${assertionNum}`, condition,
+                `Expected: true, Got: ${condition}`);
+            return condition;
+        }
+
+        function assertFalse(condition, testName, assertionNum) {
+            logTestResult(`${testName} - Assertion ${assertionNum}`, !condition,
+                `Expected: false, Got: ${condition}`);
+            return !condition;
+        }
+
+        // Test 1: Points awarded on KO (normal Pokemon)
+        function test1_PointsAwardedOnKO() {
+            log('<h3>Test 1: Points Awarded on KO</h3>');
+            let state = createInitialState();
+
+            // KO player1's active Pokemon (normal, 1 point)
+            state = handleKOPokemon(state, 'player1', 'active');
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(state.player2.points, 1, 'Test 1', ++assertions);
+            passed += assertEquals(state.player1.active, null, 'Test 1', ++assertions);
+            passed += assertTrue(state.player1.discard.length > 0, 'Test 1', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 2: Points awarded on KO (EX Pokemon)
+        function test2_PointsAwardedOnEXKO() {
+            log('<h3>Test 2: Points Awarded on EX KO</h3>');
+            let state = createInitialState();
+
+            // Create EX Pokemon in player1's active (cardId with 'ex')
+            state.player1.active = {
+                cardId: 'A1-123ex', // Mock EX card
+                currentHp: 0,
+                energy: [],
+                status: null,
+                turnPlayed: 0
+            };
+
+            state = handleKOPokemon(state, 'player1', 'active');
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(state.player2.points, 2, 'Test 2', ++assertions);
+            passed += assertEquals(state.player1.active, null, 'Test 2', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 3: 3 points win condition
+        function test3_3PointsWinCondition() {
+            log('<h3>Test 3: 3 Points Win Condition</h3>');
+            let state = createInitialState();
+
+            // Give player1 exactly 3 points
+            state.player1.points = POINTS_TO_WIN;
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'player1', 'Test 3', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 4: No winner before 3 points
+        function test4_NoWinnerBefore3Points() {
+            log('<h3>Test 4: No Winner Before 3 Points</h3>');
+            let state = createInitialState();
+
+            state.player1.points = 2;
+            state.player2.points = 2;
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, null, 'Test 4', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 5: Simultaneous KO - player1 has bench, player2 doesn't
+        function test5_SimultaneousKO_Player1Bench() {
+            log('<h3>Test 5: Simultaneous KO - Player1 Has Bench</h3>');
+            let state = createInitialState();
+
+            // Both players have 3 points
+            state.player1.points = POINTS_TO_WIN;
+            state.player2.points = POINTS_TO_WIN;
+
+            // Player1 has bench Pokemon, player2 doesn't
+            state.player1.bench = [
+                { cardId: 'A1-001', currentHp: 60, energy: [], status: null, turnPlayed: 0 },
+                null,
+                null
+            ];
+            state.player2.bench = [null, null, null];
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'player1', 'Test 5', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 6: Simultaneous KO - player2 has bench, player1 doesn't
+        function test6_SimultaneousKO_Player2Bench() {
+            log('<h3>Test 6: Simultaneous KO - Player2 Has Bench</h3>');
+            let state = createInitialState();
+
+            state.player1.points = POINTS_TO_WIN;
+            state.player2.points = POINTS_TO_WIN;
+
+            // Player2 has bench Pokemon, player1 doesn't
+            state.player1.bench = [null, null, null];
+            state.player2.bench = [
+                { cardId: 'A1-002', currentHp: 60, energy: [], status: null, turnPlayed: 0 },
+                null,
+                null
+            ];
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'player2', 'Test 6', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 7: Simultaneous KO - both have bench
+        function test7_SimultaneousKO_BothBench() {
+            log('<h3>Test 7: Simultaneous KO - Both Have Bench (Draw)</h3>');
+            let state = createInitialState();
+
+            state.player1.points = POINTS_TO_WIN;
+            state.player2.points = POINTS_TO_WIN;
+
+            // Both players have bench Pokemon
+            state.player1.bench = [
+                { cardId: 'A1-001', currentHp: 60, energy: [], status: null, turnPlayed: 0 },
+                null,
+                null
+            ];
+            state.player2.bench = [
+                { cardId: 'A1-002', currentHp: 60, energy: [], status: null, turnPlayed: 0 },
+                null,
+                null
+            ];
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'tie', 'Test 7', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 8: Simultaneous KO - neither has bench
+        function test8_SimultaneousKO_NoBench() {
+            log('<h3>Test 8: Simultaneous KO - Neither Has Bench (Draw)</h3>');
+            let state = createInitialState();
+
+            state.player1.points = POINTS_TO_WIN;
+            state.player2.points = POINTS_TO_WIN;
+
+            // Neither player has bench Pokemon
+            state.player1.bench = [null, null, null];
+            state.player2.bench = [null, null, null];
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'tie', 'Test 8', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 9: Turn limit - player1 has more points
+        function test9_TurnLimit_Player1MorePoints() {
+            log('<h3>Test 9: Turn Limit - Player1 Has More Points</h3>');
+            let state = createInitialState();
+
+            state.turn = TURN_LIMIT;
+            state.player1.points = 2;
+            state.player2.points = 1;
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'player1', 'Test 9', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 10: Turn limit - player2 has more points
+        function test10_TurnLimit_Player2MorePoints() {
+            log('<h3>Test 10: Turn Limit - Player2 Has More Points</h3>');
+            let state = createInitialState();
+
+            state.turn = TURN_LIMIT;
+            state.player1.points = 1;
+            state.player2.points = 2;
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'player2', 'Test 10', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 11: Turn limit - equal points
+        function test11_TurnLimit_EqualPoints() {
+            log('<h3>Test 11: Turn Limit - Equal Points (Draw)</h3>');
+            let state = createInitialState();
+
+            state.turn = TURN_LIMIT;
+            state.player1.points = 2;
+            state.player2.points = 2;
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, 'tie', 'Test 11', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 12: Before turn limit - no winner even with points
+        function test12_BeforeTurnLimit_NoWinner() {
+            log('<h3>Test 12: Before Turn Limit - No Winner</h3>');
+            let state = createInitialState();
+
+            state.turn = TURN_LIMIT - 1;
+            state.player1.points = 2;
+            state.player2.points = 1;
+
+            const winner = checkWinCondition(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(winner, null, 'Test 12', ++assertions);
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 13: hasBenchPokemon helper function
+        function test13_HasBenchPokemon() {
+            log('<h3>Test 13: hasBenchPokemon Helper</h3>');
+            // This is tested indirectly through tests 5-8
+            // We'll verify the logic is correct
+            let state = createInitialState();
+
+            // Test with bench
+            state.player1.bench = [
+                { cardId: 'A1-001', currentHp: 60, energy: [], status: null, turnPlayed: 0 },
+                null,
+                null
+            ];
+            const hasBench = checkWinCondition(state); // This doesn't directly test hasBenchPokemon, but uses it
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertEquals(hasBench, null, 'Test 13', ++assertions); // No winner yet
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        // Test 14: Game over logging
+        function test14_GameOverLogging() {
+            log('<h3>Test 14: Game Over Logging</h3>');
+            let state = createInitialState();
+
+            state.player1.points = POINTS_TO_WIN;
+            state = endTurn(state);
+
+            let assertions = 0;
+            let passed = 0;
+
+            passed += assertTrue(state.winner !== undefined, 'Test 14', ++assertions);
+            passed += assertTrue(
+                state.log.some(entry => entry.action === 'gameOver'),
+                'Test 14',
+                ++assertions
+            );
+
+            log(`<div class="assertion">${passed}/${assertions} assertions passed</div>`);
+            return passed === assertions;
+        }
+
+        async function runAllTests() {
+            clearOutput();
+            log('<h2>Running Tests...</h2>');
+
+            const tests = [
+                { name: 'Points Awarded on KO', fn: test1_PointsAwardedOnKO },
+                { name: 'Points Awarded on EX KO', fn: test2_PointsAwardedOnEXKO },
+                { name: '3 Points Win Condition', fn: test3_3PointsWinCondition },
+                { name: 'No Winner Before 3 Points', fn: test4_NoWinnerBefore3Points },
+                { name: 'Simultaneous KO - Player1 Bench', fn: test5_SimultaneousKO_Player1Bench },
+                { name: 'Simultaneous KO - Player2 Bench', fn: test6_SimultaneousKO_Player2Bench },
+                { name: 'Simultaneous KO - Both Bench', fn: test7_SimultaneousKO_BothBench },
+                { name: 'Simultaneous KO - No Bench', fn: test8_SimultaneousKO_NoBench },
+                { name: 'Turn Limit - Player1 More', fn: test9_TurnLimit_Player1MorePoints },
+                { name: 'Turn Limit - Player2 More', fn: test10_TurnLimit_Player2MorePoints },
+                { name: 'Turn Limit - Equal Points', fn: test11_TurnLimit_EqualPoints },
+                { name: 'Before Turn Limit - No Winner', fn: test12_BeforeTurnLimit_NoWinner },
+                { name: 'hasBenchPokemon Helper', fn: test13_HasBenchPokemon },
+                { name: 'Game Over Logging', fn: test14_GameOverLogging }
+            ];
+
+            let totalPassed = 0;
+            for (const test of tests) {
+                try {
+                    if (await test.fn()) {
+                        totalPassed++;
+                    }
+                } catch (e) {
+                    log(`<div class="fail">ERROR in ${test.name}: ${e.message}</div>`);
+                }
+            }
+
+            log(`<h2>Results: ${totalPassed}/${tests.length} tests passed</h2>`);
+
+            if (totalPassed === tests.length) {
+                log('<div class="pass"><strong>ALL TESTS PASSED! 🎉</strong></div>');
+            } else {
+                log(`<div class="fail"><strong>${tests.length - totalPassed} test(s) failed</strong></div>`);
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        // Initialize on load
+        init();
+
+        // Make functions available to window
+        window.runAllTests = runAllTests;
+        window.clearOutput = clearOutput;
+    </script>
+</body>
+</html>

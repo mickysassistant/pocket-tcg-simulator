@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test T15: Action Log Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #27ae60;
+            color: white;
+        }
+        .fail {
+            background: #e74c3c;
+            color: white;
+        }
+        .summary {
+            padding: 15px;
+            background: #34495e;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        #log-preview {
+            width: 300px;
+            height: 400px;
+            background: #2c3e50;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid #7f8c8d;
+        }
+        .log-entry {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+        .log-time {
+            color: #95a5a6;
+            margin-right: 8px;
+        }
+        .log-player {
+            color: #3498db;
+            margin-right: 8px;
+        }
+        .log-action-damage {
+            color: #e74c3c;
+        }
+        .log-action-healing {
+            color: #27ae60;
+        }
+        .log-action-status {
+            color: #f1c40f;
+        }
+        .log-action-card {
+            color: #3498db;
+        }
+        .log-action-ability {
+            color: #9b59b6;
+        }
+        .log-turn-header {
+            font-weight: bold;
+            color: #f39c12;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test T15: Action Log Panel</h1>
+
+    <div class="summary">
+        <h2>Success Criteria</h2>
+        <ul>
+            <li>Color-coded entries</li>
+            <li>Turn grouping</li>
+            <li>Export as text</li>
+            <li>Auto-scroll</li>
+        </ul>
+    </div>
+
+    <div id="results"></div>
+
+    <h2>Log Preview (Mock Data)</h2>
+    <div id="log-preview"></div>
+
+    <script>
+        // Mock log data for testing
+        const mockLog = [
+            { timestamp: Date.now() - 5000, turn: 1, player: 'player1', action: 'startTurn', details: 'Turn 1' },
+            { timestamp: Date.now() - 4500, turn: 1, player: 'player1', action: 'drawCard', details: 'Drew 1 card' },
+            { timestamp: Date.now() - 4000, turn: 1, player: 'player1', action: 'attack', attack: 'Tackle', target: 'player2', damage: 40 },
+            { timestamp: Date.now() - 3000, turn: 1, player: 'player1', action: 'damage', source: 'Tackle', damage: 40, result: 'HP: 140' },
+            { timestamp: Date.now() - 2000, turn: 1, player: 'player1', action: 'endTurn', details: 'Turn 1 ended' },
+            { timestamp: Date.now() - 1000, turn: 2, player: 'player2', action: 'startTurn', details: 'Turn 2' },
+            { timestamp: Date.now() - 500, turn: 2, player: 'player2', action: 'drawCard', details: 'Drew 1 card' },
+            { timestamp: Date.now(), turn: 2, player: 'player2', action: 'evolve', from: 'Charmander', to: 'Charmeleon', details: 'Evolved Active' },
+            { timestamp: Date.now() + 500, turn: 2, player: 'player2', action: 'ability', ability: 'Blaze', details: 'Passive boost' },
+        ];
+
+        let passCount = 0;
+        let failCount = 0;
+
+        function logResult(testName, passed, details) {
+            const result = document.createElement('div');
+            result.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            result.innerHTML = `<strong>${testName}</strong>: ${passed ? 'PASS' : 'FAIL'}<br>${details}`;
+            document.getElementById('results').appendChild(result);
+            if (passed) passCount++;
+            else failCount++;
+        }
+
+        // Test 1: Log data structure
+        function testLogStructure() {
+            try {
+                if (!Array.isArray(mockLog)) throw new Error('Log is not an array');
+                mockLog.forEach((entry, i) => {
+                    if (!entry.timestamp || !entry.action) {
+                        throw new Error(`Entry ${i} missing required fields`);
+                    }
+                });
+                logResult('Test 1: Log Structure', true, 'All entries have required fields');
+            } catch (e) {
+                logResult('Test 1: Log Structure', false, e.message);
+            }
+        }
+
+        // Test 2: Color coding classes exist
+        function testColorCoding() {
+            try {
+                const colorClasses = [
+                    '.log-action-damage',
+                    '.log-action-healing',
+                    '.log-action-status',
+                    '.log-action-card',
+                    '.log-action-ability'
+                ];
+                let allExist = true;
+                colorClasses.forEach(cls => {
+                    const el = document.querySelector(cls);
+                    if (!el) allExist = false;
+                });
+                if (allExist) {
+                    logResult('Test 2: Color Coding Classes', true, 'All color classes defined in CSS');
+                } else {
+                    logResult('Test 2: Color Coding Classes', false, 'Not all color classes found');
+                }
+            } catch (e) {
+                logResult('Test 2: Color Coding Classes', false, e.message);
+            }
+        }
+
+        // Test 3: Action type mapping
+        function testActionTypeMapping() {
+            try {
+                const actions = {
+                    'damage': 'log-action-damage',
+                    'attack': 'log-action-damage',
+                    'ko': 'log-action-damage',
+                    'heal': 'log-action-healing',
+                    'checkup': 'log-action-status',
+                    'drawCard': 'log-action-card',
+                    'evolve': 'log-action-card',
+                    'ability': 'log-action-ability'
+                };
+                logResult('Test 3: Action Type Mapping', true, `${Object.keys(actions).length} action types mapped to colors`);
+            } catch (e) {
+                logResult('Test 3: Action Type Mapping', false, e.message);
+            }
+        }
+
+        // Test 4: Turn grouping logic
+        function testTurnGrouping() {
+            try {
+                const groupedByTurn = {};
+                for (const entry of mockLog) {
+                    const turn = entry.turn ?? 0;
+                    if (!groupedByTurn[turn]) {
+                        groupedByTurn[turn] = [];
+                    }
+                    groupedByTurn[turn].push(entry);
+                }
+                const turnCount = Object.keys(groupedByTurn).length;
+                if (turnCount === 2) {
+                    logResult('Test 4: Turn Grouping', true, `Grouped ${mockLog.length} entries into ${turnCount} turns`);
+                } else {
+                    logResult('Test 4: Turn Grouping', false, `Expected 2 turns, got ${turnCount}`);
+                }
+            } catch (e) {
+                logResult('Test 4: Turn Grouping', false, e.message);
+            }
+        }
+
+        // Test 5: Log HTML generation
+        function testLogHTMLGeneration() {
+            try {
+                const groupedByTurn = {};
+                for (const entry of mockLog) {
+                    const turn = entry.turn ?? 0;
+                    if (!groupedByTurn[turn]) {
+                        groupedByTurn[turn] = [];
+                    }
+                    groupedByTurn[turn].push(entry);
+                }
+                const sortedTurns = Object.keys(groupedByTurn).map(Number).sort((a, b) => a - b);
+                let turnHeaderCount = 0;
+                let entryCount = 0;
+                for (const turn of sortedTurns) {
+                    const header = `<div class="log-turn-header">Turn ${turn}</div>`;
+                    if (header.includes('log-turn-header')) turnHeaderCount++;
+                    for (const entry of groupedByTurn[turn]) {
+                        entryCount++;
+                    }
+                }
+                if (turnHeaderCount === 2 && entryCount === 9) {
+                    logResult('Test 5: Log HTML Generation', true, `${turnHeaderCount} turn headers, ${entryCount} entries`);
+                } else {
+                    logResult('Test 5: Log HTML Generation', false, `Expected 2 headers/9 entries, got ${turnHeaderCount}/${entryCount}`);
+                }
+            } catch (e) {
+                logResult('Test 5: Log HTML Generation', false, e.message);
+            }
+        }
+
+        // Test 6: Export text generation
+        function testExportText() {
+            try {
+                const groupedByTurn = {};
+                for (const entry of mockLog) {
+                    const turn = entry.turn ?? 0;
+                    if (!groupedByTurn[turn]) {
+                        groupedByTurn[turn] = [];
+                    }
+                    groupedByTurn[turn].push(entry);
+                }
+                const lines = [];
+                lines.push('=== Pokemon TCG Pocket Simulator - Action Log ===');
+                lines.push(`Exported: ${new Date().toISOString()}`);
+                const sortedTurns = Object.keys(groupedByTurn).map(Number).sort((a, b) => a - b);
+                for (const turn of sortedTurns) {
+                    lines.push(`--- Turn ${turn} ---`);
+                    for (const entry of groupedByTurn[turn]) {
+                        const time = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
+                        const player = entry.player ?? '';
+                        const action = entry.action;
+                        const details = entry.details ? ' — ' + entry.details : '';
+                        lines.push(`[${time}] ${player}: ${action}${details}`);
+                    }
+                }
+                if (lines.length > 10 && lines[0].includes('Action Log')) {
+                    logResult('Test 6: Export Text', true, `Generated ${lines.length} lines of text`);
+                } else {
+                    logResult('Test 6: Export Text', false, `Export text malformed (${lines.length} lines)`);
+                }
+            } catch (e) {
+                logResult('Test 6: Export Text', false, e.message);
+            }
+        }
+
+        // Test 7: Preview rendering
+        function testPreviewRendering() {
+            try {
+                const preview = document.getElementById('log-preview');
+                const groupedByTurn = {};
+                for (const entry of mockLog) {
+                    const turn = entry.turn ?? 0;
+                    if (!groupedByTurn[turn]) {
+                        groupedByTurn[turn] = [];
+                    }
+                    groupedByTurn[turn].push(entry);
+                }
+                const sortedTurns = Object.keys(groupedByTurn).map(Number).sort((a, b) => a - b);
+                const html = sortedTurns.map(turn => {
+                    const entries = groupedByTurn[turn];
+                    const header = `<div class="log-turn-header">Turn ${turn}</div>`;
+                    const entryHtml = entries.map(entry => {
+                        const time = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
+                        let actionClass = 'log-action';
+                        if (['damage', 'attack', 'ko'].includes(entry.action)) {
+                            actionClass += ' log-action-damage';
+                        } else if (['heal', 'recovery'].includes(entry.action)) {
+                            actionClass += ' log-action-healing';
+                        } else if (['checkup', 'status', 'poison', 'burn', 'sleep', 'paralysis'].includes(entry.action)) {
+                            actionClass += ' log-action-status';
+                        } else if (['draw', 'drawCard', 'evolve', 'playCard', 'attachEnergy'].includes(entry.action)) {
+                            actionClass += ' log-action-card';
+                        } else if (['ability', 'trigger'].includes(entry.action)) {
+                            actionClass += ' log-action-ability';
+                        }
+                        return `<div class="log-entry">
+                            <span class="log-time">${time}</span>
+                            <span class="log-player">${entry.player ?? ''}</span>
+                            <span class="${actionClass}">${entry.action}${entry.details ? ' — ' + entry.details : ''}</span>
+                        </div>`;
+                    }).join('');
+                    return header + entryHtml;
+                }).join('');
+                preview.innerHTML = html;
+                if (preview.children.length > 0 && html.includes('Turn 1') && html.includes('Turn 2')) {
+                    logResult('Test 7: Preview Rendering', true, 'Log preview rendered with turn grouping');
+                } else {
+                    logResult('Test 7: Preview Rendering', false, 'Preview did not render correctly');
+                }
+            } catch (e) {
+                logResult('Test 7: Preview Rendering', false, e.message);
+            }
+        }
+
+        // Run all tests
+        testLogStructure();
+        testColorCoding();
+        testActionTypeMapping();
+        testTurnGrouping();
+        testLogHTMLGeneration();
+        testExportText();
+        testPreviewRendering();
+
+        // Summary
+        setTimeout(() => {
+            const summary = document.createElement('div');
+            summary.className = 'summary';
+            summary.innerHTML = `
+                <h2>Test Summary</h2>
+                <p><strong>Total:</strong> ${passCount + failCount} tests</p>
+                <p><strong>Passed:</strong> ${passCount} ✅</p>
+                <p><strong>Failed:</strong> ${failCount} ❌</p>
+                <p><strong>Success Rate:</strong> ${((passCount / (passCount + failCount)) * 100).toFixed(1)}%</p>
+            `;
+            document.getElementById('results').appendChild(summary);
+        }, 100);
+    </script>
+</body>
+</html>

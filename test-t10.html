@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test T10: Status Effects + Pokemon Checkup</title>
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h1 { color: #4CAF50; }
+    .test { margin: 10px 0; padding: 10px; border-left: 3px solid #555; }
+    .pass { border-color: #4CAF50; background: #1e3a24; }
+    .fail { border-color: #f44336; background: #3a1e1e; }
+    .pass::before { content: '✅ '; }
+    .fail::before { content: '❌ '; }
+    .summary { margin: 20px 0; padding: 15px; background: #333; border-radius: 5px; }
+    button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+    button:hover { background: #45a049; }
+  </style>
+</head>
+<body>
+  <h1>Test T10: Status Effects + Pokemon Checkup</h1>
+  <button onclick="runTests()">Run Tests</button>
+  <div id="results"></div>
+
+  <script type="module">
+    import { createInitialState, createPokemon, processPokemonCheckup, validateState } from './js/engine/game-state.js';
+    import { STATUS, STATUS_DAMAGE } from './js/engine/constants.js';
+
+    // Simple getCard function for testing
+    function getCard(cardId) {
+      const cards = {
+        'A1-001': { id: 'A1-001', name: 'Bulbasaur', hp: 70, element: 'G', attacks: [], weakness: 'R' },
+        'A1-003': { id: 'A1-003', name: 'Venusaur', hp: 180, element: 'G', attacks: [], weakness: 'R' },
+        'A1-012': { id: 'A1-012', name: 'Charizard', hp: 180, element: 'R', attacks: [], weakness: 'W' },
+      };
+      return cards[cardId] || { id: cardId, name: 'Unknown', hp: 100, element: 'C', attacks: [], weakness: null };
+    }
+
+    function assert(condition, message) {
+      if (condition) {
+        return `<div class="test pass">${message}</div>`;
+      } else {
+        return `<div class="test fail">${message}</div>`;
+      }
+    }
+
+    function assertEquals(actual, expected, message) {
+      if (actual === expected) {
+        return `<div class="test pass">${message}</div>`;
+      } else {
+        return `<div class="test fail">${message} (expected: ${expected}, got: ${actual})</div>`;
+      }
+    }
+
+    function runTests() {
+      let results = '';
+      let passCount = 0;
+      let failCount = 0;
+
+      // Test 1: Poison damage
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 70;
+        state.player1.active.status = STATUS.POISON;
+        state.coinQueue = [true, false, true, true, false];
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.currentHp === 60) {
+          results += `<div class="test pass">Test 1: Poison applies 10 damage</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 1: Poison damage (expected: 60, got: ${newState.player1.active.currentHp})</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 2: Poison+ damage
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-003');
+        state.player1.active.currentHp = 180;
+        state.player1.active.status = STATUS.POISON_PLUS;
+        state.coinQueue = [true, false, true, true, false];
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.currentHp === 160) {
+          results += `<div class="test pass">Test 2: Poison+ applies 20 damage</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 2: Poison+ damage (expected: 160, got: ${newState.player1.active.currentHp})</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 3: Burn damage + heads (cured)
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-012');
+        state.player1.active.currentHp = 180;
+        state.player1.active.status = STATUS.BURN;
+        state.coinQueue = [true, false, true, true, false]; // heads first
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.currentHp === 160 && newState.player1.active.status === null) {
+          results += `<div class="test pass">Test 3: Burn applies 20 damage and cures on heads</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 3: Burn damage and cure (expected: 160 HP, null status; got: ${newState.player1.active.currentHp} HP, ${newState.player1.active.status} status)</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 4: Burn damage + tails (not cured)
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-012');
+        state.player1.active.currentHp = 180;
+        state.player1.active.status = STATUS.BURN;
+        state.coinQueue = [false, true, true, true, false]; // tails first
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.currentHp === 160 && newState.player1.active.status === STATUS.BURN) {
+          results += `<div class="test pass">Test 4: Burn applies 20 damage, remains on tails</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 4: Burn damage and remain (expected: 160 HP, burn status; got: ${newState.player1.active.currentHp} HP, ${newState.player1.active.status} status)</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 5: Sleep - wake up on heads
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 70;
+        state.player1.active.status = STATUS.SLEEP;
+        state.coinQueue = [true, false, true, true, false]; // heads first
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.status === null) {
+          results += `<div class="test pass">Test 5: Sleep cures on heads</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 5: Sleep cure (expected: null, got: ${newState.player1.active.status})</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 6: Sleep - remain asleep on tails
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 70;
+        state.player1.active.status = STATUS.SLEEP;
+        state.coinQueue = [false, true, true, true, false]; // tails first
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.status === STATUS.SLEEP) {
+          results += `<div class="test pass">Test 6: Sleep remains on tails</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 6: Sleep remain (expected: sleep, got: ${newState.player1.active.status})</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 7: Paralysis auto-cure
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 70;
+        state.player1.active.status = STATUS.PARALYSIS;
+        state.coinQueue = [true, false, true, true, false]; // should not consume coin
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.status === null && newState.coinQueue.length === 5) {
+          results += `<div class="test pass">Test 7: Paralysis auto-cures without coin flip</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 7: Paralysis cure (expected: null status, 5 coins; got: ${newState.player1.active.status} status, ${newState.coinQueue.length} coins)</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 8: KO from Poison
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 10; // Low HP
+        state.player1.active.status = STATUS.POISON;
+        state.coinQueue = [true, false, true, true, false];
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active === null && newState.player2.points === 1) {
+          results += `<div class="test pass">Test 8: KO from Poison awards 1 point to opponent</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 8: Poison KO (expected: null active, 1 point; got: active=${newState.player1.active !== null}, points=${newState.player2.points})</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 9: KO from Burn
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 20; // Exactly burn damage
+        state.player1.active.status = STATUS.BURN;
+        state.coinQueue = [true, false, true, true, false];
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active === null && newState.player2.points === 1) {
+          results += `<div class="test pass">Test 9: KO from Burn awards 1 point to opponent</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 9: Burn KO (expected: null active, 1 point; got: active=${newState.player1.active !== null}, points=${newState.player2.points})</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 10: Multiple Pokemon with status (active + bench)
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 70;
+        state.player1.active.status = STATUS.POISON;
+
+        state.player1.bench = [
+          createPokemon('A1-003'),
+          createPokemon('A1-012'),
+          null
+        ];
+        state.player1.bench[0].currentHp = 180;
+        state.player1.bench[0].status = STATUS.BURN;
+        state.player1.bench[1].currentHp = 180;
+        state.player1.bench[1].status = STATUS.SLEEP;
+
+        state.coinQueue = [true, true, true, true, true]; // All heads
+
+        const newState = processPokemonCheckup(state);
+
+        const activeOk = newState.player1.active.currentHp === 60 && newState.player1.active.status === STATUS.POISON;
+        const bench0Ok = newState.player1.bench[0].currentHp === 160 && newState.player1.bench[0].status === null;
+        const bench1Ok = newState.player1.bench[1].status === null;
+
+        if (activeOk && bench0Ok && bench1Ok) {
+          results += `<div class="test pass">Test 10: Multiple Pokemon processed correctly</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 10: Multiple status (active: ${activeOk}, bench[0]: ${bench0Ok}, bench[1]: ${bench1Ok})</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 11: No status - no changes
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 70;
+        state.player1.active.status = null;
+        state.coinQueue = [true, false, true, true, false];
+
+        const newState = processPokemonCheckup(state);
+
+        if (newState.player1.active.currentHp === 70 && newState.coinQueue.length === 5) {
+          results += `<div class="test pass">Test 11: No status - no changes</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 11: No status (expected: 70 HP, 5 coins; got: ${newState.player1.active.currentHp} HP, ${newState.coinQueue.length} coins)</div>`;
+          failCount++;
+        }
+      }
+
+      // Test 12: Log entries created
+      {
+        const state = createInitialState();
+        state.player1.active = createPokemon('A1-001');
+        state.player1.active.currentHp = 70;
+        state.player1.active.status = STATUS.POISON;
+        state.coinQueue = [true, false, true, true, false];
+
+        const newState = processPokemonCheckup(state);
+
+        const logEntry = newState.log.find(entry => entry.action === 'checkup');
+        if (logEntry && logEntry.details.includes('Poison')) {
+          results += `<div class="test pass">Test 12: Checkup log entry created</div>`;
+          passCount++;
+        } else {
+          results += `<div class="test fail">Test 12: Log entry not found or missing Poison</div>`;
+          failCount++;
+        }
+      }
+
+      const total = passCount + failCount;
+      const percentage = Math.round((passCount / total) * 100);
+
+      results = `
+        <div class="summary">
+          <h2>Results: ${passCount}/${total} tests passed (${percentage}%)</h2>
+        </div>
+        ${results}
+      `;
+
+      document.getElementById('results').innerHTML = results;
+    }
+
+    window.runTests = runTests;
+  </script>
+</body>
+</html>

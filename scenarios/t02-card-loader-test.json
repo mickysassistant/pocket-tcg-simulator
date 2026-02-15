@@ -1,0 +1,64 @@
+{
+  "name": "T02 - Card Loader Test",
+  "description": "Test scenario for verifying card loading functionality",
+  "version": "0.1.0",
+  "expectedResults": {
+    "cardsLoaded": 2418,
+    "testCard": {
+      "id": "A1-001",
+      "name": "Bulbasaur",
+      "hp": 70,
+      "supertype": "Pokémon"
+    },
+    "setsLoaded": [
+      "A1", "A1a",
+      "A2", "A2a", "A2b",
+      "A3", "A3a", "A3b",
+      "A4", "A4a", "A4b",
+      "B1", "B1a",
+      "B2"
+    ]
+  },
+  "tests": [
+    {
+      "name": "Load all sets",
+      "description": "Verify all 14 sets load without errors",
+      "expected": true
+    },
+    {
+      "name": "Get card by ID",
+      "description": "Retrieve A1-001 (Bulbasaur) successfully",
+      "cardId": "A1-001",
+      "expected": {
+        "name": "Bulbasaur",
+        "hp": 70
+      }
+    },
+    {
+      "name": "Get card image URL",
+      "description": "Retrieve image URL for A1-001",
+      "cardId": "A1-001",
+      "expectedField": "images.small"
+    },
+    {
+      "name": "Invalid card ID",
+      "description": "Invalid ID returns null",
+      "cardId": "INVALID-ID",
+      "expected": null
+    },
+    {
+      "name": "Card count",
+      "description": "Total cards loaded should be 2418",
+      "expected": 2418
+    },
+    {
+      "name": "Different card types",
+      "description": "Verify Pokémon and Trainer cards exist",
+      "expected": {
+        "pokémon": 2206,
+        "trainer": 212,
+        "energy": 0
+      }
+    }
+  ]
+}

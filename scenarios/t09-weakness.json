@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "name": "T09: Weakness Test",
+  "description": "Squirtle (Water) vs Charmander (Fire, weak to Water). Tests weakness +20.",
+  "turn": 2,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false, true, false, true, true, false],
+  "player1": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-053",
+      "currentHp": 60,
+      "energy": ["W"],
+      "status": null,
+      "turnPlayed": 0,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [],
+    "hand": [],
+    "deck": [],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": null,
+      "nextEnergy": null,
+      "configuredTypes": ["W"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "player2": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-033",
+      "currentHp": 60,
+      "energy": ["R"],
+      "status": null,
+      "turnPlayed": 0,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [],
+    "hand": [],
+    "deck": [],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": null,
+      "nextEnergy": null,
+      "configuredTypes": ["R"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": []
+}

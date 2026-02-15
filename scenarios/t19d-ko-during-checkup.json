@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "name": "T19d: Pokemon KO'd During Checkup",
+  "description": "Tests Pokemon KO'd by Poison damage during Pokemon Checkup. Bench Pokemon should promote to active.",
+  "turn": 8,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false, true, false, true, true, false],
+  "player1": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-001",
+      "currentHp": 5,
+      "energy": ["G"],
+      "status": ["poison"],
+      "turnPlayed": 3,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [
+      {
+        "cardId": "A1-002",
+        "currentHp": 70,
+        "energy": ["G", "G"],
+        "status": null,
+        "turnPlayed": 2,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      },
+      {
+        "cardId": "A1-003",
+        "currentHp": 90,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 4,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      }
+    ],
+    "hand": ["A1-131"],
+    "deck": ["A1-004", "A1-005"],
+    "discard": ["A1-220"],
+    "energyZone": {
+      "currentEnergy": "G",
+      "nextEnergy": "W",
+      "configuredTypes": ["G", "W"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "player2": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-015",
+      "currentHp": 140,
+      "energy": ["R", "R", "R"],
+      "status": null,
+      "turnPlayed": 1,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [],
+    "hand": ["A1-131"],
+    "deck": ["A1-016", "A1-017"],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": "R",
+      "nextEnergy": "R",
+      "configuredTypes": ["R"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": [
+    {
+      "turn": 8,
+      "player": "player1",
+      "action": "startTurn"
+    }
+  ],
+  "_expectedBehavior": {
+    "description": "After endTurn, Poison damage (10) should KO Bulbasaur (5 HP). Ivysaur should promote from bench to active. Player 2 should receive 1 point.",
+    "expectedActiveAfter": "A1-002",
+    "expectedPlayer2Points": 1
+  },
+  "_todoPocketVerify": false,
+  "_verifiedWithApp": false
+}

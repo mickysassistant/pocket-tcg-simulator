@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 07 Test: Turn Flow</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; }
+        h2 { color: #555; margin-top: 30px; }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-secondary { background: #2196F3; color: white; }
+        .btn-warning { background: #FF9800; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        #results {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .pass { color: #4CAF50; }
+        .fail { color: #f44336; }
+        .info { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>Task 07 Test: Turn Flow</h1>
+    <p>Testing turn flow implementation (startTurn, endTurn, drawCard, checkup, win condition)</p>
+
+    <div class="test-section">
+        <h2>Controls</h2>
+        <button id="run-all-btn" class="btn-primary">Run All Tests</button>
+        <button id="clear-btn" class="btn-secondary">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results">Click "Run All Tests" to begin...</div>
+    </div>
+
+    <script type="module">
+        import {
+            createInitialState,
+            cloneState,
+            createPlayer,
+            createPokemon,
+            startTurn,
+            endTurn,
+            drawCard,
+            processPokemonCheckup,
+            checkWinCondition
+        } from './js/engine/game-state.js';
+        import { loadCards, getCard } from './js/data/card-loader.js';
+
+        const resultsDiv = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            resultsDiv.innerHTML += `<span class="${type}">[${timestamp}] ${message}</span>\n`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function assert(condition, message) {
+            if (condition) {
+                log(`✓ PASS: ${message}`, 'pass');
+                return true;
+            } else {
+                log(`✗ FAIL: ${message}`, 'fail');
+                return false;
+            }
+        }
+
+        function assertEquals(actual, expected, message) {
+            const condition = JSON.stringify(actual) === JSON.stringify(expected);
+            if (condition) {
+                log(`✓ PASS: ${message}`, 'pass');
+                return true;
+            } else {
+                log(`✗ FAIL: ${message}\n   Expected: ${JSON.stringify(expected)}\n   Actual: ${JSON.stringify(actual)}`, 'fail');
+                return false;
+            }
+        }
+
+        // Load cards first
+        async function loadTestData() {
+            log('Loading card data...', 'info');
+            await loadCards();
+            log(`Loaded card data successfully`, 'pass');
+        }
+
+        // Test 1: startTurn() - First turn (player 1 going first)
+        function testStartTurnFirst() {
+            log('\n=== Test 1: startTurn() - First turn (player 1 going first) ===', 'info');
+
+            let state = createInitialState();
+            const currentPlayer = state.currentPlayer; // Should be 'player1'
+            const initialTurn = state.turn; // Should be 0
+
+            // Mock player with cards in deck
+            state.player1.deck = ['A1-001', 'A1-002', 'A1-003', 'A1-004', 'A1-005'];
+
+            state = startTurn(state);
+
+            // Check that flags are reset
+            assert(!state.player1.supporterUsedThisTurn, 'supporterUsedThisTurn reset');
+            assert(!state.player1.retreatedThisTurn, 'retreatedThisTurn reset');
+            assert(!state.player1.energyZone.usedThisTurn, 'energyZone.usedThisTurn reset');
+            assert(!state.player1.normalAttachUsedThisTurn, 'normalAttachUsedThisTurn reset');
+
+            // Check that no card was drawn (first turn going first)
+            assert(state.player1.deck.length === 5, 'No card drawn on first turn (deck unchanged)');
+            assert(state.player1.hand.length === 0, 'No card drawn on first turn (hand empty)');
+
+            // Check that energy was generated (shifted next to current, new next generated)
+            // Energy generation is tested separately
+
+            // Check log entry
+            const lastLog = state.log[state.log.length - 1];
+            assertEquals(lastLog.action, 'startTurn', 'Log entry added');
+            assertEquals(lastLog.player, 'player1', 'Log shows correct player');
+
+            log('Test 1 completed', 'pass');
+        }
+
+        // Test 2: startTurn() - Normal turn (player 2)
+        function testStartTurnNormal() {
+            log('\n=== Test 2: startTurn() - Normal turn (player 2) ===', 'info');
+
+            let state = createInitialState();
+            state.turn = 1;
+            state.currentPlayer = 'player2';
+
+            // Mock player with cards in deck
+            state.player2.deck = ['A1-001', 'A1-002', 'A1-003', 'A1-004', 'A1-005'];
+
+            state = startTurn(state);
+
+            // Check that flags are reset
+            assert(!state.player2.supporterUsedThisTurn, 'supporterUsedThisTurn reset');
+            assert(!state.player2.retreatedThisTurn, 'retreatedThisTurn reset');
+
+            // Check that card was drawn (normal turn)
+            assert(state.player2.deck.length === 4, 'Card drawn on normal turn (deck decreased)');
+            assert(state.player2.hand.length === 1, 'Card drawn on normal turn (hand increased)');
+
+            // Check log entry
+            const lastLog = state.log[state.log.length - 1];
+            assertEquals(lastLog.action, 'startTurn', 'Log entry added');
+
+            log('Test 2 completed', 'pass');
+        }
+
+        // Test 3: drawCard() - Draw from deck
+        function testDrawCard() {
+            log('\n=== Test 3: drawCard() - Draw from deck ===', 'info');
+
+            let state = createInitialState();
+            state.player1.deck = ['A1-001', 'A1-002', 'A1-003'];
+            state.player1.hand = ['A1-100'];
+
+            state = drawCard(state, 'player1');
+
+            assertEquals(state.player1.deck.length, 2, 'Deck decreased by 1');
+            assertEquals(state.player1.hand.length, 2, 'Hand increased by 1');
+            assertEquals(state.player1.hand[1], 'A1-003', 'Correct card drawn (from top of deck)');
+
+            log('Test 3 completed', 'pass');
+        }
+
+        // Test 4: drawCard() - Deck empty
+        function testDrawCardEmptyDeck() {
+            log('\n=== Test 4: drawCard() - Deck empty ===', 'info');
+
+            let state = createInitialState();
+            state.player1.deck = [];
+            state.player1.hand = ['A1-100'];
+
+            state = drawCard(state, 'player1');
+
+            assertEquals(state.player1.deck.length, 0, 'Deck still empty');
+            assertEquals(state.player1.hand.length, 1, 'Hand unchanged');
+
+            // Check log entry
+            const lastLog = state.log[state.log.length - 1];
+            assertEquals(lastLog.action, 'draw', 'Log entry added');
+            assertEquals(lastLog.result, 'deck empty', 'Log shows deck empty');
+
+            log('Test 4 completed', 'pass');
+        }
+
+        // Test 5: drawCard() - Hand full
+        function testDrawCardHandFull() {
+            log('\n=== Test 5: drawCard() - Hand full ===', 'info');
+
+            let state = createInitialState();
+            state.player1.deck = ['A1-001'];
+            state.player1.hand = Array(10).fill('A1-100'); // Full hand
+
+            state = drawCard(state, 'player1');
+
+            assertEquals(state.player1.deck.length, 0, 'Deck decreased by 1');
+            assertEquals(state.player1.hand.length, 10, 'Hand still full');
+            assertEquals(state.player1.discard.length, 1, 'Card discarded');
+
+            log('Test 5 completed', 'pass');
+        }
+
+        // Test 6: endTurn() - Switch player
+        function testEndTurnSwitchPlayer() {
+            log('\n=== Test 6: endTurn() - Switch player ===', 'info');
+
+            let state = createInitialState();
+            state.currentPlayer = 'player1';
+            state.turn = 5;
+
+            state = endTurn(state);
+
+            assertEquals(state.currentPlayer, 'player2', 'Player switched');
+            assertEquals(state.turn, 6, 'Turn increased');
+
+            // Check log entry
+            const lastLog = state.log[state.log.length - 1];
+            assertEquals(lastLog.action, 'endTurn', 'Log entry added');
+
+            log('Test 6 completed', 'pass');
+        }
+
+        // Test 7: endTurn() - Checkup: Poison
+        function testEndTurnPoison() {
+            log('\n=== Test 7: endTurn() - Checkup: Poison ===', 'info');
+
+            let state = createInitialState();
+            state.currentPlayer = 'player1';
+
+            // Mock active Pokemon with Poison status
+            state.player1.active = {
+                cardId: 'A1-001',
+                currentHp: 100,
+                energy: [],
+                status: 'poison',
+                turnPlayed: 0
+            };
+
+            state = endTurn(state);
+
+            assertEquals(state.player1.active.currentHp, 90, 'Poison deals 10 damage');
+            assertEquals(state.player1.active.status, 'poison', 'Poison remains');
+
+            log('Test 7 completed', 'pass');
+        }
+
+        // Test 8: endTurn() - Checkup: Poison+ (toxic)
+        function testEndTurnPoisonPlus() {
+            log('\n=== Test 8: endTurn() - Checkup: Poison+ (toxic) ===', 'info');
+
+            let state = createInitialState();
+            state.currentPlayer = 'player1';
+
+            // Mock active Pokemon with Poison+ status
+            state.player1.active = {
+                cardId: 'A1-001',
+                currentHp: 100,
+                energy: [],
+                status: 'poison+',
+                turnPlayed: 0
+            };
+
+            state = endTurn(state);
+
+            assertEquals(state.player1.active.currentHp, 80, 'Poison+ deals 20 damage');
+            assertEquals(state.player1.active.status, 'poison+', 'Poison+ remains');
+
+            log('Test 8 completed', 'pass');
+        }
+
+        // Test 9: endTurn() - Checkup: Burn
+        function testEndTurnBurn() {
+            log('\n=== Test 9: endTurn() - Checkup: Burn ===', 'info');
+
+            let state = createInitialState();
+            state.currentPlayer = 'player1';
+
+            // Mock active Pokemon with Burn status
+            state.player1.active = {
+                cardId: 'A1-001',
+                currentHp: 100,
+                energy: [],
+                status: 'burn',
+                turnPlayed: 0
+            };
+
+            // Mock coin queue (heads first)
+            state.coinQueue = [true, false, true];
+
+            state = endTurn(state);
+
+            assertEquals(state.player1.active.currentHp, 80, 'Burn deals 20 damage');
+            assertEquals(state.player1.active.status, null, 'Burn cleared on heads');
+            assertEquals(state.coinQueue.length, 2, 'One coin consumed');
+
+            log('Test 9 completed', 'pass');
+        }
+
+        // Test 10: endTurn() - Checkup: Sleep
+        function testEndTurnSleep() {
+            log('\n=== Test 10: endTurn() - Checkup: Sleep ===', 'info');
+
+            let state = createInitialState();
+            state.currentPlayer = 'player1';
+
+            // Mock active Pokemon with Sleep status
+            state.player1.active = {
+                cardId: 'A1-001',
+                currentHp: 100,
+                energy: [],
+                status: 'sleep',
+                turnPlayed: 0
+            };
+
+            // Mock coin queue (tails first)
+            state.coinQueue = [false, true];
+
+            state = endTurn(state);
+
+            assertEquals(state.player1.active.currentHp, 100, 'Sleep deals no damage');
+            assertEquals(state.player1.active.status, 'sleep', 'Sleep remains on tails');
+            assertEquals(state.coinQueue.length, 1, 'One coin consumed');
+
+            log('Test 10 completed', 'pass');
+        }
+
+        // Test 11: endTurn() - Checkup: Paralysis
+        function testEndTurnParalysis() {
+            log('\n=== Test 11: endTurn() - Checkup: Paralysis ===', 'info');
+
+            let state = createInitialState();
+            state.currentPlayer = 'player1';
+
+            // Mock active Pokemon with Paralysis status
+            state.player1.active = {
+                cardId: 'A1-001',
+                currentHp: 100,
+                energy: [],
+                status: 'paralysis',
+                turnPlayed: 0
+            };
+
+            // Mock coin queue (heads first)
+            state.coinQueue = [true, false];
+
+            state = endTurn(state);
+
+            assertEquals(state.player1.active.status, null, 'Paralysis cleared on heads');
+            assertEquals(state.coinQueue.length, 1, 'One coin consumed');
+
+            log('Test 11 completed', 'pass');
+        }
+
+        // Test 12: checkWinCondition() - No winner yet
+        function testCheckWinConditionNone() {
+            log('\n=== Test 12: checkWinCondition() - No winner yet ===', 'info');
+
+            let state = createInitialState();
+            state.player1.points = 2;
+            state.player2.points = 1;
+
+            const winner = checkWinCondition(state);
+            assertEquals(winner, null, 'No winner yet');
+
+            log('Test 12 completed', 'pass');
+        }
+
+        // Test 13: checkWinCondition() - Player 1 wins
+        function testCheckWinConditionPlayer1() {
+            log('\n=== Test 13: checkWinCondition() - Player 1 wins ===', 'info');
+
+            let state = createInitialState();
+            state.player1.points = 3;
+            state.player2.points = 1;
+
+            const winner = checkWinCondition(state);
+            assertEquals(winner, 'player1', 'Player 1 wins');
+
+            log('Test 13 completed', 'pass');
+        }
+
+        // Test 14: checkWinCondition() - Player 2 wins
+        function testCheckWinConditionPlayer2() {
+            log('\n=== Test 14: checkWinCondition() - Player 2 wins ===', 'info');
+
+            let state = createInitialState();
+            state.player1.points = 2;
+            state.player2.points = 3;
+
+            const winner = checkWinCondition(state);
+            assertEquals(winner, 'player2', 'Player 2 wins');
+
+            log('Test 14 completed', 'pass');
+        }
+
+        // Test 15: Full turn flow (startTurn → endTurn)
+        function testFullTurnFlow() {
+            log('\n=== Test 15: Full turn flow ===', 'info');
+
+            let state = createInitialState();
+            state.turn = 1;
+            state.currentPlayer = 'player2';
+
+            // Mock deck
+            state.player2.deck = ['A1-001', 'A1-002', 'A1-003'];
+
+            // Start turn
+            state = startTurn(state);
+
+            // Verify turn started
+            assertEquals(state.currentPlayer, 'player2', 'Still player2 turn');
+            assertEquals(state.player2.hand.length, 1, 'Card drawn');
+
+            // End turn
+            state = endTurn(state);
+
+            // Verify turn ended
+            assertEquals(state.currentPlayer, 'player1', 'Player switched to player1');
+            assertEquals(state.turn, 2, 'Turn increased');
+
+            // Verify log entries
+            const lastTwoLogs = state.log.slice(-2);
+            assertEquals(lastTwoLogs[0].action, 'startTurn', 'First log is startTurn');
+            assertEquals(lastTwoLogs[1].action, 'endTurn', 'Second log is endTurn');
+
+            log('Test 15 completed', 'pass');
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            resultsDiv.innerHTML = '';
+            log('Starting Task 07 tests...\n', 'info');
+
+            await loadTestData();
+
+            let passCount = 0;
+            let failCount = 0;
+
+            const tests = [
+                testStartTurnFirst,
+                testStartTurnNormal,
+                testDrawCard,
+                testDrawCardEmptyDeck,
+                testDrawCardHandFull,
+                testEndTurnSwitchPlayer,
+                testEndTurnPoison,
+                testEndTurnPoisonPlus,
+                testEndTurnBurn,
+                testEndTurnSleep,
+                testEndTurnParalysis,
+                testCheckWinConditionNone,
+                testCheckWinConditionPlayer1,
+                testCheckWinConditionPlayer2,
+                testFullTurnFlow
+            ];
+
+            for (const test of tests) {
+                try {
+                    test();
+                } catch (e) {
+                    log(`Error in test: ${e.message}`, 'fail');
+                    failCount++;
+                }
+            }
+
+            log('\n=== Test Summary ===', 'info');
+            log(`Total tests: ${tests.length}`, 'info');
+            log(`Passed: ${passCount}`, 'pass');
+            log(`Failed: ${failCount}`, failCount === 0 ? 'pass' : 'fail');
+        }
+
+        // Event listeners
+        document.getElementById('run-all-btn').addEventListener('click', runAllTests);
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            resultsDiv.innerHTML = 'Click "Run All Tests" to begin...';
+        });
+    </script>
+</body>
+</html>

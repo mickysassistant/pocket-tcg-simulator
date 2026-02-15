@@ -1,0 +1,6 @@
+{
+  "timestamp": "2026-02-11T20:43:44.963Z",
+  "status": "CRASH",
+  "error": "net::ERR_CONNECTION_REFUSED at http://localhost:3000/?qa=true",
+  "stack": "Error: net::ERR_CONNECTION_REFUSED at http://localhost:3000/?qa=true\n    at navigate (file:///home/deckie/.openclaw/workspace/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/Frame.js:180:27)\n    at async Deferred.race (file:///home/deckie/.openclaw/workspace/node_modules/puppeteer-core/lib/esm/puppeteer/util/Deferred.js:33:20)\n    at async CdpFrame.goto (file:///home/deckie/.openclaw/workspace/node_modules/puppeteer-core/lib/esm/puppeteer/cdp/Frame.js:146:25)\n    at async CdpPage.goto (file:///home/deckie/.openclaw/workspace/node_modules/puppeteer-core/lib/esm/puppeteer/api/Page.js:576:20)\n    at async runBrowserQA (file:///home/deckie/.openclaw/workspace/pocket-tcg-simulator/test-qa-puppeteer.mjs:86:9)"
+}

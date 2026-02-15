@@ -1,0 +1,109 @@
+/* Action Log CSS */
+
+/* Note: Width is set in battlefield.css to prevent layout issues */
+#action-log {
+    background: #2c3e50;
+    border-left: 2px solid #34495e;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-header {
+    padding: 15px;
+    background: #34495e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.log-header h2 {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.log-entries {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.log-empty {
+    color: #95a5a6;
+    text-align: center;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 10px;
+    font-style: italic;
+}
+
+.log-empty::before {
+    content: '🎮';
+    font-size: 36px;
+    opacity: 0.5;
+    margin-bottom: 8px;
+}
+
+.log-empty::after {
+    content: attr(data-hint);
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 8px;
+}
+
+.log-entry {
+    padding: 5px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+.log-turn-header {
+    font-weight: bold;
+    color: #f39c12;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #7f8c8d;
+}
+
+.log-action-damage {
+    color: #e74c3c;
+}
+
+.log-action-healing {
+    color: #27ae60;
+}
+
+.log-action-status {
+    color: #f1c40f;
+}
+
+.log-action-card {
+    color: #3498db;
+}
+
+.log-action-ability {
+    color: #9b59b6;
+}
+
+/* Scrollbar styling */
+.log-entries::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-entries::-webkit-scrollbar-track {
+    background: #34495e;
+}
+
+.log-entries::-webkit-scrollbar-thumb {
+    background: #7f8c8d;
+    border-radius: 4px;
+}
+
+.log-entries::-webkit-scrollbar-thumb:hover {
+    background: #95a5a6;
+}

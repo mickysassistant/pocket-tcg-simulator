@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Card Loader - T02</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .info {
+            color: blue;
+        }
+        .test-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .test-card img {
+            max-width: 200px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Card Loader - T02</h1>
+    <div id="results"></div>
+    <div id="card-display"></div>
+
+    <script type="module">
+        import { loadCards, getCard, getCardImage, getCardCount } from './js/data/card-loader.js';
+
+        const resultsDiv = document.getElementById('results');
+        const cardDisplay = document.getElementById('card-display');
+
+        function log(message, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.textContent = message;
+            resultsDiv.appendChild(p);
+        }
+
+        async function runTests() {
+            log('🧪 Starting T02 Tests...', 'info');
+            log('----------------------------------------', 'info');
+
+            // Test 1: Load cards
+            log('Test 1: Loading cards...', 'info');
+            try {
+                await loadCards();
+                const count = getCardCount();
+                log(`✅ Test 1 PASSED: ${count} cards loaded successfully`, 'success');
+            } catch (error) {
+                log(`❌ Test 1 FAILED: ${error.message}`, 'error');
+                return;
+            }
+
+            // Test 2: Get card by ID
+            log('Test 2: Getting card by ID (A1-001)...', 'info');
+            const testCard = getCard('A1-001');
+            if (testCard) {
+                log(`✅ Test 2 PASSED: Found card "${testCard.name}"`, 'success');
+                log(`   - ID: ${testCard.id}`, 'info');
+                log(`   - HP: ${testCard.hp || 'N/A'}`, 'info');
+                log(`   - Types: ${testCard.types ? testCard.types.join(', ') : 'N/A'}`, 'info');
+            } else {
+                log('❌ Test 2 FAILED: Card A1-001 not found', 'error');
+                return;
+            }
+
+            // Test 3: Get card image
+            log('Test 3: Getting card image URL...', 'info');
+            const imgUrl = getCardImage('A1-001', 'small');
+            if (imgUrl) {
+                log(`✅ Test 3 PASSED: Image URL found`, 'success');
+                log(`   URL: ${imgUrl.substring(0, 60)}...`, 'info');
+            } else {
+                log('❌ Test 3 FAILED: No image URL found', 'error');
+                return;
+            }
+
+            // Test 4: Invalid card ID
+            log('Test 4: Testing invalid card ID...', 'info');
+            const invalidCard = getCard('INVALID-ID');
+            if (invalidCard === null) {
+                log('✅ Test 4 PASSED: Invalid ID returns null', 'success');
+            } else {
+                log('❌ Test 4 FAILED: Invalid ID should return null', 'error');
+                return;
+            }
+
+            // Display test card
+            if (testCard && imgUrl) {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'test-card';
+                cardDiv.innerHTML = `
+                    <h2>🎴 Test Card Display</h2>
+                    <p><strong>Name:</strong> ${testCard.name}</p>
+                    <p><strong>ID:</strong> ${testCard.id}</p>
+                    <p><strong>HP:</strong> ${testCard.hp || 'N/A'}</p>
+                    <p><strong>Supertype:</strong> ${testCard.supertype || 'N/A'}</p>
+                    <img src="${imgUrl}" alt="${testCard.name}">
+                `;
+                cardDisplay.appendChild(cardDiv);
+            }
+
+            log('----------------------------------------', 'info');
+            log('🎉 All tests passed! T02 is complete.', 'success');
+        }
+
+        runTests().catch(error => {
+            log(`❌ Fatal error: ${error.message}`, 'error');
+            console.error(error);
+        });
+    </script>
+</body>
+</html>

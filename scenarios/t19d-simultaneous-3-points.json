@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "name": "T19d: Simultaneous 3 Points (Both Have Bench)",
+  "description": "Tests both players reaching 3 points simultaneously. Since both have bench, should be a draw.",
+  "turn": 15,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false, true, false, true, true, false],
+  "player1": {
+    "points": 2,
+    "active": {
+      "cardId": "A1-003",
+      "currentHp": 150,
+      "energy": ["G", "G", "G", "G"],
+      "status": null,
+      "turnPlayed": 0,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [
+      {
+        "cardId": "A1-001",
+        "currentHp": 60,
+        "energy": ["G"],
+        "status": null,
+        "turnPlayed": 0,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      },
+      {
+        "cardId": "A1-002",
+        "currentHp": 90,
+        "energy": ["G", "G"],
+        "status": null,
+        "turnPlayed": 2,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      }
+    ],
+    "hand": ["A1-131"],
+    "deck": ["A1-004"],
+    "discard": ["A1-220", "A1-220"],
+    "energyZone": {
+      "currentEnergy": "G",
+      "nextEnergy": "G",
+      "configuredTypes": ["G", "W"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "player2": {
+    "points": 2,
+    "active": {
+      "cardId": "A1-018",
+      "currentHp": 180,
+      "energy": ["R", "R", "R", "R"],
+      "status": null,
+      "turnPlayed": 1,
+      "lastEvolved": null,
+      "tool": null,
+      "effects": []
+    },
+    "bench": [
+      {
+        "cardId": "A1-015",
+        "currentHp": 120,
+        "energy": ["R", "R"],
+        "status": null,
+        "turnPlayed": 0,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      },
+      {
+        "cardId": "A1-016",
+        "currentHp": 100,
+        "energy": ["R"],
+        "status": null,
+        "turnPlayed": 3,
+        "lastEvolved": null,
+        "tool": null,
+        "effects": []
+      }
+    ],
+    "hand": ["A1-131"],
+    "deck": ["A1-017"],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": "R",
+      "nextEnergy": "R",
+      "configuredTypes": ["R"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": [],
+  "_expectedBehavior": {
+    "description": "When both active Pokemon are KO'd simultaneously, both reach 3 points. Since both have bench Pokemon, result should be a draw.",
+    "expectedWinner": "draw",
+    "expectedPlayer1Points": 3,
+    "expectedPlayer2Points": 3
+  },
+  "_todoPocketVerify": false,
+  "_verifiedWithApp": false
+}

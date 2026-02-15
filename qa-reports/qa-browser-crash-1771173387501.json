@@ -1,0 +1,6 @@
+{
+  "timestamp": "2026-02-15T16:36:27.501Z",
+  "status": "CRASH",
+  "error": "require is not defined",
+  "stack": "ReferenceError: require is not defined\n    at runBrowserQA (file:///home/deckie/.openclaw/workspace/pocket-tcg-simulator/test-qa-browser.mjs:122:9)"
+}
