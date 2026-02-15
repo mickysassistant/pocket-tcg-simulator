@@ -872,17 +872,6 @@ function handleEvolveDrop(playerId, handIndex, targetLocation, evoCard) {
 }
 
 /**
- * Check whether a card-loader card is a Basic Pokemon.
- */
-function isBasicPokemonCard(card) {
-    if (!card) return false;
-    if (card.subtypes && card.subtypes.includes('Basic')) return true;
-    if (card.stage === 'Basic' || card.stage === 0) return true;
-    if (card.supertype === 'Pokémon' && !card.evolvesFrom) return true;
-    return false;
-}
-
-/**
  * Error severity levels for better error categorization
  * @enum {string}
  */
