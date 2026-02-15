@@ -158,6 +158,24 @@
     "invalidTarget": "Invalid target for this card",
     "playSuccess": "Played {cardName}"
   },
+  "retreat": {
+    "title": "Retreat Active Pokemon",
+    "retreatCost": "Retreat Cost",
+    "selectBenchPokemon": "Select a Pokemon from bench",
+    "discardEnergy": "Discard Energy",
+    "discardInstructions": "Select exactly {cost} energy card(s) to discard",
+    "discardComplete": "Energy selected: {selected}/{cost}",
+    "discardIncomplete": "Need {cost} energy card(s), selected {selected}",
+    "discardExcess": "Too many energy selected: {selected}/{cost}",
+    "confirmRetreat": "Confirm Retreat",
+    "cancelRetreat": "Cancel",
+    "retreatSuccess": "Retreated to {pokemonName}",
+    "noBenchPokemon": "No Pokemon in bench",
+    "cannotRetreat": "Cannot retreat",
+    "energyInsufficient": "Not enough energy attached",
+    "energyMismatch": "Selected energy does not match retreat cost",
+    "statusBlocksRetreat": "Cannot retreat while {status}"
+  },
   "errors": {
     "validation": {
       "invalidPlayer": "Invalid player",

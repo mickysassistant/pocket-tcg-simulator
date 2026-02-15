@@ -71,6 +71,9 @@ let editTarget = null; // { playerId, location } - location: 'active' or bench i
 // Trainer card play modal state (Stage 1)
 let trainerModalState = null; // { playerId, handIndex, cardId, card, selectedTarget, targetType }
 
+// Retreat modal state (Stage 2)
+let retreatModalState = null; // { playerId, benchIndex, retreatCost, selectedEnergyIndices }
+
 // i18n
 let currentLanguage = 'es';
 const translations = { es: {}, en: {} };
@@ -390,9 +393,33 @@ function renderAttackPanel(st) {
         return;
     }
 
+    container.innerHTML = '';
+
+    // Add retreat button (Stage 2)
+    const retreatBtn = document.createElement('button');
+    retreatBtn.className = 'attack-button retreat-button';
+    retreatBtn.innerHTML = `
+        <div>
+            <div class="attack-name">${t('retreat.title')}</div>
+        </div>
+        <div class="attack-damage">↩️</div>
+    `;
+
+    // Check if retreat is possible
+    const canRetreatActive = canRetreatActivePokemon(st, currentPlayerId);
+    retreatBtn.disabled = !canRetreatActive;
+    retreatBtn.addEventListener('click', () => openRetreatModal(currentPlayerId));
+    container.appendChild(retreatBtn);
+
+    // Add separator
+    const separator = document.createElement('div');
+    separator.className = 'attack-panel-separator';
+    separator.textContent = '⚔️';
+    container.appendChild(separator);
+
     // Check if already attacked this turn
     if (currentPlayer.attackedThisTurn) {
-        container.innerHTML = '<div class="empty-slot" style="width:100%">Already attacked this turn</div>';
+        container.innerHTML += '<div class="empty-slot" style="width:100%">Already attacked this turn</div>';
         return;
     }
 
@@ -400,11 +427,9 @@ function renderAttackPanel(st) {
     const opponentId = currentPlayerId === 'player1' ? 'player2' : 'player1';
     const opponent = st[opponentId];
     if (!opponent || !opponent.active) {
-        container.innerHTML = '<div class="empty-slot" style="width:100%">No target to attack</div>';
+        container.innerHTML += '<div class="empty-slot" style="width:100%">No target to attack</div>';
         return;
     }
-
-    container.innerHTML = '';
 
     attackerCard.attacks.forEach((attack, index) => {
         const button = document.createElement('button');
@@ -1861,6 +1886,274 @@ function clearButtonLoading(btn) {
     if (btn) btn.classList.remove('btn-loading');
 }
 
+// ============================================================================
+// RETREAT MODAL (Stage 2)
+// ============================================================================
+
+/**
+ * Check if the current player can retreat their active Pokemon
+ * @param {Object} st - Game state
+ * @param {string} playerId - Player ID
+ * @returns {boolean}
+ */
+function canRetreatActivePokemon(st, playerId) {
+    const player = st[playerId];
+    if (!player || !player.active) return false;
+    if (player.retreatedThisTurn) return false;
+
+    // Check if there's at least one Pokemon on the bench
+    const hasBenchPokemon = player.bench.some(p => p !== null);
+    if (!hasBenchPokemon) return false;
+
+    // Get retreat cost from card
+    const card = getCard(player.active.cardId);
+    if (!card) return false;
+
+    const retreatCost = card.retreatCost || 0;
+    if (retreatCost === 0) return true; // Free retreat
+
+    // Check if enough energy is attached
+    if (player.active.energy.length < retreatCost) return false;
+
+    // Check status that blocks retreat
+    const status = player.active.status;
+    if (status === 'sleep' || status === 'paralysis') return false;
+
+    return true;
+}
+
+/**
+ * Open retreat modal
+ * @param {string} playerId - Player ID
+ */
+function openRetreatModal(playerId) {
+    const player = state[playerId];
+    if (!player || !player.active) {
+        logError(t('alerts.noPokemonInSlot'));
+        return;
+    }
+
+    // Check if can retreat
+    if (!canRetreatActivePokemon(state, playerId)) {
+        logError(t('retreat.cannotRetreat'));
+        return;
+    }
+
+    // Get retreat cost
+    const card = getCard(player.active.cardId);
+    const retreatCost = card?.retreatCost || 0;
+
+    // Setup modal state
+    retreatModalState = {
+        playerId,
+        benchIndex: null,
+        retreatCost,
+        selectedEnergyIndices: []
+    };
+
+    // Populate modal UI
+    const modal = document.querySelector('#retreat-modal');
+    const activeImg = document.querySelector('#retreat-active-img');
+    const activeName = document.querySelector('#retreat-active-name');
+    const costValue = document.querySelector('#retreat-cost-value');
+    const benchSection = document.querySelector('#retreat-bench-selection');
+    const benchOptions = document.querySelector('#retreat-bench-options');
+    const energySection = document.querySelector('#retreat-energy-selection');
+    const energyInstructions = document.querySelector('#retreat-discard-instructions');
+    const energyList = document.querySelector('#retreat-energy-list');
+    const energyStatus = document.querySelector('#retreat-energy-status');
+    const errorDiv = document.querySelector('#retreat-validation-error');
+
+    // Clear previous state
+    errorDiv.textContent = '';
+    benchOptions.innerHTML = '';
+    energyList.innerHTML = '';
+    energyStatus.textContent = '';
+    energyStatus.className = 'retreat-energy-status';
+
+    // Set active Pokemon info
+    activeImg.src = getCardImage(player.active.cardId, 'small');
+    activeName.textContent = card?.name || player.active.cardId;
+    costValue.textContent = retreatCost;
+
+    // Render bench options
+    if (retreatCost > 0) {
+        energyInstructions.textContent = t('retreat.discardInstructions', { cost: retreatCost });
+        energySection.classList.remove('hidden');
+    } else {
+        energyInstructions.textContent = t('retreat.discardComplete', { selected: 0, cost: 0 });
+        energySection.classList.add('hidden');
+    }
+
+    player.bench.forEach((p, i) => {
+        if (p) {
+            const benchCard = getCard(p.cardId);
+            const option = document.createElement('div');
+            option.className = 'target-option';
+            option.dataset.benchIndex = i;
+            option.textContent = benchCard?.name || p.cardId;
+            option.addEventListener('click', () => {
+                benchOptions.querySelectorAll('.target-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                retreatModalState.benchIndex = i;
+                updateRetreatEnergyStatus();
+            });
+            benchOptions.appendChild(option);
+        }
+    });
+
+    // Render energy selection if needed
+    if (retreatCost > 0) {
+        player.active.energy.forEach((energy, idx) => {
+            const energyItem = document.createElement('div');
+            energyItem.className = 'retreat-energy-item';
+            energyItem.dataset.energyIndex = idx;
+            energyItem.innerHTML = `
+                <span class="energy energy-${energy}">${energy}</span>
+                <span class="energy-index">${idx}</span>
+            `;
+            energyItem.addEventListener('click', () => toggleRetreatEnergySelection(idx, energyItem));
+            energyList.appendChild(energyItem);
+        });
+    }
+
+    // Show modal
+    modal.classList.add('active');
+}
+
+/**
+ * Toggle energy selection for retreat
+ * @param {number} energyIndex - Index of energy card
+ * @param {HTMLElement} element - Energy element
+ */
+function toggleRetreatEnergySelection(energyIndex, element) {
+    const idx = retreatModalState.selectedEnergyIndices.indexOf(energyIndex);
+    if (idx >= 0) {
+        // Deselect
+        retreatModalState.selectedEnergyIndices.splice(idx, 1);
+        element.classList.remove('selected');
+    } else {
+        // Select
+        retreatModalState.selectedEnergyIndices.push(energyIndex);
+        element.classList.add('selected');
+    }
+    updateRetreatEnergyStatus();
+}
+
+/**
+ * Update retreat energy status display
+ */
+function updateRetreatEnergyStatus() {
+    const energyStatus = document.querySelector('#retreat-energy-status');
+    const selected = retreatModalState.selectedEnergyIndices.length;
+    const cost = retreatModalState.retreatCost;
+
+    if (cost === 0) {
+        energyStatus.textContent = t('retreat.discardComplete', { selected: 0, cost: 0 });
+        energyStatus.className = 'retreat-energy-status complete';
+        return;
+    }
+
+    if (selected === cost) {
+        energyStatus.textContent = t('retreat.discardComplete', { selected, cost });
+        energyStatus.className = 'retreat-energy-status complete';
+    } else if (selected < cost) {
+        energyStatus.textContent = t('retreat.discardIncomplete', { cost, selected });
+        energyStatus.className = 'retreat-energy-status incomplete';
+    } else {
+        energyStatus.textContent = t('retreat.discardExcess', { selected, cost });
+        energyStatus.className = 'retreat-energy-status excess';
+    }
+}
+
+/**
+ * Validate retreat action
+ * @returns {{valid: boolean, error: string|null}}
+ */
+function validateRetreat() {
+    if (!retreatModalState) {
+        return { valid: false, error: 'No retreat action in progress' };
+    }
+
+    const { playerId, benchIndex, retreatCost, selectedEnergyIndices } = retreatModalState;
+    const player = state[playerId];
+
+    // Check if bench is selected
+    if (benchIndex === null || !player.bench[benchIndex]) {
+        return { valid: false, error: t('retreat.noBenchPokemon') };
+    }
+
+    // Check energy count matches retreat cost
+    if (selectedEnergyIndices.length !== retreatCost) {
+        if (selectedEnergyIndices.length < retreatCost) {
+            return { valid: false, error: t('retreat.energyInsufficient') };
+        } else {
+            return { valid: false, error: t('retreat.energyMismatch') };
+        }
+    }
+
+    // Check if can still retreat (in case state changed)
+    if (!canRetreatActivePokemon(state, playerId)) {
+        return { valid: false, error: t('retreat.cannotRetreat') };
+    }
+
+    return { valid: true, error: null };
+}
+
+/**
+ * Confirm retreat action
+ */
+function confirmRetreat() {
+    const errorDiv = document.querySelector('#retreat-validation-error');
+    errorDiv.textContent = '';
+
+    // Validate
+    const validation = validateRetreat();
+    if (!validation.valid) {
+        errorDiv.textContent = validation.error;
+        return;
+    }
+
+    const { playerId, benchIndex, retreatCost, selectedEnergyIndices } = retreatModalState;
+
+    // Execute retreat
+    state = executeRetreat(state, playerId, benchIndex, retreatCost, selectedEnergyIndices);
+    render(state);
+
+    // Close modal
+    closeRetreatModal();
+
+    // Log success
+    const newActive = state[playerId].active;
+    const newCard = getCard(newActive.cardId);
+    logInfo(t('retreat.retreatSuccess', { pokemonName: newCard?.name || newActive.cardId }));
+}
+
+/**
+ * Close retreat modal
+ */
+function closeRetreatModal() {
+    const modal = document.querySelector('#retreat-modal');
+    modal.classList.remove('active');
+    retreatModalState = null;
+}
+
+/**
+ * Setup retreat modal event listeners
+ */
+function setupRetreatModalListeners() {
+    const confirmBtn = document.querySelector('#retreat-confirm-btn');
+    const cancelBtn = document.querySelector('#retreat-cancel-btn');
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', confirmRetreat);
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeRetreatModal);
+    }
+}
+
 async function init() {
     console.log('🚀 Initializing...');
 
@@ -1884,6 +2177,7 @@ async function init() {
         setupDragAndDrop();
         setupEditModalListeners();
         setupTrainerModalListeners();
+        setupRetreatModalListeners();
         render(state);
         console.log('✅ Interface ready');
 

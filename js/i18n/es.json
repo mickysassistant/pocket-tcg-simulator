@@ -168,6 +168,24 @@
     "invalidTarget": "Objetivo inválido para esta carta",
     "playSuccess": "Jugada {cardName}"
   },
+  "retreat": {
+    "title": "Retirar Pokémon Activo",
+    "retreatCost": "Costo de Retirada",
+    "selectBenchPokemon": "Selecciona un Pokémon del banco",
+    "discardEnergy": "Descartar Energía",
+    "discardInstructions": "Selecciona exactamente {cost} carta(s) de energía para descartar",
+    "discardComplete": "Energía seleccionada: {selected}/{cost}",
+    "discardIncomplete": "Necesitas {cost} carta(s) de energía, seleccionadas: {selected}",
+    "discardExcess": "Demasiadas energías seleccionadas: {selected}/{cost}",
+    "confirmRetreat": "Confirmar Retirada",
+    "cancelRetreat": "Cancelar",
+    "retreatSuccess": "Retirado a {pokemonName}",
+    "noBenchPokemon": "No hay Pokémon en el banco",
+    "cannotRetreat": "No se puede retirar",
+    "energyInsufficient": "Energía insuficiente adjuntada",
+    "energyMismatch": "La energía seleccionada no coincide con el costo de retirada",
+    "statusBlocksRetreat": "No se puede retirar mientras {status}"
+  },
   "errors": {
     "validation": {
       "invalidPlayer": "Jugador inválido",

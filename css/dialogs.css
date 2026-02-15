@@ -841,3 +841,131 @@ body.game-over #controls {
 .trainer-validation-error:empty {
     display: none;
 }
+
+/* ============================================
+   Stage 2: Retreat Modal
+   ============================================ */
+
+.retreat-play-content {
+    max-width: 500px;
+}
+
+.retreat-active-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(241, 196, 15, 0.1);
+    border-radius: 8px;
+    border: 2px solid rgba(241, 196, 15, 0.3);
+}
+
+.retreat-pokemon-thumb {
+    width: 100px;
+    height: auto;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.retreat-pokemon-info {
+    flex: 1;
+}
+
+.retreat-pokemon-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.retreat-cost-display {
+    font-size: 14px;
+    color: #f39c12;
+}
+
+.retreat-cost-value {
+    font-weight: bold;
+    font-size: 18px;
+    margin-left: 4px;
+}
+
+.retreat-bench-selection {
+    margin-bottom: 16px;
+}
+
+.retreat-energy-selection {
+    margin-bottom: 16px;
+}
+
+.retreat-instructions {
+    font-size: 12px;
+    color: #95a5a6;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.retreat-energy-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.retreat-energy-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.retreat-energy-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.retreat-energy-item.selected {
+    background: #e67e22;
+    border-color: #e67e22;
+    color: white;
+}
+
+.retreat-energy-status {
+    font-size: 12px;
+    min-height: 18px;
+    padding: 4px 0;
+}
+
+.retreat-energy-status.complete {
+    color: #27ae60;
+}
+
+.retreat-energy-status.incomplete {
+    color: #f39c12;
+}
+
+.retreat-energy-status.excess {
+    color: #e74c3c;
+}
+
+.retreat-validation-error {
+    color: #f44336;
+    font-size: 13px;
+    min-height: 18px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: rgba(244, 67, 54, 0.1);
+    border-left: 3px solid #f44336;
+    border-radius: 4px;
+}
+
+.retreat-validation-error:empty {
+    display: none;
+}
