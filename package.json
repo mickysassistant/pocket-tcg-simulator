@@ -1,0 +1,11 @@
+{
+  "name": "pocket-tcg-simulator",
+  "version": "0.1.0",
+  "description": "Pokemon TCG Pocket Battle Simulator",
+  "scripts": {
+    "serve": "npx serve -l 3000"
+  },
+  "keywords": ["pokemon", "tcg", "simulator"],
+  "author": "",
+  "license": "MIT"
+}
