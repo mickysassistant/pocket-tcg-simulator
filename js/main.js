@@ -1120,11 +1120,6 @@ function openScenarioEditor() {
 // STAGE 3: NEW GAME FROM DECK PRESETS
 // ============================================================================
 
-function isBasicPokemonCard(card) {
-    if (!card) return false;
-    return card.supertype === 'Pokémon' && card.subtype === 'Basic';
-}
-
 function shuffleArray(arr) {
     const copy = [...arr];
     for (let i = copy.length - 1; i > 0; i--) {
