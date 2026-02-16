@@ -99,3 +99,76 @@ Started: 2026-02-16T19:52:00+01:00
   ✓ Existing non-opening turn draw behavior remains unchanged
   ✓ Tests for opening-turn draw behavior pass (10/10)
   ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 20:18 - R003: Keep first-turn manual energy attachment blocked for player going first
+- Created src/game/energy-system.js implementing first-turn energy attachment restriction
+- Rule: Player going first (player1 on turn 0) CANNOT attach energy from Energy Zone on first turn
+- Implemented canAttachEnergy() method with validation reason 'first_turn_restriction'
+- Implemented attachEnergy() method that respects the restriction
+- Updated src/index.js to include energySystem in game creation
+- Created tests/rules/first-turn-energy-block.test.js with 10 comprehensive tests covering:
+  - AC1: Player1 on turn 0 - energy attachment rejected with validation reason
+  - AC2: Player2 first turn - energy attachment allowed
+  - AC3: Player1 turn 2 - energy attachment allowed
+  - AC3: Later turns - attachment behavior unchanged
+  - First-turn restriction only blocks player1 on turn 0
+  - Energy attachment respects Energy Zone availability
+  - canAttachEnergy validation method correct
+  - Restriction decoupled from draw logic (verifies independence from R002)
+  - Multiple first-turn attempts all blocked
+  - Energy system correctly identifies first turn
+- All 10 tests pass
+- Verified R002 tests still pass (no regressions)
+- Updated docs/rule-lock-manifest.json status for R003 to "completed"
+- Files created:
+  - src/game/energy-system.js (3,676 bytes)
+  - tests/rules/first-turn-energy-block.test.js (12,859 bytes)
+- Files modified:
+  - src/index.js (added energySystem export)
+  - docs/rule-lock-manifest.json (R003 status → completed)
+- **Learnings:**
+  - Restriction is completely independent of opening-turn draw rule (R002)
+  - Validation logic is cleanly separated in canAttachEnergy() method
+  - Energy system follows same pattern as other game systems (constructor + methods)
+  - Test pattern: create test game, add test data, verify behavior, check logs
+
+---
+
+## 2026-02-16 20:32 - R004: Enforce hand-limit draw behavior at 10 cards without discarding drawn card
+- Verified existing draw system implementation correctly enforces 10-card hand limit
+- Hand limit behavior:
+  - When hand size is 10, draw attempts are blocked completely
+  - Deck, hand, and discard (banque) sizes remain unchanged
+  - Clear log entry records draw was skipped due to hand_limit
+  - When hand size is 9, draw succeeds and hand reaches 10
+  - Drawing multiple cards at hand size 9: draws to 10 then blocks remaining
+- Both GameState.drawCards() and DrawSystem.drawCards() have consistent behavior
+- Created comprehensive test suite (tests/rules/hand-limit-draw.test.js) with 17 tests covering:
+  - AC1: Draw at hand size 10 leaves deck, hand, and discard unchanged (4 tests)
+  - AC2: Draw log entry clearly records hand limit blocking (3 tests)
+  - AC3: Draw at hand size 9 succeeds and hand reaches 10 (4 tests)
+  - Additional tests: turn draw, effect-based draw, canDraw method, consistency (6 tests)
+- All 17 tests pass
+- Verified no regressions in R002 and R003 tests
+- Updated tests/rule-lock-manifest.test.js to reflect R002, R003 completed status
+- Updated docs/rule-lock-manifest.json to mark R004 as completed
+- Files created:
+  - tests/rules/hand-limit-draw.test.js (13,554 bytes)
+- Files modified:
+  - docs/rule-lock-manifest.json (R004 status → completed, codeTargets updated)
+  - tests/rule-lock-manifest.test.js (updated status checks for R002, R003)
+- **Learnings:**
+  - Hand limit enforcement is already correctly implemented in draw system
+  - The "without discarding" in story title clarifies that no card moves to discard (unlike some TCGs)
+  - Both draw methods (GameState and DrawSystem) are aligned and consistent
+  - Test coverage should verify state changes (deck, hand, discard) not just final counts
+- **Acceptance Criteria Met:**
+  ✓ When hand size is 10, draw attempts leave deck, hand, and discard sizes unchanged
+  ✓ Draw log entry clearly records that draw was skipped due to hand limit
+  ✓ When hand size is 9, draw succeeds and hand reaches 10
+  ✓ Tests for hand-limit draw behavior pass (17/17)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
