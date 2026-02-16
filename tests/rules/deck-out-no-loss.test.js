@@ -146,7 +146,7 @@ runTest('AC2.3 - Can end turn after empty deck draw', () => {
   game.turnManager.endTurn();
   
   assertEqual(game.gameState.currentPlayer, 'player2', 'Current player should be player2');
-  assertEqual(game.gameState.turnNumber, 0, 'Turn number should still be 0');
+  assertEqual(game.gameState.turnNumber, 1, 'Turn number should be 1 after one turn');
 });
 
 // AC2: Player2 can still play after player1 empties deck
@@ -241,15 +241,7 @@ runTest('Regression.2 - Effect-driven draw from empty deck does not cause loss',
 runTest('Regression.3 - Empty deck on consecutive turns does not cause loss', () => {
   const game = createTestGame(0, 60, 5, 5);
   
-  // Player1 turn 0 (empty deck)
-  game.turnManager.startTurn('player1');
-  game.turnManager.endTurn();
-  
-  // Player2 turn 1
-  game.turnManager.startTurn('player2');
-  game.turnManager.endTurn();
-  
-  // Player1 turn 2 (still empty deck)
+  // Player1 turn 1 (empty deck)
   game.turnManager.startTurn('player1');
   game.turnManager.endTurn();
   
@@ -257,10 +249,18 @@ runTest('Regression.3 - Empty deck on consecutive turns does not cause loss', ()
   game.turnManager.startTurn('player2');
   game.turnManager.endTurn();
   
+  // Player1 turn 3 (still empty deck)
+  game.turnManager.startTurn('player1');
+  game.turnManager.endTurn();
+  
+  // Player2 turn 4
+  game.turnManager.startTurn('player2');
+  game.turnManager.endTurn();
+  
   // Game should still be playable
   assert(game.gameState.winner === undefined, 'Winner should not be set');
   assertEqual(game.gameState.currentPlayer, 'player1', 'Should be player1 turn');
-  assertEqual(game.gameState.turnNumber, 2, 'Should be turn 2');
+  assertEqual(game.gameState.turnNumber, 4, 'Should be turn 4 after 4 turns');
 });
 
 // DeckManager: isDeckEmpty correctly identifies empty deck

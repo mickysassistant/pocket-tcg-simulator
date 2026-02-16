@@ -103,17 +103,17 @@ function runTests() {
   assertEqual(r001.status, 'completed', 'R001 should be marked as completed');
   console.log('  ✓ PASSED\n');
 
-  // Test 10: Story statuses are correct (R001-R005 completed, rest planned)
+  // Test 10: Story statuses are correct (R001-R006 completed, rest planned)
   console.log('Test 10: Story statuses are correct');
   const completedStories = manifest.rules.filter(r => 
-    ['R001', 'R002', 'R003', 'R004', 'R005'].includes(r.storyId)
+    ['R001', 'R002', 'R003', 'R004', 'R005', 'R006'].includes(r.storyId)
   );
   completedStories.forEach(rule => {
     assertEqual(rule.status, 'completed', `${rule.storyId} should be marked as completed`);
   });
   
   const plannedStories = manifest.rules.filter(r => 
-    !['R001', 'R002', 'R003', 'R004', 'R005'].includes(r.storyId)
+    !['R001', 'R002', 'R003', 'R004', 'R005', 'R006'].includes(r.storyId)
   );
   plannedStories.forEach(rule => {
     assertEqual(rule.status, 'planned', `${rule.storyId} should be marked as planned`);

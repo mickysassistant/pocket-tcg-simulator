@@ -8,10 +8,12 @@
  */
 
 const GameState = require('./game-state');
+const WinCondition = require('./win-condition');
 
 class TurnManager {
-  constructor(gameState) {
+  constructor(gameState, turnLimit = 30) {
     this.gameState = gameState;
+    this.winCondition = new WinCondition(gameState, turnLimit);
   }
 
   /**
@@ -55,6 +57,7 @@ class TurnManager {
 
   /**
    * End the current turn
+   * @returns {Object|null} Win condition result if game ends, null otherwise
    */
   endTurn() {
     // Move to checkup phase (Pokemon Checkup)
@@ -64,6 +67,18 @@ class TurnManager {
 
     // End turn
     this.gameState.endTurn();
+
+    // Check win condition after turn ends
+    // Turn limit is checked AFTER turn completion per rule-locked behavior
+    const winResult = this.winCondition.checkWinCondition();
+    if (winResult) {
+      this.gameState.turnLog.push({
+        type: 'win_condition',
+        result: winResult
+      });
+    }
+
+    return winResult;
   }
 
   /**

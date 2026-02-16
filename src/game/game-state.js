@@ -124,10 +124,8 @@ class GameState {
     // Switch players
     this.currentPlayer = this.currentPlayer === 'player1' ? 'player2' : 'player1';
     
-    // Increment turn number when player1 starts their turn
-    if (this.currentPlayer === 'player1') {
-      this.turnNumber++;
-    }
+    // Increment turn number after every turn (total turn counter)
+    this.turnNumber++;
 
     this.phase = 'draw';
   }
@@ -141,7 +139,7 @@ class GameState {
       currentPlayer: this.currentPlayer,
       turnNumber: this.turnNumber,
       phase: this.phase,
-      isFirstTurn: this.turnNumber === 0 && this.currentPlayer === 'player1'
+      isFirstTurn: this.turnNumber === 0
     };
   }
 }

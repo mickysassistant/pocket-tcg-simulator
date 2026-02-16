@@ -172,3 +172,56 @@ Started: 2026-02-16T19:52:00+01:00
   ✓ Typecheck passes (N/A - plain JavaScript project)
 
 ---
+
+## 2026-02-16 20:42 - R005: Enforce no deck-out loss when draw is impossible from empty deck
+- Created src/game/deck-manager.js to centralize deck-related operations
+- Confirmed and enhanced empty-deck handling across game systems
+- Deck manager provides consistent API for deck operations:
+  - isDeckEmpty(): Check if deck is empty
+  - getDeckSize(): Get current deck size
+  - canDraw(): Check if draw is possible
+  - shouldDeckOutCauseLoss(): Always returns false (no deck-out loss in Pocket TCG)
+  - getDrawBlockReason(): Get reason for draw blocking
+  - getDeckInfo(): Get complete deck state information
+- Key rule implementation: Empty deck does NOT cause automatic loss
+  - Draw attempts from empty deck simply skip drawing without triggering defeat
+  - Game state remains playable after empty-deck draw attempts
+  - Log captures empty-deck no-draw outcome with clear reason 'deck_empty'
+  - Both GameState.drawCards() and DrawSystem.drawCards() have consistent empty-deck behavior
+- Updated src/index.js to export DeckManager class
+- Created comprehensive test suite (tests/rules/deck-out-no-loss.test.js) with 22 tests covering:
+  - AC1: Empty deck draw does not throw error or set winner (3 tests)
+  - AC2: Game state remains playable after empty-deck draw attempts (4 tests)
+  - AC3: Log captures empty-deck no-draw outcome (3 tests)
+  - Regression: Start-turn draw with empty deck (1 test)
+  - Regression: Effect-driven draw from empty deck (1 test)
+  - Regression: Empty deck on consecutive turns (1 test)
+  - DeckManager API tests (7 tests)
+  - Consistency: Both draw methods handle empty deck (1 test)
+  - Isolation: Player1 empty deck does not affect player2 (1 test)
+- All 22 tests pass
+- Verified no regressions in R002, R003, R004 tests (all existing tests pass)
+- Updated docs/rule-lock-manifest.json to mark R005 as completed
+- Updated tests/rule-lock-manifest.test.js to reflect R005 completed status
+- Files created:
+  - src/game/deck-manager.js (4,246 bytes)
+  - tests/rules/deck-out-no-loss.test.js (14,762 bytes)
+- Files modified:
+  - src/index.js (added DeckManager export)
+  - docs/rule-lock-manifest.json (R005 status → completed)
+  - tests/rule-lock-manifest.test.js (updated status checks for R005)
+- **Learnings:**
+  - Pocket TCG has NO deck-out loss rule (key difference from traditional TCGs)
+  - Empty deck handling is already implemented in draw system from R002
+  - Deck manager centralizes deck logic and provides consistent API across game systems
+  - Deck manager's shouldDeckOutCauseLoss() explicitly documents the no-loss behavior
+  - Test coverage should include both start-turn and effect-driven draws from empty deck
+  - Log entries should include clear messages about no automatic loss for transparency
+- **Acceptance Criteria Met:**
+  ✓ A draw attempt from an empty deck does not set winner and does not throw
+  ✓ Game state remains playable after empty-deck draw attempts
+  ✓ Log captures empty-deck no-draw outcome
+  ✓ Tests for empty-deck no-loss behavior pass (22/22)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
