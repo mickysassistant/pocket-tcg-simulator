@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-02-16T08:33:59.278Z",
+  "url": "http://localhost:3000/?qa=true",
+  "status": "FAIL",
+  "totalChecks": 12,
+  "errors": 2,
+  "warnings": 0,
+  "criticalErrors": 0,
+  "initialLoadErrors": 1,
+  "loadingOverlayHidden": true,
+  "allButtonsPresent": true,
+  "pageState": {
+    "turnNumber": "0",
+    "currentPlayer": "Player 1",
+    "logEntries": 0
+  },
+  "qaMessages": {
+    "total": 0,
+    "success": 0,
+    "error": 0
+  },
+  "consoleErrors": [
+    {
+      "text": "Identifier 'isBasicPokemonCard' has already been declared",
+      "stack": "SyntaxError: Identifier 'isBasicPokemonCard' has already been declared"
+    },
+    {
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "location": {
+        "url": "http://localhost:3000/favicon.ico"
+      }
+    },
+    {
+      "text": "Controls panel did not change collapsed state after toggle click"
+    }
+  ],
+  "consoleWarnings": [],
+  "failedRequests": []
+}

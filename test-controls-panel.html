@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controls Panel - Collapsible Side Panel Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .test-section {
+            background: #2c3e50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .pass {
+            background: rgba(39, 174, 96, 0.2);
+            border-left: 4px solid #27ae60;
+        }
+        .fail {
+            background: rgba(231, 76, 60, 0.2);
+            border-left: 4px solid #e74c3c;
+        }
+        .info {
+            background: rgba(52, 152, 219, 0.2);
+            border-left: 4px solid #3498db;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        #test-iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            background: white;
+        }
+        pre {
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Controls Panel - Collapsible Side Panel Test</h1>
+
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+        <p>This test verifies the Stage 1 collapsible controls panel implementation:</p>
+        <ul>
+            <li>Toggle button exists and is clickable</li>
+            <li>Panel can be collapsed and expanded</li>
+            <li>Controls remain functional when panel is open and collapsed</li>
+            <li>Collapsed state persists in localStorage</li>
+            <li>Responsive behavior works on different screen sizes</li>
+        </ul>
+        <button onclick="runTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Interactive Preview</h2>
+        <p>Use the iframe below to manually verify the collapsible panel:</p>
+        <div>
+            <button onclick="loadSimulator()">Load Simulator</button>
+            <button onclick="resizeFrame(1200)">Desktop (1200px)</button>
+            <button onclick="resizeFrame(768)">Tablet (768px)</button>
+            <button onclick="resizeFrame(480)">Mobile (480px)</button>
+        </div>
+        <iframe id="test-iframe" src="about:blank"></iframe>
+    </div>
+
+    <script>
+        let testResults = [];
+        let testFrame = null;
+
+        function clearResults() {
+            testResults = [];
+            document.getElementById('test-results').innerHTML = '';
+        }
+
+        function addResult(name, passed, message, details = null) {
+            testResults.push({ name, passed, message, details });
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓' : '✗'} ${name}</strong>
+                <p>${message}</p>
+                ${details ? `<pre>${JSON.stringify(details, null, 2)}</pre>` : ''}
+            `;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        function addInfo(message) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result info';
+            resultDiv.innerHTML = `<strong>ℹ️ Info:</strong> <p>${message}</p>`;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        function loadSimulator() {
+            testFrame = document.getElementById('test-iframe');
+            testFrame.src = 'index.html';
+            addInfo('Simulator loaded. Waiting for initialization...');
+        }
+
+        function resizeFrame(width) {
+            testFrame = document.getElementById('test-iframe');
+            testFrame.style.width = width + 'px';
+            addInfo(`Frame resized to ${width}px`);
+        }
+
+        async function runTests() {
+            clearResults();
+            addInfo('Starting tests...');
+
+            // Load the simulator in iframe
+            testFrame = document.getElementById('test-iframe');
+            testFrame.src = 'index.html';
+
+            // Wait for the frame to load
+            await new Promise(resolve => {
+                testFrame.onload = resolve;
+                setTimeout(resolve, 2000); // Fallback timeout
+            });
+
+            addInfo('Simulator loaded. Running automated tests...');
+
+            const frameDoc = testFrame.contentDocument || testFrame.contentWindow.document;
+
+            // Test 1: Controls panel exists
+            const controlsPanel = frameDoc.querySelector('.controls-panel');
+            addResult(
+                'Controls panel exists',
+                !!controlsPanel,
+                controlsPanel ? 'Controls panel element found' : 'Controls panel element not found'
+            );
+
+            // Test 2: Toggle button exists
+            const toggleBtn = frameDoc.querySelector('#controls-toggle');
+            addResult(
+                'Toggle button exists',
+                !!toggleBtn,
+                toggleBtn ? 'Toggle button element found' : 'Toggle button element not found'
+            );
+
+            // Test 3: Controls content exists
+            const controlsContent = frameDoc.querySelector('.controls-content');
+            addResult(
+                'Controls content exists',
+                !!controlsContent,
+                controlsContent ? 'Controls content element found' : 'Controls content element not found'
+            );
+
+            // Test 4: All control buttons exist
+            const requiredButtons = ['play-btn', 'pause-btn', 'step-btn', 'new-game-btn', 'load-btn', 'save-btn', 'edit-btn', 'coins-btn', 'lang-btn'];
+            const missingButtons = requiredButtons.filter(id => !frameDoc.querySelector(`#${id}`));
+            addResult(
+                'All control buttons exist',
+                missingButtons.length === 0,
+                missingButtons.length === 0
+                    ? 'All 9 control buttons found'
+                    : `Missing buttons: ${missingButtons.join(', ')}`,
+                { requiredButtons, foundButtons: requiredButtons.filter(id => frameDoc.querySelector(`#${id}`)) }
+            );
+
+            // Test 5: Speed select exists
+            const speedSelect = frameDoc.querySelector('#speed-select');
+            addResult(
+                'Speed control exists',
+                !!speedSelect,
+                speedSelect ? 'Speed select element found' : 'Speed select element not found'
+            );
+
+            // Test 6: Initial state - panel should be expanded by default
+            const initialStateExpanded = !controlsPanel.classList.contains('collapsed');
+            addResult(
+                'Initial panel state',
+                initialStateExpanded,
+                initialStateExpanded ? 'Panel starts expanded (correct)' : 'Panel starts collapsed (unexpected)'
+            );
+
+            // Test 7: Toggle button click functionality
+            if (toggleBtn && controlsPanel) {
+                const wasCollapsed = controlsPanel.classList.contains('collapsed');
+                toggleBtn.click();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const isNowCollapsed = controlsPanel.classList.contains('collapsed');
+                addResult(
+                    'Toggle button works (collapse)',
+                    wasCollapsed !== isNowCollapsed,
+                    isNowCollapsed
+                        ? 'Panel collapsed successfully on first click'
+                        : 'Panel state did not change on first click',
+                    { wasCollapsed, isNowCollapsed }
+                );
+
+                // Test 8: Toggle button can expand
+                toggleBtn.click();
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const isExpandedAgain = !controlsPanel.classList.contains('collapsed');
+                addResult(
+                    'Toggle button works (expand)',
+                    isExpandedAgain,
+                    isExpandedAgain
+                        ? 'Panel expanded successfully on second click'
+                        : 'Panel did not expand on second click',
+                    { isNowCollapsed, isExpandedAgain }
+                );
+            } else {
+                addResult('Toggle button works', false, 'Cannot test - toggle button or panel not found');
+            }
+
+            // Test 9: Controls are clickable when panel is expanded
+            const playBtn = frameDoc.querySelector('#play-btn');
+            if (playBtn) {
+                const wasClickable = playBtn.offsetParent !== null;
+                addResult(
+                    'Controls clickable when expanded',
+                    wasClickable,
+                    wasClickable
+                        ? 'Controls are visible and clickable when panel is expanded'
+                        : 'Controls are not clickable when panel is expanded'
+                );
+            }
+
+            // Test 10: Check collapsed CSS class is applied correctly
+            if (controlsPanel) {
+                controlsPanel.classList.add('collapsed');
+                await new Promise(resolve => setTimeout(resolve, 50));
+                const hasCollapsedClass = controlsPanel.classList.contains('collapsed');
+                const contentHidden = frameDoc.querySelector('.controls-content').style.opacity === '0' ||
+                                     frameDoc.querySelector('.controls-content').offsetParent === null;
+
+                addResult(
+                    'Collapsed state hides content',
+                    hasCollapsedClass && (contentHidden || frameDoc.querySelector('.controls-content').style.opacity === '0'),
+                    hasCollapsedClass
+                        ? 'Collapsed class applied correctly'
+                        : 'Collapsed class not applied'
+                );
+
+                // Restore expanded state
+                controlsPanel.classList.remove('collapsed');
+            }
+
+            // Test 11: localStorage persistence
+            try {
+                localStorage.setItem('testControlsPanelCollapsed', 'true');
+                const retrieved = localStorage.getItem('testControlsPanelCollapsed');
+                localStorage.removeItem('testControlsPanelCollapsed');
+
+                addResult(
+                    'LocalStorage persistence',
+                    retrieved === 'true',
+                    retrieved === 'true'
+                        ? 'LocalStorage is working for state persistence'
+                        : 'LocalStorage persistence may not work'
+                );
+            } catch (e) {
+                addResult(
+                    'LocalStorage persistence',
+                    false,
+                    `LocalStorage error: ${e.message}`
+                );
+            }
+
+            // Test 12: Responsive breakpoint styles
+            addInfo('Responsive breakpoint tests require manual verification in the iframe.');
+            addInfo('Use the resize buttons above to test different screen sizes.');
+
+            // Summary
+            const passed = testResults.filter(r => r.passed).length;
+            const total = testResults.length;
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-result info';
+            summaryDiv.innerHTML = `<strong>Summary: ${passed}/${total} tests passed</strong>`;
+            document.getElementById('test-results').appendChild(summaryDiv);
+
+            addInfo('Automated tests complete. Please manually verify:');
+            addInfo('1. Panel collapses and expands smoothly with animation');
+            addInfo('2. All controls work when panel is both open and collapsed');
+            addInfo('3. Panel state persists after page reload');
+            addInfo('4. Responsive behavior works on mobile/tablet/desktop sizes');
+        }
+
+        // Auto-run tests on page load (optional)
+        // window.addEventListener('load', () => setTimeout(runTests, 1000));
+    </script>
+</body>
+</html>

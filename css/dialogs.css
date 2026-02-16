@@ -104,25 +104,281 @@ button:active {
     font-size: 12px;
 }
 
-/* Controls */
-#controls {
-    /* Note: Layout and width handled in battlefield.css */
+/* Controls - Collapsible Side Panel */
+.controls-panel {
+    position: relative;
     background: #34495e;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    border-left: 2px solid #2c3e50;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    width: 280px;
+}
+
+.controls-panel.collapsed {
+    width: 40px;
+}
+
+.controls-toggle-btn {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 60px;
+    background: #2c3e50;
+    border: 2px solid #4a5d70;
+    border-radius: 0 8px 8px 0;
+    color: #f39c12;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+    padding: 0;
+}
+
+.controls-toggle-btn:hover {
+    background: #3d566e;
+    border-color: #f39c12;
+}
+
+.controls-toggle-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.5);
+}
+
+.controls-panel.collapsed .controls-toggle-btn {
+    border-radius: 0 8px 8px 0;
+}
+
+.controls-panel:not(.collapsed) .controls-toggle-btn {
+    left: 0;
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.controls-panel.collapsed .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.controls-content {
+    flex: 1;
     padding: 15px;
+    padding-left: 40px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    gap: 15px;
+    overflow-y: auto;
+    min-width: 240px;
+    transition: opacity 0.3s ease, margin 0.3s ease;
+}
+
+.controls-panel.collapsed .controls-content {
+    opacity: 0;
+    margin-left: -240px;
+    pointer-events: none;
+}
+
+.controls-section {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
-    border-left: 2px solid #2c3e50;
+}
+
+.controls-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f39c12;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 5px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(243, 156, 18, 0.3);
 }
 
 .controls-left,
 .controls-center,
 .controls-right {
     display: flex;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
     align-items: center;
+    width: 100%;
+}
+
+.controls-left {
+    flex-direction: row;
+}
+
+.controls-center {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.controls-right {
+    flex-direction: column;
+}
+
+.controls-left button,
+.controls-right button {
+    flex: 1;
+    min-width: 100px;
+}
+
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+}
+
+.speed-control label {
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.speed-control select {
+    padding: 5px;
+    border-radius: 5px;
+    border: none;
+    background: #2c3e50;
+    color: #eee;
+    flex: 1;
+}
+
+.turn-display,
+.current-player {
+    font-size: 14px;
+    font-weight: bold;
+    width: 100%;
+}
+
+/* Coin Preview (small coins in main UI) */
+.coin-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    width: 100%;
+}
+
+.coin-label {
+    font-size: 11px;
+    color: #95a5a6;
+}
+
+.coin-preview-display {
+    display: flex;
+    gap: 5px;
+}
+
+.coin-preview-display .coin {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+    cursor: default;
+    transform: none;
+}
+
+.coin-preview-display .coin:hover {
+    transform: none;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1024px) {
+    #app {
+        grid-template-columns: 1fr auto;
+    }
+
+    #action-log {
+        display: none;
+    }
+
+    .controls-panel {
+        position: fixed;
+        right: 0;
+        top: 0;
+        height: 100vh;
+        z-index: 1000;
+        width: 280px;
+        box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .controls-panel.collapsed {
+        width: 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .controls-panel {
+        width: 280px;
+    }
+
+    .controls-panel.collapsed {
+        width: 40px;
+    }
+
+    .controls-content {
+        padding: 15px;
+        padding-left: 40px;
+    }
+
+    .controls-left button,
+    .controls-right button {
+        min-width: auto;
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .controls-section-title {
+        font-size: 11px;
+    }
+
+    .turn-display,
+    .current-player {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .controls-panel {
+        width: 260px;
+    }
+
+    .controls-panel.collapsed {
+        width: 36px;
+    }
+
+    .controls-toggle-btn {
+        width: 28px;
+        height: 50px;
+        font-size: 14px;
+    }
+
+    .controls-content {
+        padding-left: 32px;
+        padding-right: 10px;
+    }
+
+    .controls-left,
+    .controls-right {
+        gap: 6px;
+    }
+
+    .controls-left button,
+    .controls-right button {
+        padding: 6px 10px;
+        font-size: 11px;
+        min-width: 80px;
+    }
 }
 
 .speed-control {
