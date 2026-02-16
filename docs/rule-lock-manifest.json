@@ -31,9 +31,9 @@
     {
       "storyId": "R004",
       "ruleName": "Enforce hand-limit draw behavior at 10 cards without discarding drawn card",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": "/home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/rules/limite-de-mano.md",
-      "codeTargets": ["src/game/draw-system.js", "src/game/hand-manager.js"],
+      "codeTargets": ["src/game/draw-system.js", "src/game/game-state.js"],
       "testTargets": ["tests/rules/hand-limit-draw.test.js"]
     },
     {
