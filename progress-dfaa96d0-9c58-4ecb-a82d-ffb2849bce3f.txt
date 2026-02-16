@@ -1,0 +1,41 @@
+# Progress Log
+Run: dfaa96d0-9c58-4ecb-a82d-ffb2849bce3f
+Task: RULE-LOCKED MICRO-STORY RUN (must register stories in Antfarm DB). REPO: /home/deckie/.openclaw/workspace/pocket-tcg-simulator BRANCH: main SOURCE_DOCS: /home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs Planner MUST output valid STORIES_JSON (exact contract) so 'step stories <run-id>' shows entries immediately after plan. 8-20 stories, IDs R001..R0NN, one rule per story, first-turn draw fix as dedicated story (going first DOES draw). Developer one story per cycle only. Deliver docs/RULES_ALIGNMENT_REPORT.md and per-story tests.
+Started: 2026-02-16T19:52:00+01:00
+
+## Codebase Patterns
+- Project is a static HTML/JS simulator with no build system
+- No test framework currently exists - tests are simple Node.js scripts that run with `node <test-file>`
+- Source documentation for Pocket TCG rules is located at /home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/
+- Main code directory structure is minimal (no src/ directory exists yet)
+- Only `npm run serve` script available for serving static files
+- No type checking - plain JavaScript project
+- Game engine uses CommonJS module system (require/module.exports)
+- Tests use custom assertion functions, no testing framework
+
+---
+
+## 2026-02-16 19:52 - R001: Create machine-readable rule lock manifest for execution tracking
+- Created docs/rule-lock-manifest.json with entries for all 10 planned stories (R001-R010)
+- Each manifest entry contains: storyId, ruleName, sourceDocPath, codeTargets, and testTargets
+- Created tests/rule-lock-manifest.test.js with 11 validation tests covering:
+  - Manifest file existence and JSON validity
+  - Required top-level properties
+  - Rule entry field validation
+  - Story ID format validation
+  - Status value validation
+  - Array type validation for codeTargets and testTargets
+  - Expected story ID presence (R001-R010)
+  - R001 completion status
+  - Run ID verification
+- Manifest JSON validates with node -e "JSON.parse(...)"
+- All 11 tests pass
+- Files created:
+  - docs/rule-lock-manifest.json (3,880 bytes)
+  - tests/rule-lock-manifest.test.js (5,120 bytes)
+- **Learnings:**
+  - This project has minimal structure - essentially empty with only README and completion docs
+  - Need to create src/ directory structure as stories are implemented
+  - Tests are simple Node.js scripts, not using any framework like Jest or Mocha
+  - Source docs are in a separate research repository
+  - Rule mapping will be updated as stories progress (status field from planned → completed)

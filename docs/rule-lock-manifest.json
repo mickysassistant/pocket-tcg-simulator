@@ -15,7 +15,7 @@
     {
       "storyId": "R002",
       "ruleName": "Fix opening-turn draw rule so player going first DOES draw",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": "/home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/rules/setup-inicial.md",
       "codeTargets": ["src/game/turn-manager.js", "src/game/draw-system.js"],
       "testTargets": ["tests/rules/opening-turn-draw.test.js"]
