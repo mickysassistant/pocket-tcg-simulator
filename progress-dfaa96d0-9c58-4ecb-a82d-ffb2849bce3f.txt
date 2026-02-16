@@ -225,3 +225,138 @@ Started: 2026-02-16T19:52:00+01:00
   ✓ Typecheck passes (N/A - plain JavaScript project)
 
 ---
+
+## 2026-02-16 21:00 - R006: Align turn-limit resolution rule to locked behavior at max turns
+- Created src/game/win-condition.js implementing turn-limit win condition checking
+- Rule: When turn limit is reached, game ends in DRAW (no winner)
+  - PvP battles: max 30 turns
+  - Solo battles: max 50 turns
+  - Turn 30 IS played (check happens after turn completion)
+  - Turn counter counts total turns (each player action is one turn)
+- Updated turn tracking in src/game/game-state.js:
+  - Changed turnNumber to increment after EVERY turn (not just player1 turns)
+  - Updated getCurrentTurnInfo to correctly identify opening turn (turnNumber === 0)
+  - This ensures turn counter matches total turns played, not completed rounds
+- Updated src/game/turn-manager.js:
+  - Integrated WinCondition into TurnManager constructor
+  - Modified endTurn() to check win condition after each turn completes
+  - Returns win condition result when game ends, null otherwise
+- Updated src/index.js:
+  - Added WinCondition to exports
+  - Modified createGame() to accept turnLimit parameter (default 30)
+  - Exposes winCondition via turnManager.winCondition in game instance
+- Created comprehensive test suite (tests/rules/turn-limit-resolution.test.js) with 19 tests covering:
+  - AC1: At configured turn limit, game ends in DRAW (3 tests)
+    * PvP mode (30 turns): draw detected at turn 30
+    * Solo mode (50 turns): draw detected at turn 50
+    * endTurn returns win condition at turn limit
+  - AC2: Before turn limit, no premature winner declared (7 tests)
+    * No win condition at turn 29 (before limit)
+    * Win condition detected at turn 30 (at limit)
+    * Early turns (0-10): no win condition
+    * Mid-game turns (10-20): no win condition
+    * Late turns (20-29): no win condition
+    * endTurn returns null before turn limit
+  - AC3: Beyond turn limit, result remains stable/deterministic (3 tests)
+    * Turns 30+ consistently return DRAW
+    * Multiple checkWinCondition calls return identical results
+    * Turn limit boundary behavior verified
+  - Additional tests: getTurnLimit, setTurnLimit, isTurnLimitReached, default limit, turn logging (6 tests)
+- All 19 tests pass
+- Updated tests/rules/deck-out-no-loss.test.js to reflect new turn tracking behavior:
+  - Fixed AC2.3: Turn number should be 1 after one turn (not 0)
+  - Fixed Regression.3: Turn number should be 4 after 4 turns (not 2)
+- Updated tests/rule-lock-manifest.test.js to reflect R006 completed status
+- Updated docs/rule-lock-manifest.json to mark R006 as completed
+- Verified no regressions in R002, R003, R004, R005 tests (all existing tests pass)
+- Files created:
+  - src/game/win-condition.js (2,566 bytes)
+  - tests/rules/turn-limit-resolution.test.js (13,577 bytes)
+- Files modified:
+  - src/game/game-state.js (turn tracking updated)
+  - src/game/turn-manager.js (win condition integration)
+  - src/index.js (WinCondition export and turnLimit parameter)
+  - tests/rules/deck-out-no-loss.test.js (turn tracking fixes)
+  - tests/rule-lock-manifest.test.js (R006 status update)
+  - docs/rule-lock-manifest.json (R006 status → completed, codeTargets updated)
+- **Learnings:**
+  - Turn limit is checked AFTER turn completion, not before
+  - Turn counter should track TOTAL turns (each player action), not rounds
+  - Win condition check happens in endTurn(), returns result to caller
+  - WinCondition system is separate from GameState, provides clean API for win checking
+  - Turn limit causes DRAW (no winner), not a win for either player
+  - Source doc "turn 30 IS played" means check happens after turn 30 completes
+  - Changed turn tracking from round-based to turn-based (breaking change)
+  - All affected tests updated to reflect correct turn counting
+- **Acceptance Criteria Met:**
+  ✓ At configured turn limit, winner or draw outcome matches locked rule (draw at turn 30/50)
+  ✓ Before turn limit, no premature turn-limit winner is declared
+  ✓ Beyond turn limit, result remains stable and deterministic
+  ✓ Tests for turn-limit resolution pass (19/19)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 21:05 - R007: Correct first-turn evolution restriction to only block global opening turn
+- Created src/game/evolution-system.js implementing evolution validation and execution
+- Rule: Evolution is blocked on global opening turn (turn 0), but allowed on turn 1+ for both players
+- Implemented canEvolve() method with validation for:
+  - opening_turn_restriction: Blocked on turn 0
+  - played_this_turn: Cannot evolve Pokemon played this turn
+  - already_evolved: Cannot evolve same Pokemon twice in one turn
+- Implemented evolve() method that respects validation rules
+- Implemented resetTurnTracking() to clear turn-specific flags (playedThisTurn, evolvedThisTurn)
+- Updated src/game/turn-manager.js to accept evolutionSystem parameter and reset tracking at turn start
+- Updated src/index.js to include evolutionSystem in game creation and exports
+- Created comprehensive test suite (tests/rules/first-turn-evolution.test.js) with 20 tests covering:
+  - AC1: Evolution rejected on global opening turn (5 tests)
+    * Player1 cannot evolve on turn 0
+    * Global opening turn is only turn 0, not player2's first turn
+    * canEvolve returns false on turn 0
+    * isOpeningTurn correctly identifies turn 0
+    * Multiple evolution attempts on turn 0 all blocked
+  - AC2: Evolution eligibility on subsequent follows per-Pokemon timing constraints (5 tests)
+    * Player1 can evolve on turn 2 (after opening turn)
+    * Player2 can evolve on their first turn (turn 1)
+    * Cannot evolve Pokemon played this turn
+    * Cannot evolve same Pokemon twice in one turn
+    * Multiple different Pokemon can evolve in same turn
+  - AC3: No contradictory turn-boundary logic (3 tests)
+    * canEvolve and evolve use same boundary rule
+    * Turn boundary consistent across multiple games
+    * Engine helper isOpeningTurn matches turn tracking
+  - Regression tests: Turn 0 vs turn 1 behavior (4 tests)
+    * Turn 0 blocks both players, turn 1 allows player2
+    * Turn 2 allows player1 evolution
+    * playedThisTurn flag resets each turn
+    * evolvedThisTurn tracking resets each turn
+  - Additional tests: Edge cases and consistency (3 tests)
+    * Evolution logs contain correct information
+    * Active and bench Pokemon can both evolve
+    * canEvolve returns correct reasons for different failures
+- All 20 tests pass
+- Verified no regressions in R002, R003, R004, R005, R006 tests (all existing tests pass)
+- Updated docs/rule-lock-manifest.json to mark R007 as completed
+- Updated tests/rule-lock-manifest.test.js to reflect R007 completed status
+- Files created:
+  - src/game/evolution-system.js (6,527 bytes)
+  - tests/rules/first-turn-evolution.test.js (22,695 bytes)
+- Files modified:
+  - src/game/turn-manager.js (added evolutionSystem parameter and reset tracking)
+  - src/index.js (added EvolutionSystem export and integration)
+  - docs/rule-lock-manifest.json (R007 status → completed)
+  - tests/rule-lock-manifest.test.js (updated status checks for R007)
+- **Learnings:**
+  - Global opening turn is only turn 0 (player1's first turn), not player2's first turn
+  - Player2 can evolve on turn 1 (their first turn) because it's not the global opening turn
+  - Evolution system needs to track two turn-specific flags: playedThisTurn (per Pokemon) and evolvedThisTurn (global Set)
+  - Turn tracking must be reset at the START of each player's turn, not at the end
+  - Evolution is independent of first-turn energy attachment rule (different players' first turns are affected differently)
+- **Acceptance Criteria Met:**
+  ✓ Evolution is rejected on global opening turn per rule lock (turn 0)
+  ✓ Evolution eligibility on subsequent turns follows existing per-Pokemon timing constraints
+  ✓ No contradictory turn-boundary logic remains between move and engine validation paths
+  ✓ Tests for evolution first-turn restriction pass (20/20)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---

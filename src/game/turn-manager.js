@@ -11,9 +11,10 @@ const GameState = require('./game-state');
 const WinCondition = require('./win-condition');
 
 class TurnManager {
-  constructor(gameState, turnLimit = 30) {
+  constructor(gameState, turnLimit = 30, evolutionSystem = null) {
     this.gameState = gameState;
     this.winCondition = new WinCondition(gameState, turnLimit);
+    this.evolutionSystem = evolutionSystem;
   }
 
   /**
@@ -45,6 +46,11 @@ class TurnManager {
    * @param {string} playerId - Player whose turn is starting
    */
   startTurn(playerId) {
+    // Reset evolution tracking at the start of each player's turn
+    if (this.evolutionSystem) {
+      this.evolutionSystem.resetTurnTracking();
+    }
+
     // Record turn start
     this.gameState.startTurn(playerId);
 

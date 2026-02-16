@@ -55,9 +55,9 @@
     {
       "storyId": "R007",
       "ruleName": "Correct first-turn evolution restriction to only block global opening turn",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": "/home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/mechanics/evolucion.md",
-      "codeTargets": ["src/game/evolution-system.js"],
+      "codeTargets": ["src/game/evolution-system.js", "src/game/turn-manager.js", "src/index.js"],
       "testTargets": ["tests/rules/first-turn-evolution.test.js"]
     },
     {

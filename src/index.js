@@ -8,6 +8,7 @@ const GameState = require('./game/game-state');
 const TurnManager = require('./game/turn-manager');
 const DrawSystem = require('./game/draw-system');
 const EnergySystem = require('./game/energy-system');
+const EvolutionSystem = require('./game/evolution-system');
 const DeckManager = require('./game/deck-manager');
 const WinCondition = require('./game/win-condition');
 
@@ -17,7 +18,8 @@ const WinCondition = require('./game/win-condition');
  */
 function createGame(player1Deck, player2Deck, turnLimit = 30) {
   const gameState = new GameState();
-  const turnManager = new TurnManager(gameState, turnLimit);
+  const evolutionSystem = new EvolutionSystem(gameState);
+  const turnManager = new TurnManager(gameState, turnLimit, evolutionSystem);
   const drawSystem = new DrawSystem(gameState);
   const energySystem = new EnergySystem(gameState);
   const deckManager = new DeckManager(gameState);
@@ -30,6 +32,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
     turnManager,
     drawSystem,
     energySystem,
+    evolutionSystem,
     deckManager,
     winCondition: turnManager.winCondition
   };
@@ -40,6 +43,7 @@ module.exports = {
   TurnManager,
   DrawSystem,
   EnergySystem,
+  EvolutionSystem,
   DeckManager,
   WinCondition,
   createGame
