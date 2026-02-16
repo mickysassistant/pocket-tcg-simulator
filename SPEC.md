@@ -84,51 +84,209 @@ A browser-based battle simulator for Pokemon TCG Pocket where users can:
 - **Hand limit:** 10 cards max
 - **Bench limit:** 3 Pokemon max
 
-### Game Start Setup
-The simulator supports two distinct game start modes:
+### Start-of-Game Setup
 
-#### 1. Empty State (Fresh Startup)
-- **Purpose:** Blank state for manual setup or scenario editing
-- **Initialization:** Creates empty game state with no Pokemon, cards, or configuration
-- **Board State:**
-  - No active Pokemon (null for both players)
-  - Empty bench (0/3 slots filled)
-  - Empty hand (0 cards)
-  - Empty deck (0 cards)
-  - Empty discard pile (0 cards)
-  - Energy Zone: No configured types, null current/next energy
-- **Turn State:** Turn 0, player1 as current player
-- **Coin Queue:** Pre-generated with 10 random coin flips
-- **Usage:** User can manually add cards via drag-and-drop, edit mode, or load a scenario
+The simulator supports three distinct game start modes, each with specific initialization rules:
 
-#### 2. New Game from Deck Presets
-- **Purpose:** Start a game with properly configured decks for competitive play
-- **Initialization:** User selects deck presets for both players via "New Game" modal
-- **Board State Setup:**
-  - Deck is shuffled randomly
-  - **Active Pokemon:** First Basic Pokemon in shuffled deck is placed in active spot
-  - **Bench Pokemon:** Up to 3 additional Basic Pokemon are placed on bench (in deck order)
-  - **Hand:** 5 cards are dealt from remaining deck
-  - **Deck:** Remaining cards (after active, bench, and hand) stay in deck
-  - **Energy Zone:** Configured with deck's energy types (up to 3)
-  - **Coin Queue:** Pre-generated with 10 random coin flips
-- **Turn State:** Turn 1, player1 as current player
-- **Validation:** Deck must contain at least 1 Basic Pokemon and respect max copies (2 per card)
-- **First Turn Rules:** Player going first (player1) does NOT draw a card on turn 1
+#### Mode 1: App Boot → Empty State (Fresh Startup)
 
-#### Scenario Load Behavior
-- **When Loading a Scenario:** Full custom board state is restored exactly as saved
-- **Overrides:** Scenario data completely replaces current state (no merge)
-- **Validation:** Loaded scenario must pass state validation (version, structure, constraints)
-- **Backward Compatibility:** Scenario format version 1 is always supported
+**When it occurs:** Application first launches or when user explicitly creates a fresh game state without deck data.
 
-#### State Transitions
-- **Fresh Startup → Empty State:** `createInitialState()` creates blank state
-- **New Game Click → Deck Select Modal:** User selects decks from presets
-- **Deck Select → Populated Game:** `startNewGameFromPresets()` builds and validates players
-- **Load Scenario Click → File Select:** User chooses JSON scenario file
-- **Scenario Load → Custom State:** `loadScenario()` validates and applies scenario
-- **Edit Mode Toggle:** Allows manual state modification without validation checks
+**Purpose:** Provides a blank canvas for manual setup, scenario editing, or testing custom configurations.
+
+**Initialization Process:**
+- Called via: `createInitialState()` in `js/engine/game-state.js`
+- No deck data is loaded
+- No Pokemon are placed on the field
+
+**Explicit Board State Rules:**
+- **Active Pokemon:** `null` for both players (no Pokemon in active spot)
+- **Bench:** Empty array (0/3 slots filled) for both players
+- **Hand:** Empty array (0 cards) for both players
+- **Deck:** Empty array (0 cards) for both players
+- **Discard Pile:** Empty array (0 cards) for both players
+- **Energy Zone:**
+  - `currentEnergy`: `null`
+  - `nextEnergy`: `null`
+  - `configuredTypes`: Empty array `[]`
+  - `usedThisTurn`: `false`
+- **Turn State:**
+  - `turn`: `0` (pre-game state)
+  - `currentPlayer`: `'player1'`
+- **Coin Queue:** Pre-generated with 10 random coin flips (array of booleans)
+- **Stadium:** `null`
+- **Turn Effects:** Empty array `[]`
+- **Log:** Empty array `[]`
+
+**Validation:** Empty state always passes `isValidState()` validation.
+
+**Usage Patterns:**
+- User manually adds cards via drag-and-drop UI
+- User enters Edit Mode to configure board state manually
+- User loads a scenario JSON to populate state
+- User clicks "New Game" to start from deck presets (transitions to Mode 2)
+
+---
+
+#### Mode 2: New Game from Deck Presets
+
+**When it occurs:** User selects deck presets for both players via "New Game" modal and confirms start.
+
+**Purpose:** Start a competitive game with properly configured decks following Pocket TCG rules.
+
+**Initialization Process:**
+- Called via: `startNewGameFromPresets(deckId1, deckId2)` in `js/main.js`
+- Deck presets are loaded from `js/data/deck-presets.js`
+- Each player's state is built via `buildPlayerFromPreset(preset, turnPlayed)`
+
+**Explicit Board State Setup Rules:**
+
+1. **Deck Shuffling:**
+   - Each player's 20-card deck is shuffled using Fisher-Yates algorithm
+   - `TODO-Pocket-Verify: Does official Pokemon TCG Pocket shuffle before placing active/bench?`
+   - Current implementation: Shuffles before selecting active/bench cards
+
+2. **Active Pokemon Selection:**
+   - First Basic Pokemon (as defined by `isBasicPokemonCard()`) in the shuffled deck is placed in active spot
+   - The Basic Pokemon is removed from the deck after selection
+   - Active Pokemon's `currentHp` is set to the card's full HP value
+   - Active Pokemon's `turnPlayed` is set to `0`
+
+3. **Bench Pokemon Placement:**
+   - Up to 3 additional Basic Pokemon are placed on bench
+   - Selection order: First 3 Basic Pokemon in the remaining shuffled deck (after removing active)
+   - Each bench Pokemon is removed from the deck
+   - Bench Pokemon's `currentHp` is set to the card's full HP value
+   - `TODO-Pocket-Verify: Does official Pocket place exactly 3 basics, or up to 3 basics on bench?`
+   - `TODO-Pocket-Verify: In official Pocket, are bench Pokemon placed in deck order or shuffled order?`
+   - Current implementation: Up to 3 basics, in shuffled order
+
+4. **Hand Dealing:**
+   - Exactly 5 cards are dealt from the remaining deck to hand
+   - Cards are taken from the top of the deck (indices 0-4 after removing active and bench)
+   - `TODO-Pocket-Verify: What is the official hand size in Pokemon TCG Pocket?`
+   - Current assumption: 5 cards
+
+5. **Remaining Deck:**
+   - All remaining cards (after active, bench, and hand) stay in deck
+   - Deck count should be: `20 - 1 (active) - benchCount - 5 (hand)`
+   - Minimum deck after setup: `20 - 1 - 3 - 5 = 11 cards` (if 3 basics placed on bench)
+
+6. **Energy Zone Configuration:**
+   - `configuredTypes`: Set to the deck preset's `energyTypes` array (up to 3 types)
+   - `currentEnergy`: Set to `energyTypes[0]` (first energy type from preset)
+   - `nextEnergy`: Set to `energyTypes[1]` or falls back to `energyTypes[0]` if only one type
+   - `usedThisTurn`: `false`
+   - `TODO-Pocket-Verify: Does Energy Zone start with energy ready on turn 1 in official Pocket?`
+   - Current implementation: Yes, `currentEnergy` is pre-filled
+
+7. **Turn State:**
+   - `turn`: `1` (first turn)
+   - `currentPlayer`: `'player1'` (player1 goes first)
+
+8. **Coin Queue:**
+   - Pre-generated with 10 random coin flips (array of booleans)
+
+9. **Other Fields:**
+   - `points`: `0` for both players
+   - `stadium`: `null`
+   - `turnEffects`: Empty array `[]`
+   - `log`: Initial log entry indicating game start
+
+**Validation Requirements:**
+- Deck preset must contain exactly 20 cards
+- Deck preset must contain at least 1 Basic Pokemon (active Pokemon required)
+- Deck preset must respect max copies rule (2 per card name)
+- All cards in preset must exist in card database
+
+**First Turn Rules (Player 1 - Going First):**
+- Does NOT draw a card at turn start (draw phase is skipped)
+- Cannot attach energy from Energy Zone
+- Cannot evolve any Pokemon (evolution ban applies to both players on turn 1)
+- CAN use Supporter cards (different from physical TCG rules)
+
+---
+
+#### Mode 3: Scenario Load
+
+**When it occurs:** User loads a saved scenario JSON file via "Load Scenario" button or applies scenario via Scenario Editor modal.
+
+**Purpose:** Restore a custom game state for testing specific situations or resuming a saved game.
+
+**Initialization Process:**
+- Called via: `loadScenario(jsonString)` in `js/main.js`
+- Scenario JSON is parsed from string
+- Loaded state is validated via `isValidState(state)`
+- If valid, current state is completely replaced with loaded scenario
+
+**Explicit Board State Rules:**
+- **Full Override:** Scenario data completely replaces current state (no merge with existing state)
+- **Exact Restoration:** All fields from scenario are applied exactly as saved, including:
+  - Turn number and current player
+  - All Pokemon states (active, bench, hand, deck, discard)
+  - Energy Zone configuration
+  - Stadium card
+  - Turn effects
+  - Action log history
+  - Points for both players
+  - All Pokemon state: HP, energy, status, tools, effects, turnPlayed, lastEvolved
+
+**Validation Requirements:**
+- Scenario must have `version: 1` (or current supported version)
+- All required fields must be present
+- Deck sizes must be valid (0-20 cards per zone)
+- Bench cannot exceed 3 Pokemon per player
+- Hand cannot exceed 10 cards per player
+- All card IDs must exist in card database
+- Energy types must be valid constants from `ENERGY_TYPES`
+- Status values must be valid constants from `STATUS`
+- Turn must be within valid range (0-30 or higher for custom scenarios)
+
+**Backward Compatibility:**
+- Scenario format version 1 is always supported
+- Future versions will include migration logic if format changes
+
+**Usage Patterns:**
+- User loads pre-configured test scenarios (e.g., `scenarios/demo-start-game.json`)
+- User exports current state, modifies it, and re-imports it
+- User shares scenarios with other players for testing
+
+---
+
+#### State Transition Summary
+
+| Transition | Method | Description |
+|-----------|--------|-------------|
+| Fresh Startup → Empty State | `createInitialState()` | Creates blank state with no cards |
+| New Game Click → Deck Select Modal | `openNewGameModal()` | Opens modal to select deck presets |
+| Deck Select → Populated Game | `startNewGameFromPresets()` | Builds game state from selected decks |
+| Load Scenario Click → File Select | (UI event) | Opens file picker for JSON scenario |
+| Scenario Load → Custom State | `loadScenario()` | Validates and applies scenario |
+| Edit Mode Toggle | `toggleEditMode()` | Enables manual state modification |
+| Scenario Editor Apply | `loadScenario()` | Validates and applies edited scenario |
+
+---
+
+#### Critical Implementation Notes
+
+**Full-Board Population Rules:**
+- **DO NOT auto-populate full board on app boot** (Mode 1)
+- **DO NOT auto-populate full board on fresh state creation**
+- **FULL-BOARD POPULATION ONLY OCCURS** when:
+  - Loading a scenario JSON that includes populated slots (Mode 3)
+  - Building game state from deck presets (Mode 2) - which populates based on deck contents
+
+**Common Confusions to Avoid:**
+- "New Game" button does NOT create an empty state → It creates a populated game from deck presets (Mode 2)
+- "App boot" does NOT start with full board → It starts with empty state (Mode 1) requiring user action
+- "Scenario load" does NOT merge with existing state → It completely replaces state (Mode 3)
+
+**Unknowns Requiring Verification:**
+1. `TODO-Pocket-Verify: Deck shuffling order` - Does official Pocket shuffle before or after selecting active/bench?
+2. `TODO-Pocket-Verify: Bench count expectation` - Does official Pocket place exactly 3 basics or up to 3 basics?
+3. `TODO-Pocket-Verify: Hand size` - What is the official hand size in Pokemon TCG Pocket? (Current assumption: 5)
+4. `TODO-Pocket-Verify: Energy Zone initial state` - Does Energy Zone start with energy ready on turn 1 in official Pocket?
+5. `TODO-Pocket-Verify: Basic Pokemon detection` - How does official Pocket determine if a card is a Basic Pokemon? (Current implementation: checks card stage or name)
 
 ### Win Conditions
 - **Primary:** First to 3 points wins
