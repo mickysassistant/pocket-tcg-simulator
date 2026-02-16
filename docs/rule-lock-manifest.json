@@ -71,10 +71,10 @@
     {
       "storyId": "R009",
       "ruleName": "Document resolved rule mappings in docs/RULES_ALIGNMENT_REPORT.md",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": null,
       "codeTargets": ["docs/RULES_ALIGNMENT_REPORT.md"],
-      "testTargets": []
+      "testTargets": ["tests/rules/rules-alignment-report.test.js"]
     },
     {
       "storyId": "R010",
