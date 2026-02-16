@@ -79,10 +79,10 @@
     {
       "storyId": "R010",
       "ruleName": "Add integration regression suite for rule-locked micro-story set",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": null,
       "codeTargets": ["tests/integration/regression-suite.test.js"],
-      "testTargets": []
+      "testTargets": ["tests/integration/regression-suite.test.js"]
     }
   ]
 }
