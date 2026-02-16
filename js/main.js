@@ -18,6 +18,11 @@ import {
     handleKOPokemon
 } from './engine/game-state.js';
 import {
+    isBasicPokemonCard,
+    buildPlayerFromPreset,
+    buildNewGameState
+} from './engine/new-game-setup.js';
+import {
     startTurn,
     endTurn,
     drawCard,
@@ -871,16 +876,7 @@ function handleEvolveDrop(playerId, handIndex, targetLocation, evoCard) {
     console.log(`🔄 ${targetCard.name} evolved into ${evoCard.name}`);
 }
 
-/**
- * Check whether a card-loader card is a Basic Pokemon.
- */
-function isBasicPokemonCard(card) {
-    if (!card) return false;
-    if (card.subtypes && card.subtypes.includes('Basic')) return true;
-    if (card.stage === 'Basic' || card.stage === 0) return true;
-    if (card.supertype === 'Pokémon' && !card.evolvesFrom) return true;
-    return false;
-}
+// isBasicPokemonCard is now imported from js/engine/new-game-setup.js
 
 /**
  * Error severity levels for better error categorization
@@ -1120,90 +1116,7 @@ function openScenarioEditor() {
 // STAGE 3: NEW GAME FROM DECK PRESETS
 // ============================================================================
 
-function isBasicPokemonCard(card) {
-    if (!card) return false;
-    return card.supertype === 'Pokémon' && card.subtype === 'Basic';
-}
-
-function shuffleArray(arr) {
-    const copy = [...arr];
-    for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
-}
-
-function buildPlayerFromPreset(playerName, preset, turnPlayed = 0) {
-    const validation = validateDeckPreset(preset);
-    if (!validation.valid) {
-        throw new Error(`${t('newGame.invalidDeck')}: ${validation.errors.join(', ')}`);
-    }
-
-    const missingCards = preset.deck.filter(cardId => !getCard(cardId));
-    if (missingCards.length > 0) {
-        throw new Error(`${t('newGame.invalidDeck')}: missing cards ${missingCards.join(', ')}`);
-    }
-
-    const shuffledDeck = shuffleArray(preset.deck);
-    const basicIndices = shuffledDeck
-        .map((cardId, idx) => ({ cardId, idx, card: getCard(cardId) }))
-        .filter(entry => isBasicPokemonCard(entry.card));
-
-    if (basicIndices.length === 0) {
-        throw new Error(`${t('newGame.invalidDeck')}: no basic Pokemon`);
-    }
-
-    const activePick = basicIndices[0];
-    const remainingAfterActive = shuffledDeck.filter((_, idx) => idx !== activePick.idx);
-
-    const bench = [];
-    const benchCandidates = remainingAfterActive
-        .map((cardId, idx) => ({ cardId, idx, card: getCard(cardId) }))
-        .filter(entry => isBasicPokemonCard(entry.card));
-
-    const benchIndicesToRemove = [];
-    for (let i = 0; i < Math.min(3, benchCandidates.length); i++) {
-        const candidate = benchCandidates[i];
-        bench.push({
-            cardId: candidate.cardId,
-            currentHp: candidate.card.hp,
-            energy: [],
-            status: null,
-            turnPlayed
-        });
-        benchIndicesToRemove.push(candidate.idx);
-    }
-
-    const deckAfterSetup = remainingAfterActive.filter((_, idx) => !benchIndicesToRemove.includes(idx));
-    const hand = deckAfterSetup.slice(0, Math.min(5, deckAfterSetup.length));
-    const deck = deckAfterSetup.slice(hand.length);
-
-    return {
-        points: 0,
-        active: {
-            cardId: activePick.cardId,
-            currentHp: activePick.card.hp,
-            energy: [],
-            status: null,
-            turnPlayed
-        },
-        bench,
-        hand,
-        deck,
-        discard: [],
-        energyZone: {
-            currentEnergy: preset.energyTypes[0] || null,
-            nextEnergy: preset.energyTypes[1] || preset.energyTypes[0] || null,
-            configuredTypes: [...preset.energyTypes],
-            usedThisTurn: false
-        },
-        supporterUsedThisTurn: false,
-        retreatedThisTurn: false,
-        normalAttachUsedThisTurn: false,
-        attackedThisTurn: false
-    };
-}
+// isBasicPokemonCard, shuffleArray, buildPlayerFromPreset now in js/engine/new-game-setup.js
 
 function startNewGameFromPresets(player1DeckId, player2DeckId) {
     const preset1 = getDeckPreset(player1DeckId);
@@ -1213,17 +1126,8 @@ function startNewGameFromPresets(player1DeckId, player2DeckId) {
         throw new Error(t('newGame.invalidDeck'));
     }
 
-    const newState = createInitialState();
-    newState.name = 'New game from presets';
-    newState.description = `${preset1.name} vs ${preset2.name}`;
-    newState.turn = 1;
-    newState.currentPlayer = 'player1';
-    newState.player1 = buildPlayerFromPreset('Player 1', preset1, 0);
-    newState.player2 = buildPlayerFromPreset('Player 2', preset2, 0);
-
-    if (!isValidState(newState)) {
-        throw new Error(t('newGame.invalidDeck'));
-    }
+    // Use the new pure helper function to build the state
+    const newState = buildNewGameState(preset1, preset2, getCard);
 
     state = newState;
     hideGameOverBanner();
