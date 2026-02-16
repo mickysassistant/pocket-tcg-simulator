@@ -106,7 +106,7 @@ export function buildPlayerFromPreset(preset, cardLookup, turnPlayed = 0, option
     const bench = [];
     const benchCandidates = remainingAfterActive
         .map((cardId, idx) => ({ cardId, idx, card: cardLookup ? cardLookup(cardId) : null }))
-        .filter(entry => isBasicPokemonCard(entry.card));
+        .filter(entry => isBasicPokemonCard(entry.card) && entry.cardId !== activePick.cardId);
 
     const benchIndicesToRemove = [];
     for (let i = 0; i < Math.min(3, benchCandidates.length); i++) {

@@ -269,8 +269,9 @@ export function executeEvolve(state, playerId, handIndex, targetLocation, evoCar
   // newHp = newMaxHp - damageCounters, where damageCounters = oldMaxHp - oldCurrentHp
   const newMaxHp = evoCardData.hp || 0;
   let oldMaxHp = newMaxHp; // fallback
+  let oldCard = null;
   if (getCardFn) {
-    const oldCard = getCardFn(target.cardId);
+    oldCard = getCardFn(target.cardId);
     if (oldCard && oldCard.hp) oldMaxHp = oldCard.hp;
   }
   const damageCounters = Math.max(0, oldMaxHp - target.currentHp);
@@ -280,6 +281,6 @@ export function executeEvolve(state, playerId, handIndex, targetLocation, evoCar
   target.status = null; // Evolution cures status
   target.lastEvolved = s.turn;
 
-  s.log.push({ timestamp: Date.now(), turn: s.turn, player: playerId, action: 'evolve', from: oldCard, to: evoCardId });
+  s.log.push({ timestamp: Date.now(), turn: s.turn, player: playerId, action: 'evolve', from: oldCard ? oldCard.id : target.cardId, to: evoCardId });
   return s;
 }
