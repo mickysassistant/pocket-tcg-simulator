@@ -23,7 +23,7 @@
     {
       "storyId": "R003",
       "ruleName": "Keep first-turn manual energy attachment blocked for player going first",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": "/home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/rules/acciones-y-limites-del-turno.md",
       "codeTargets": ["src/game/energy-system.js"],
       "testTargets": ["tests/rules/first-turn-energy-block.test.js"]

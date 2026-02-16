@@ -39,3 +39,63 @@ Started: 2026-02-16T19:52:00+01:00
   - Tests are simple Node.js scripts, not using any framework like Jest or Mocha
   - Source docs are in a separate research repository
   - Rule mapping will be updated as stories progress (status field from planned → completed)
+
+---
+
+## 2026-02-16 20:04 - R002: Fix opening-turn draw rule so player going first DOES draw
+- Created src/ directory structure with game engine components
+- Implemented core game state (src/game/game-state.js):
+  - Player state management (deck, hand, banque, activePokemon, energyZone)
+  - Turn tracking (currentPlayer, turnNumber, phase, turnLog)
+  - Initial setup with 5-card hands for both players
+  - Card drawing with hand limit enforcement (10 cards max)
+  - Turn management (startTurn, endTurn, getCurrentTurnInfo)
+- Implemented turn manager (src/game/turn-manager.js):
+  - ProcessTurnStart method handles opening-turn draw rule
+  - RULE-LOCKED BEHAVIOR: Player going first (player1 on turn 0) DOES draw 1 card
+  - No special case to skip draw on opening turn
+  - Includes clear log message confirming draw happened
+  - isOpeningTurn method to identify opening turn
+- Implemented draw system (src/game/draw-system.js):
+  - drawCards method with hand limit and empty deck handling
+  - canDraw method to check if draw is possible
+  - getHandSize and getDeckSize methods for querying state
+  - Hand limit: 10 cards maximum
+  - Empty deck: No automatic loss, logs failed draw
+- Created main entry point (src/index.js):
+  - Exports GameState, TurnManager, DrawSystem classes
+  - createGame factory function for easy game instantiation
+- Created comprehensive test suite (tests/rules/opening-turn-draw.test.js):
+  - 10 tests covering all acceptance criteria:
+    1. Opening turn draws exactly 1 card
+    2. No "skip draw" message in logs
+    3. Non-opening turns also draw 1 card
+    4. Player2 draws on their first turn
+    5. Hand limit enforced at 10 cards
+    6. Drawing works with non-empty deck
+    7. Consistent behavior across multiple games
+    8. Turn manager correctly identifies opening turn
+    9. Hand limit enforced on non-opening turns
+    10. Empty deck handling (no automatic loss)
+  - All 10 tests pass
+- Updated docs/rule-lock-manifest.json to mark R002 as completed
+- Files created/modified:
+  - src/game/game-state.js (3,564 bytes)
+  - src/game/turn-manager.js (2,059 bytes)
+  - src/game/draw-system.js (3,230 bytes)
+  - src/index.js (776 bytes)
+  - tests/rules/opening-turn-draw.test.js (10,761 bytes)
+  - docs/rule-lock-manifest.json (updated R002 status to completed)
+  - progress-dfaa96d0-9c58-4ecb-a82d-ffb2849bce3f.txt (created)
+- **Learnings:**
+  - Game engine is being built from scratch - no existing codebase to follow
+  - Using CommonJS modules (require/module.exports) since no build system
+  - Tests use custom assertion functions for simplicity
+  - Rule-locking means implementing specific behavior even if it differs from documented Game8 rules
+  - Opening-turn draw rule: First player DOES draw (rule-locked requirement)
+- **Acceptance Criteria Met:**
+  ✓ Starting turn 0 for player1 draws exactly 1 card when deck and hand capacity allow
+  ✓ No start-turn log message claims that opening turn skips draw
+  ✓ Existing non-opening turn draw behavior remains unchanged
+  ✓ Tests for opening-turn draw behavior pass (10/10)
+  ✓ Typecheck passes (N/A - plain JavaScript project)

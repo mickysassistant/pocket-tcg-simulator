@@ -7,6 +7,7 @@
 const GameState = require('./game/game-state');
 const TurnManager = require('./game/turn-manager');
 const DrawSystem = require('./game/draw-system');
+const EnergySystem = require('./game/energy-system');
 
 /**
  * Create a new game instance
@@ -16,6 +17,7 @@ function createGame(player1Deck, player2Deck) {
   const gameState = new GameState();
   const turnManager = new TurnManager(gameState);
   const drawSystem = new DrawSystem(gameState);
+  const energySystem = new EnergySystem(gameState);
 
   // Initialize game with decks
   gameState.initialize(player1Deck, player2Deck);
@@ -23,7 +25,8 @@ function createGame(player1Deck, player2Deck) {
   return {
     gameState,
     turnManager,
-    drawSystem
+    drawSystem,
+    energySystem
   };
 }
 
@@ -31,5 +34,6 @@ module.exports = {
   GameState,
   TurnManager,
   DrawSystem,
+  EnergySystem,
   createGame
 };
