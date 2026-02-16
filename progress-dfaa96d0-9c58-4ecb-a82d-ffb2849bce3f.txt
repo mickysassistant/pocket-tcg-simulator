@@ -423,3 +423,70 @@ Started: 2026-02-16T19:52:00+01:00
   ✓ Typecheck passes (N/A - plain JavaScript project)
 
 ---
+
+## 2026-02-16 23:15 - R010: Add integration regression suite for rule-locked micro-story set
+- Created tests/integration/regression-suite.test.js with 25 comprehensive tests covering:
+  - R002: Opening-turn draw (3 tests)
+    * Player1 draws 1 card on opening turn (turn 0)
+    * Player2 draws 1 card on their first turn (turn 1)
+    * Opening turn does not skip draw (no skip message in logs)
+  - R003: First-turn energy attachment block (3 tests)
+    * Player1 cannot attach energy on turn 0 (opening turn)
+    * Player2 can attach energy on their first turn (turn 1)
+    * Player1 can attach energy on turn 2 (after opening turn)
+  - R004: Hand-limit draw behavior (3 tests)
+    * Draw at hand size 10 leaves hand unchanged (deck unchanged)
+    * Draw log entry records hand limit blocking
+    * Draw at hand size 9 succeeds and hand reaches 10
+  - R005: No deck-out loss (3 tests)
+    * Draw from empty deck does not set winner or throw
+    * Game state remains playable after empty-deck draw attempts
+    * Log captures empty-deck no-draw outcome
+  - R006: Turn-limit resolution (3 tests)
+    * At configured turn limit, game ends in DRAW (no winner)
+    * Before turn limit, no premature winner declared
+    * Beyond turn limit, result remains stable/deterministic
+  - R007: First-turn evolution restriction (3 tests)
+    * Evolution rejected on global opening turn (turn 0)
+    * Player1 can evolve on turn 2 (after opening turn)
+    * Player2 can evolve on their first turn (turn 1)
+  - R008: Supporter first-turn allowance (3 tests)
+    * Player1 can play Supporter on turn 0 (opening turn)
+    * Once-per-turn limit still applies
+    * Once-per-turn limit resets at start of next turn
+  - Cross-story integration tests (4 tests)
+    * R002+R003: Opening turn draw + first-turn energy block work together
+    * R004+R005: Hand limit checked before deck out
+    * R007+R008: Evolution blocked but Supporter allowed on opening turn
+    * R002+R003+R004+R005+R006+R007+R008: All rules work together over multiple turns
+- All 25 integration tests pass
+- Created TESTING.md documentation with:
+  - Test structure explanation
+  - Commands to run all tests and individual test suites
+  - Integration regression suite invocation
+  - Test coverage breakdown by story
+  - Debugging guidance
+- Updated tests/rule-lock-manifest.test.js to reflect R009 completed status (added to completed stories list)
+- Updated docs/rule-lock-manifest.json to mark R010 as completed
+- Fixed infinite loop bug in INT4 integration test (deck size was too small to test both hand limit and deck out)
+- Fixed while loop condition to check deck emptiness when filling hand
+- Verified no regressions in all existing tests (R001-R009)
+- Files created:
+  - tests/integration/regression-suite.test.js (10,403 bytes)
+  - TESTING.md (4,403 bytes)
+- Files modified:
+  - docs/rule-lock-manifest.json (R010 status → completed, testTargets updated)
+  - tests/rule-lock-manifest.test.js (added R009 to completed stories list)
+- **Learnings:**
+  - Integration tests are crucial for catching regressions when rules interact
+  - Test names with story IDs (e.g., "[R003] AC1 - ...") make it easy to identify which rule regressed
+  - Cross-story tests verify rules don't interfere with each other in unexpected ways
+  - When testing multiple scenarios that consume resources (cards, deck size), ensure sufficient initial state
+  - Testing documentation should include quick reference commands for common workflows
+  - Integration suite provides safety net for future changes
+- **Acceptance Criteria Met:**
+  ✓ Integration test suite exists and includes cases for R002, R003, R004, R005, R006, R007, and R008
+  ✓ Integration test output clearly indicates failing story ID when a rule regresses
+  ✓ Project test documentation includes the command to run this integration suite (TESTING.md)
+  ✓ Tests for rule-locked integration suite pass (25/25)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
