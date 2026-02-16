@@ -63,10 +63,10 @@
     {
       "storyId": "R008",
       "ruleName": "Lock Supporter first-turn allowance for player going first",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": "/home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/mechanics/items-y-supporters.md",
-      "codeTargets": ["src/game/card-play-system.js"],
-      "testTargets": ["tests/rules/supporter-first-turn.test.js"]
+      "codeTargets": ["src/game/supporter-system.js", "src/game/turn-manager.js", "src/index.js"],
+      "testTargets": ["tests/rules/supporter-first-turn-allowance.test.js"]
     },
     {
       "storyId": "R009",
