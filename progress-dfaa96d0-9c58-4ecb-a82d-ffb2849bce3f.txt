@@ -360,3 +360,66 @@ Started: 2026-02-16T19:52:00+01:00
   ✓ Typecheck passes (N/A - plain JavaScript project)
 
 ---
+
+## 2026-02-16 21:24 - R008: Lock Supporter first-turn allowance for player going first
+- Created src/game/supporter-system.js implementing Supporter card validation and execution
+- Rule: Supporters CAN be used on the first turn (player1's turn 0) - different from some Items (e.g., Rare Candy) which have first-turn restrictions
+- Implemented canPlaySupporter() method with validation for:
+  - already_played: Cannot play more than one Supporter per turn
+  - external_blocker: Supports external blockers (opponent passive lock, etc.)
+  - No first-turn restriction for Supporters (turn 0 allows play)
+- Implemented playSupporter() method that respects validation rules
+- Implemented addExternalBlocker()/removeExternalBlocker() for external blocker management
+- Implemented resetTurnTracking() to clear supporterPlayedThisTurn flag each turn
+- Updated src/game/turn-manager.js to accept supporterSystem parameter and reset tracking at turn start
+- Updated src/index.js to include supporterSystem in game creation and exports
+- Created comprehensive test suite (tests/rules/supporter-first-turn-allowance.test.js) with 18 tests covering:
+  - AC1: Player1 can play Supporter on turn 0 (5 tests)
+    * Player1 can play a Supporter on turn 0
+    * canPlaySupporter returns allowed on turn 0 for player1
+    * Supporter play on turn 0 logs correctly
+    * Player2 can also play a Supporter on their first turn (turn 1)
+    * Turn 0 is identified correctly (no first-turn blocker for Supporters)
+  - AC2: Once-per-turn limit (5 tests)
+    * Cannot play a second Supporter in the same turn
+    * canPlaySupporter returns blocked after one Supporter played
+    * Once-per-turn limit resets at the start of the next turn
+    * Player1 can play a Supporter on turn 2 (after player2's turn)
+    * hasSupporterBeenPlayedThisTurn returns correct status
+  - AC3: External blocker behavior (6 tests)
+    * External blocker can prevent Supporter play
+    * External blocker is checked before once-per-turn limit
+    * External blocker can be removed
+    * Conditional external blocker (only blocks certain Supporters)
+    * Multiple external blockers can coexist
+    * External blocker logs correctly when blocking
+  - Additional tests (2 tests)
+    * Supporter behavior is independent from energy attachment (R003)
+    * Supporter behavior is independent from evolution (R007)
+- All 18 tests pass
+- Verified no regressions in R002, R003, R007 tests (all existing tests pass)
+- Updated docs/rule-lock-manifest.json to mark R008 as completed
+- Updated tests/rule-lock-manifest.test.js to reflect R008 completed status
+- Files created:
+  - src/game/supporter-system.js (4,537 bytes)
+  - tests/rules/supporter-first-turn-allowance.test.js (16,106 bytes)
+- Files modified:
+  - src/game/turn-manager.js (added supporterSystem parameter and reset tracking)
+  - src/index.js (added SupporterSystem export and integration)
+  - docs/rule-lock-manifest.json (R008 status → completed)
+  - tests/rule-lock-manifest.test.js (updated status checks for R008)
+- **Learnings:**
+  - Supporters CAN be used on the first turn (player1's turn 0), unlike some Items like Rare Candy which have first-turn restrictions
+  - Supporter once-per-turn limit is independent of turn number - applies to every turn
+  - External blocker system allows for flexible restriction handling (opponent passive locks, type restrictions, etc.)
+  - External blockers are checked BEFORE the once-per-turn limit, allowing for more granular control
+  - Supporter system follows same pattern as other game systems (constructor + canX/playX methods)
+  - Validation returns { allowed, reason } format consistent with other systems
+- **Acceptance Criteria Met:**
+  ✓ On turn 0, player1 can play one valid Supporter if no other blocker applies
+  ✓ Supporter once-per-turn limit still applies after the first Supporter is played
+  ✓ Existing blocker behavior (for example opponent passive lock) is preserved
+  ✓ Tests for first-turn Supporter allowance pass (18/18)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
