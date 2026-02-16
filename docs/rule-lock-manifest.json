@@ -39,7 +39,7 @@
     {
       "storyId": "R005",
       "ruleName": "Enforce no deck-out loss when draw is impossible from empty deck",
-      "status": "planned",
+      "status": "completed",
       "sourceDocPath": "/home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/rules/mazo-vacio-deck-out.md",
       "codeTargets": ["src/game/draw-system.js", "src/game/deck-manager.js"],
       "testTargets": ["tests/rules/deck-out-no-loss.test.js"]
