@@ -365,6 +365,58 @@ See README.md for full action contracts and schemas.
             break;
           }
 
+          case 'end_turn': {
+            const { playerId } = payload;
+
+            // Validate that it's this player's turn
+            if (gameState.currentPlayer !== playerId) {
+              const errorData = {
+                error: 'Wrong turn',
+                reason: 'WRONG_TURN',
+                message: `Cannot end turn: it is currently ${gameState.currentPlayer}'s turn, not ${playerId}'s turn.`,
+                currentPlayer: gameState.currentPlayer,
+                requestedPlayer: playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Execute end_turn
+            const winResult = turnManager.endTurn();
+
+            // Check if game ended due to win condition
+            if (winResult) {
+              // Update session status to completed
+              sessions.update(session.id, { status: 'completed' });
+
+              // Update session object for response
+              session.status = 'completed';
+            }
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              message: `Ended turn for ${playerId}`,
+              sessionStatus: session.status,
+              gameEnded: !!winResult
+            };
+
+            // Include winner info if game ended
+            if (winResult) {
+              result.winner = winResult.winner;
+              result.endReason = winResult.reason;
+              result.endMessage = winResult.message;
+            }
+
+            break;
+          }
+
           default: {
             const errorData = {
               error: 'Action not yet implemented',
@@ -403,11 +455,28 @@ See README.md for full action contracts and schemas.
           console.log(`Turn: ${result.turnNumber}`);
           console.log(`Player: ${result.currentPlayer}`);
           console.log(`Phase: ${result.phase}`);
-          console.log(`Hand size: ${result.handSize}`);
-          if (result.hand.length > 0) {
-            console.log(`Cards in hand: ${result.hand.length} card(s)`);
+
+          if (subcommand === 'start_turn') {
+            console.log(`Hand size: ${result.handSize}`);
+            if (result.hand.length > 0) {
+              console.log(`Cards in hand: ${result.hand.length} card(s)`);
+            }
+          } else if (subcommand === 'end_turn' && result.sessionStatus) {
+            console.log(`Session status: ${result.sessionStatus}`);
           }
+
           console.log(`\n${result.message}`);
+
+          if (result.gameEnded) {
+            console.log(`\nGAME ENDED`);
+            console.log(`Reason: ${result.endReason}`);
+            if (result.winner) {
+              console.log(`Winner: ${result.winner}`);
+            } else {
+              console.log(`Result: Draw (tie)`);
+            }
+          }
+
           console.log(`State saved: ${newState.id}`);
         }
       }
