@@ -10,6 +10,7 @@ const helpCmd = require('./commands/help');
 const configCmd = require('./commands/config');
 const sessionCmd = require('./commands/session');
 const actionCmd = require('./commands/action');
+const snapshotCmd = require('./commands/snapshot');
 
 /**
  * Parse CLI arguments
@@ -104,6 +105,7 @@ COMMANDS:
   config            Manage configuration
   session           Manage game sessions
   action            Manage and perform game actions
+  snapshot          Manage game state snapshots
 
 OPTIONS:
   --json            Output in JSON format
@@ -199,6 +201,10 @@ EXAMPLES:
 
       case 'action':
         await actionCmd(argv);
+        break;
+
+      case 'snapshot':
+        await snapshotCmd(argv);
         break;
 
       default:

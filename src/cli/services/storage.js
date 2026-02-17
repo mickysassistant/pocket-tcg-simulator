@@ -105,12 +105,30 @@ function runMigrations(db) {
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     );
   `);
-  
+
+  // Create snapshots table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL,
+      label TEXT NOT NULL,
+      turn_number INTEGER NOT NULL,
+      phase TEXT NOT NULL,
+      current_player TEXT NOT NULL,
+      state_data TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE(session_id, label),
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    );
+  `);
+
   // Create indexes for better query performance
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_states_session_turn ON states(session_id, turn_number);
     CREATE INDEX IF NOT EXISTS idx_events_session_turn ON events(session_id, turn_number);
     CREATE INDEX IF NOT EXISTS idx_events_session_type ON events(session_id, event_type);
+    CREATE INDEX IF NOT EXISTS idx_snapshots_session ON snapshots(session_id);
+    CREATE INDEX IF NOT EXISTS idx_snapshots_session_label ON snapshots(session_id, label);
   `);
   
   // Create metadata table for tracking schema version

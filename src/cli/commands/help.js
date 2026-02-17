@@ -34,6 +34,10 @@ async function handler(argv) {
       {
         name: 'action',
         description: 'Manage and perform game actions'
+      },
+      {
+        name: 'snapshot',
+        description: 'Manage game state snapshots'
       }
     ],
     options: [

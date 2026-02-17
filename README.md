@@ -93,6 +93,67 @@ tcgp session show <name-or-id>
 tcgp session close <name-or-id>
 ```
 
+### Snapshot Command
+
+Save and restore labeled game state snapshots for testing and debugging.
+
+```bash
+# Save a snapshot with a label
+tcgp snapshot save <session-name-or-id> <label>
+
+# Load/restore from a snapshot
+tcgp snapshot load <session-name-or-id> <label>
+
+# List all snapshots for a session
+tcgp snapshot list <session-name-or-id>
+
+# Delete a snapshot
+tcgp snapshot delete <session-name-or-id> <label>
+```
+
+#### Snapshot Features
+
+- **Labeled snapshots**: Save checkpoints with custom labels (e.g., `before-attack`, `critical-point`)
+- **State integrity validation**: Automatic validation when loading snapshots
+- **Snapshot list**: View all saved snapshots for a session
+- **Snapshot deletion**: Remove snapshots that are no longer needed
+
+#### Example Usage
+
+```bash
+# Create a session
+tcgp session create my-battle --p1 deck1 --p2 deck2
+
+# Save a snapshot before an important action
+tcgp snapshot save my-battle before-attack
+
+# ... perform actions ...
+
+# If something goes wrong, restore the snapshot
+tcgp snapshot load my-battle before-attack
+
+# List all snapshots
+tcgp snapshot list my-battle
+
+# Clean up a snapshot you no longer need
+tcgp snapshot delete my-battle old-checkpoint
+```
+
+#### JSON Output
+
+All snapshot commands support `--json` for machine-readable output:
+
+```bash
+tcgp --json snapshot save my-battle checkpoint-1
+# Output: {"id":1,"sessionId":"...","label":"checkpoint-1","turnNumber":5,...}
+
+tcgp --json snapshot load my-battle checkpoint-1
+# Output: {"sessionId":"...","snapshotId":1,"label":"checkpoint-1","validation":{"valid":true,"issues":[]},...}
+
+tcgp --json snapshot list my-battle
+# Output: {"sessionId":"...","snapshots":[{"id":1,"label":"checkpoint-1",...}],"count":1}
+```
+
 ### Action Command
 
 List and validate action payload contracts.
@@ -147,6 +208,7 @@ Validation failures return stable reason codes and `valid=false` (e.g. `VALIDATI
 - `tcgp help [command]` - Show help for a command
 - `tcgp config` - Manage configuration
 - `tcgp action` - Manage and validate in-game actions
+- `tcgp snapshot` - Manage game state snapshots
 
 ## Getting Started
 
