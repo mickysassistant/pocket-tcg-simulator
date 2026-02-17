@@ -3,9 +3,18 @@
   "version": "0.1.0",
   "description": "Pokemon TCG Pocket Battle Simulator",
   "scripts": {
-    "serve": "npx serve -l 3000"
+    "serve": "npx serve -l 3000",
+    "test:e2e": "node tests/e2e/*.test.js",
+    "test:e2e:dev": "NODE_ENV=development node tests/e2e/*.test.js"
   },
-  "keywords": ["pokemon", "tcg", "simulator"],
+  "keywords": [
+    "pokemon",
+    "tcg",
+    "simulator"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "puppeteer": "^24.37.3"
+  }
 }
