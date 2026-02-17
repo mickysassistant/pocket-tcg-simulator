@@ -21,7 +21,7 @@ const ACTIONS = {
   draw: {
     id: 'draw',
     name: 'Draw Cards',
-    description: 'Draw cards from deck to hand',
+    description: 'Internal: auto-executed at turn start',
     sessionRequired: true,
     schema: {
       type: 'object',

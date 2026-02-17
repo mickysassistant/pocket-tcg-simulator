@@ -163,6 +163,36 @@ class GameState {
       isFirstTurn: this.turnNumber === 0
     };
   }
+
+  /**
+   * Create GameState instance from JSON data
+   * @param {Object} data - Serialized game state data
+   * @param {Object} rng - Optional RNG instance for determinism
+   * @returns {GameState} Restored game state
+   */
+  static fromJSON(data, rng = null) {
+    const gameState = new GameState(rng);
+
+    // Restore turn tracking
+    if (data.currentPlayer) gameState.currentPlayer = data.currentPlayer;
+    if (data.turnNumber !== undefined) gameState.turnNumber = data.turnNumber;
+    if (data.phase) gameState.phase = data.phase;
+
+    // Restore player states
+    if (data.players) {
+      for (const [playerId, playerData] of Object.entries(data.players)) {
+        if (gameState.players[playerId]) {
+          if (playerData.deck) gameState.players[playerId].deck = [...playerData.deck];
+          if (playerData.hand) gameState.players[playerId].hand = [...playerData.hand];
+          if (playerData.banque) gameState.players[playerId].banque = [...playerData.banque];
+          if (playerData.activePokemon) gameState.players[playerId].activePokemon = playerData.activePokemon;
+          if (playerData.energyZone) gameState.players[playerId].energyZone = [...playerData.energyZone];
+        }
+      }
+    }
+
+    return gameState;
+  }
 }
 
 module.exports = GameState;

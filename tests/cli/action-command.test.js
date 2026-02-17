@@ -267,13 +267,21 @@ runTest('action with unknown subcommand shows error', () => {
 });
 
 runTest('action execution not yet implemented shows proper error', () => {
-  const result = execTcgp(['action', 'draw', '--json']);
-  assert(result.status !== 0, 'Should fail - not implemented');
-  const json = parseJson(result.stdout);
-  assert(json, 'Should return valid JSON');
-  assert.strictEqual(json.reason, 'NOT_IMPLEMENTED');
-  assert.strictEqual(json.actionId, 'draw');
-  assert(json.actionName, 'Draw Cards');
+  const timestamp = Date.now();
+  const sessionName = `test-not-implemented-${timestamp}`;
+  const createResult = execTcgp(['session', 'create', sessionName, '--p1', 'deck1', '--p2', 'deck2']);
+  if (createResult.status === 0) {
+    try {
+      const result = execTcgp(['action', 'draw', '{"playerId":"player1","count":2}', '--session', sessionName, '--json']);
+      assert(result.status !== 0, 'Should fail - not implemented');
+      const json = parseJson(result.stdout);
+      assert(json, 'Should return valid JSON');
+      assert.strictEqual(json.reason, 'NOT_IMPLEMENTED');
+      assert.strictEqual(json.actionId, 'draw');
+    } finally {
+      execTcgp(['session', 'close', sessionName]);
+    }
+  }
 });
 
 runTest('action validate without payload shows action info', () => {

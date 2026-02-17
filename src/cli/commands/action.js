@@ -6,10 +6,27 @@
  * Subcommands:
  * - list                       List all available actions
  * - validate <actionId>        Validate an action payload
- * - <actionId>                 Execute an action (future feature)
+ * - <actionId>                 Execute an action
  */
 
 const actions = require('../services/actions');
+const sessions = require('../services/sessions');
+const state = require('../services/state');
+const { GameState, TurnManager, EvolutionSystem, SupporterSystem } = require('../../index');
+
+/**
+ * Parse --session flag from positional args
+ * @param {string[]} args - Positional args
+ * @returns {string|null} Session name or ID
+ */
+function parseSessionFlag(args) {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--session' && args[i + 1]) {
+      return args[i + 1];
+    }
+  }
+  return null;
+}
 
 /**
  * Execute action command
@@ -17,6 +34,7 @@ const actions = require('../services/actions');
  */
 async function handler(argv) {
   const subcommand = argv.positionalArgs[0];
+  const sessionIdentifier = parseSessionFlag(argv.positionalArgs);
 
   // Handle --help flag for action command
   if (argv.help) {
@@ -28,15 +46,16 @@ Manage and perform game actions.
 SUBCOMMANDS:
   list                         List all available actions
   validate <actionId>          Validate an action payload against its schema
-  <actionId>                   Execute an action (not yet implemented)
+  <actionId>                   Execute an action
 
 OPTIONS:
+  --session <name|id>          Specify the session to use (required for action execution)
   --json                       Output in JSON format
   -h, --help                   Show this help
 
 ARGUMENTS:
-  actionId                     Action identifier (e.g., draw, attach_energy, evolve)
-  payload                      Action payload (for validate command)
+  actionId                     Action identifier (e.g., start_turn, draw, attach_energy, evolve)
+  payload                      Action payload (JSON string)
 
 EXAMPLES:
   tcgp action list
@@ -45,6 +64,9 @@ EXAMPLES:
   tcgp action validate draw
   tcgp action validate draw '{"playerId":"player1","count":2}'
   tcgp --json action validate evolve '{"playerId":"player1","pokemonId":"p1","evolutionCard":{"id":"e1","name":"Venusaur","stage":"stage2","hp":160}}'
+
+  tcgp action start_turn '{"playerId":"player1"}' --session my-session
+  tcgp --json action start_turn '{"playerId":"player1"}' --session my-session
 
 See README.md for full action contracts and schemas.
 `);
@@ -210,19 +232,9 @@ See README.md for full action contracts and schemas.
       }
 
       default: {
-        // Check if it's a valid action ID (for future execution)
+        // Check if it's a valid action ID for execution
         const action = actions.getAction(subcommand);
-        if (action) {
-          const errorData = {
-            error: 'Action execution not yet implemented',
-            reason: 'NOT_IMPLEMENTED',
-            message: `Action "${subcommand}" exists but execution is not yet implemented. See CLI roadmap for details.`,
-            actionId: subcommand,
-            actionName: action.name
-          };
-          argv.formatOutput(errorData);
-          process.exit(1);
-        } else {
+        if (!action) {
           const errorData = {
             error: `Unknown subcommand: ${subcommand}`,
             reason: 'UNKNOWN_SUBCOMMAND',
@@ -231,6 +243,172 @@ See README.md for full action contracts and schemas.
           };
           argv.formatOutput(errorData);
           process.exit(1);
+        }
+
+        // Check if action requires a session
+        if (action.sessionRequired && !sessionIdentifier) {
+          const errorData = {
+            error: 'Missing session',
+            reason: 'MISSING_SESSION',
+            message: `Action "${subcommand}" requires a session. Use --session <name> to specify which session to use.`,
+            actionId: subcommand
+          };
+          argv.formatOutput(errorData);
+          process.exit(1);
+        }
+
+        // Parse payload from positional args
+        const payloadStr = argv.positionalArgs[1];
+        let payload = {};
+        if (payloadStr) {
+          try {
+            payload = JSON.parse(payloadStr);
+          } catch (error) {
+            const errorData = {
+              error: 'Invalid JSON payload',
+              reason: 'INVALID_JSON',
+              message: `Failed to parse payload: ${error.message}`
+            };
+            argv.formatOutput(errorData);
+            process.exit(1);
+          }
+        }
+
+        // Validate payload
+        const validationResult = actions.validatePayload(subcommand, payload);
+        if (!validationResult.valid) {
+          const errorData = {
+            error: 'Invalid payload',
+            reason: validationResult.reason,
+            message: 'Action payload validation failed',
+            actionId: subcommand,
+            errors: validationResult.errors
+          };
+          argv.formatOutput(errorData);
+          process.exit(1);
+        }
+
+        // Load session
+        let session = sessions.get(sessionIdentifier);
+        if (!session) {
+          session = sessions.getByName(sessionIdentifier);
+        }
+
+        if (!session) {
+          const errorData = {
+            error: 'Session not found',
+            reason: 'SESSION_NOT_FOUND',
+            message: `No session found with name or ID "${sessionIdentifier}"`
+          };
+          argv.formatOutput(errorData);
+          process.exit(1);
+        }
+
+        // Check session is active
+        if (session.status !== 'active') {
+          const errorData = {
+            error: 'Session is not active',
+            reason: 'SESSION_NOT_ACTIVE',
+            message: `Session "${session.name}" is ${session.status}. Only active sessions can execute actions.`
+          };
+          argv.formatOutput(errorData);
+          process.exit(1);
+        }
+
+        // Load latest state
+        const latestState = state.getLatest(session.id);
+        if (!latestState) {
+          const errorData = {
+            error: 'No game state found',
+            reason: 'NO_STATE_FOUND',
+            message: `Session "${session.name}" has no saved game state.`
+          };
+          argv.formatOutput(errorData);
+          process.exit(1);
+        }
+
+        // Restore game state from persisted data
+        const gameState = GameState.fromJSON(latestState.stateData);
+
+        // Create game systems
+        const evolutionSystem = new EvolutionSystem(gameState);
+        const supporterSystem = new SupporterSystem(gameState);
+        const turnManager = new TurnManager(gameState, 30, evolutionSystem, supporterSystem);
+
+        // Execute action based on actionId
+        let result;
+        switch (subcommand) {
+          case 'start_turn': {
+            const { playerId } = payload;
+
+            // Execute start_turn
+            turnManager.startTurn(playerId);
+
+            // Phase should already be 'main' after startTurn
+            if (gameState.phase !== 'main') {
+              gameState.phase = 'main';
+            }
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              hand: gameState.players[playerId].hand,
+              handSize: gameState.players[playerId].hand.length,
+              message: `Started turn for ${playerId}`
+            };
+            break;
+          }
+
+          default: {
+            const errorData = {
+              error: 'Action not yet implemented',
+              reason: 'NOT_IMPLEMENTED',
+              message: `Action "${subcommand}" is registered but not yet implemented for execution.`,
+              actionId: subcommand
+            };
+            argv.formatOutput(errorData);
+            process.exit(1);
+          }
+        }
+
+        // Save new state
+        const newState = state.save({
+          sessionId: session.id,
+          turnNumber: gameState.turnNumber,
+          phase: gameState.phase,
+          currentPlayer: gameState.currentPlayer,
+          stateData: {
+            players: gameState.players,
+            currentPlayer: gameState.currentPlayer,
+            turnNumber: gameState.turnNumber,
+            phase: gameState.phase
+          }
+        });
+
+        // Include state info in result
+        result.stateId = newState.id;
+        result.savedAt = newState.createdAt;
+
+        if (argv.json) {
+          argv.formatOutput(result);
+        } else {
+          console.log(`Action: ${action.name} (${subcommand})`);
+          console.log(`Session: ${session.name} (${session.id})`);
+          console.log(`Turn: ${result.turnNumber}`);
+          console.log(`Player: ${result.currentPlayer}`);
+          console.log(`Phase: ${result.phase}`);
+          console.log(`Hand size: ${result.handSize}`);
+          if (result.hand.length > 0) {
+            console.log(`Cards in hand: ${result.hand.length} card(s)`);
+          }
+          console.log(`\n${result.message}`);
+          console.log(`State saved: ${newState.id}`);
         }
       }
     }
