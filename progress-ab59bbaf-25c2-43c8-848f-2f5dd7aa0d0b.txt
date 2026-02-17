@@ -84,3 +84,45 @@ Started: 2025-02-17
   - Output formatting needs to handle action-specific fields (handSize for start_turn, sessionStatus/gameEnded for end_turn)
 
 ---
+## 2025-02-17 - ACT-003: Ejecutar attach_energy: adjuntar energía al Pokémon objetivo
+- Implemented attach_energy action execution in CLI action command handler
+- Enhanced EnergySystem to actually attach energy to Pokemon (not just log):
+  - Added findPokemon() method to locate Pokemon in active or banque by ID
+  - Updated attachEnergy() to initialize attachedEnergy array on Pokemon if needed
+  - Energy is taken from EnergyZone and attached to target Pokemon's attachedEnergy array
+- Added energyAttachedThisTurn tracking to prevent multiple energy attachments per turn:
+  - Added energyAttachedThisTurn field to GameState
+  - Updated TurnManager.startTurn() to reset this flag at turn start
+  - Updated GameState.fromJSON() to restore this flag
+  - Action handler validates this flag and returns ENERGY_ALREADY_ATTACHED error if already attached
+- Added attach_energy case to action command handler with validations:
+  - Phase must be 'main' (WRONG_PHASE error)
+  - Player must be current player (WRONG_TURN error)
+  - Energy not yet attached this turn (ENERGY_ALREADY_ATTACHED error)
+  - Target Pokemon must be in active or banque (INVALID_TARGET error)
+- Updated session creation to populate test data:
+  - Added 10 energy cards to each player's Energy Zone
+  - Added Pokemon to active position and banque for testing
+- Updated state saving to include energyAttachedThisTurn field
+- Updated CLI output formatting for attach_energy specific fields
+- Files changed:
+  - src/game/energy-system.js: Enhanced attachEnergy() and added findPokemon()
+  - src/game/game-state.js: Added energyAttachedThisTurn field and fromJSON() support
+  - src/game/turn-manager.js: Reset energyAttachedThisTurn in startTurn()
+  - src/cli/commands/action.js: Added attach_energy case and EnergySystem import
+  - src/cli/commands/session.js: Added test Pokemon and energy to session creation
+  - tests/cli/attach-energy-action.test.js: New test file with 16 tests
+- Tests: 16 new tests covering all acceptance criteria:
+  - AC1: attach_energy executes without error and returns updated Pokemon with energy
+  - AC2: ENERGY_ALREADY_ATTACHED error on second attach in same turn, but allowed on new turn
+  - AC3: INVALID_TARGET error for non-existent Pokemon or opponent's Pokemon
+  - AC4: WRONG_PHASE error when not in main phase
+  - Additional tests: payload validation, output formats, state saving, player2
+- **Learnings:**
+  - EnergySystem.attachEnergy() must actually add energy to Pokemon's attachedEnergy array
+  - The first-turn energy attachment restriction prevents player1 from attaching energy on turn 0
+  - Tests need to account for the first-turn restriction by testing on player2's turn or later turns
+  - Pokemon cards have an optional attachedEnergy array that stores attached energy cards
+  - Session creation should populate test data (Pokemon in active/banque, energy in Energy Zone) for action testing
+  - Energy attached to a Pokemon needs to be tracked and persisted in the game state
+  - Validation order matters: phase → player → turn-specific restrictions → target validity
