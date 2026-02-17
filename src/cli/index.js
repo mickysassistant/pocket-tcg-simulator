@@ -7,6 +7,7 @@
 
 const versionCmd = require('./commands/version');
 const helpCmd = require('./commands/help');
+const configCmd = require('./commands/config');
 
 /**
  * Parse CLI arguments
@@ -183,26 +184,7 @@ EXAMPLES:
         break;
 
       case 'config':
-        if (argv.help) {
-          console.log(`
-USAGE: tcgp config
-
-Manage configuration for the tcgp CLI.
-
-This command is not yet implemented. See CLI roadmap for details.
-
-OPTIONS:
-  --json    Output in JSON format
-  -h, --help Show this help
-`);
-        } else {
-          await argv.formatOutput({
-            error: 'Command not yet implemented',
-            reason: 'NOT_IMPLEMENTED',
-            message: 'The "config" command is not yet implemented. See CLI roadmap for details.'
-          });
-          process.exit(1);
-        }
+        await configCmd(argv);
         break;
 
       case 'session':

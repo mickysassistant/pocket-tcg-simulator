@@ -25,7 +25,7 @@ async function handler(argv) {
       },
       {
         name: 'config',
-        description: 'Manage configuration (TBD)'
+        description: 'Manage configuration'
       },
       {
         name: 'session',
