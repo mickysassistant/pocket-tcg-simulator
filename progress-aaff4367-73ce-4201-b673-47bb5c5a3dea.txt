@@ -1,0 +1,43 @@
+# Progress Log
+Run: aaff4367-73ce-4201-b673-47bb5c5a3dea
+Task: Implementar roadmap completo del CLI tcgp en iteraciones pequeñas, empezando por MVP (config + session + actions) y continuando con determinismo, snapshots, replay y simulación batch.
+Started: 2026-02-17 14:17
+
+## Codebase Patterns
+- Project uses plain JavaScript (no TypeScript)
+- Tests use custom test runner with manual assertions and run with `node tests/*.test.js`
+- Main entry point is src/index.js which exports createGame and game systems
+- Game systems: GameState, TurnManager, DrawSystem, EnergySystem, EvolutionSystem, SupporterSystem, DeckManager, WinCondition
+- Tests use assert.strictEqual and other manual assertions
+- Project uses Puppeteer for E2E smoke tests
+
+---
+
+## 2026-02-17 - CLI-001: Bootstrap del ejecutable tcgp
+- Created initial CLI structure with command parser and help system
+- Added bin/tcgp executable script
+- Created src/cli/index.js as main CLI entry point with:
+  - Command parsing for --json and --help flags
+  - Implemented commands: version, help, config (placeholder), session (placeholder), action (placeholder)
+  - Support for subcommand help (--help on subcommands)
+  - JSON output format for all commands
+- Created src/cli/commands/version.js and help.js for command handlers
+- Updated package.json with:
+  - bin entry point: tcgp -> ./bin/tcgp
+  - test scripts
+  - yargs dependency (later removed in favor of custom parser)
+- Added comprehensive smoke tests in tests/cli/bootstrap.test.js:
+  - 14 tests covering all acceptance criteria
+  - Tests verify --help works for main CLI and subcommands
+  - Tests verify --json output works
+  - Tests verify error handling for missing/invalid commands
+- All 14 tests pass
+- CLI can be invoked via `node bin/tcgp` or via npm scripts once published
+- Files changed: bin/tcgp, src/cli/index.js, src/cli/commands/*.js, tests/cli/bootstrap.test.js, package.json, package-lock.json
+- **Learnings:**
+  - yargs had issues with Node.js v22 - ended up writing custom parser for simplicity
+  - CLI modules need to check both `require.main === module` AND `process.argv[1].endsWith('bin/tcgp')` to work when invoked via bin script
+  - Custom parser is simpler and more reliable for this use case
+  - JSON output should be consistent across all commands for easy parsing
+
+---
