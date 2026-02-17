@@ -2,10 +2,19 @@
   "name": "pocket-tcg-simulator",
   "version": "0.1.0",
   "description": "Pokemon TCG Pocket Battle Simulator",
+  "bin": {
+    "tcgp": "./bin/tcgp"
+  },
   "scripts": {
-    "serve": "npx serve -l 3000"
+    "serve": "npx serve -l 3000",
+    "test": "node --test tests/**/*.test.js",
+    "test:cli": "node tests/cli/bootstrap.test.js",
+    "test:rules": "node tests/rules/*.test.js"
   },
   "keywords": ["pokemon", "tcg", "simulator"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "yargs": "^17.7.2"
+  }
 }

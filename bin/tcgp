@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+/**
+ * tcgp executable
+ * 
+ * Entry point for the Pocket TCG Simulator CLI
+ */
+
+require('../src/cli/index.js');
