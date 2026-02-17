@@ -233,6 +233,45 @@ EXAMPLES:
         game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-4' });
         game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-5' });
 
+        // Add evolution cards to players' hands for evolve testing
+        const evolutionCardP1Stage1 = {
+          id: 'B1-157',
+          name: 'Zweilous',
+          supertype: 'Pokémon',
+          hp: 90,
+          types: ['Darkness'],
+          subtype: 'Stage 1'
+        };
+        const evolutionCardP1Stage2 = {
+          id: 'B1-159',
+          name: 'Hydreigon',
+          supertype: 'Pokémon',
+          hp: 150,
+          types: ['Darkness'],
+          subtype: 'Stage 2'
+        };
+        const evolutionCardP2Stage1 = {
+          id: 'A3a-044',
+          name: 'Naganadel',
+          supertype: 'Pokémon',
+          hp: 130,
+          types: ['Darkness'],
+          subtype: 'Stage 1'
+        };
+        const evolutionCardP2Stage2 = {
+          id: 'A3a-046',
+          name: 'Ultra Necrozma',
+          supertype: 'Pokémon',
+          hp: 170,
+          types: ['Darkness'],
+          subtype: 'Stage 2'
+        };
+        // Give each player evolution cards
+        game.gameState.players.player1.hand.push(evolutionCardP1Stage1);
+        game.gameState.players.player1.hand.push(evolutionCardP1Stage2);
+        game.gameState.players.player2.hand.push(evolutionCardP2Stage1);
+        game.gameState.players.player2.hand.push(evolutionCardP2Stage2);
+
         // Save initial state
         const initialState = state.save({
           sessionId,

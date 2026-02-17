@@ -33,6 +33,7 @@ class GameState {
     this.phase = 'setup'; // setup, draw, main, attack, checkup, end
     this.turnLog = []; // Log of turn events
     this.energyAttachedThisTurn = false; // Track if energy was attached this turn
+    this.evolvedThisTurn = new Set(); // Track Pokemon IDs that have evolved this turn
   }
 
   /**
@@ -179,6 +180,10 @@ class GameState {
     if (data.turnNumber !== undefined) gameState.turnNumber = data.turnNumber;
     if (data.phase) gameState.phase = data.phase;
     if (data.energyAttachedThisTurn !== undefined) gameState.energyAttachedThisTurn = data.energyAttachedThisTurn;
+    if (data.evolvedThisTurn) {
+      // Restore evolvedThisTurn as a Set
+      gameState.evolvedThisTurn = new Set(data.evolvedThisTurn);
+    }
 
     // Restore player states
     if (data.players) {

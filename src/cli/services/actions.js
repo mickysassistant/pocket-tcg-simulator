@@ -106,7 +106,7 @@ const ACTIONS = {
     sessionRequired: true,
     schema: {
       type: 'object',
-      required: ['playerId', 'pokemonId', 'evolutionCard'],
+      required: ['playerId', 'pokemonId', 'evolutionCardId'],
       properties: {
         playerId: {
           type: 'string',
@@ -117,20 +117,9 @@ const ACTIONS = {
           type: 'string',
           description: 'ID of the Pokemon to evolve'
         },
-        evolutionCard: {
-          type: 'object',
-          required: ['id', 'name', 'stage', 'hp'],
-          properties: {
-            id: { type: 'string', description: 'Card ID' },
-            name: { type: 'string', description: 'Pokemon name' },
-            stage: {
-              type: 'string',
-              enum: ['stage1', 'stage2'],
-              description: 'Evolution stage'
-            },
-            hp: { type: 'number', minimum: 1, description: 'HP value' }
-          },
-          description: 'Evolution card to apply'
+        evolutionCardId: {
+          type: 'string',
+          description: 'ID of the evolution card in the player\'s hand'
         }
       }
     }

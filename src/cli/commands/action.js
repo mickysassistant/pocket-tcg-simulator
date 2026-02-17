@@ -618,6 +618,205 @@ See README.md for full action contracts and schemas.
             break;
           }
 
+          case 'evolve': {
+            const { playerId, pokemonId, evolutionCardId } = payload;
+
+            // Validate phase is 'main'
+            if (gameState.phase !== 'main') {
+              const errorData = {
+                error: 'Wrong phase',
+                reason: 'WRONG_PHASE',
+                message: `Pokemon can only evolve during main phase, current phase is ${gameState.phase}.`,
+                currentPhase: gameState.phase,
+                expectedPhase: 'main'
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that it's this player's turn
+            if (gameState.currentPlayer !== playerId) {
+              const errorData = {
+                error: 'Wrong turn',
+                reason: 'WRONG_TURN',
+                message: `Cannot evolve Pokemon: it is currently ${gameState.currentPlayer}'s turn, not ${playerId}'s turn.`,
+                currentPlayer: gameState.currentPlayer,
+                requestedPlayer: playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const player = gameState.players[playerId];
+
+            // Verify evolution card is in hand
+            const handCardIndex = player.hand.findIndex(card => card.id === evolutionCardId);
+            if (handCardIndex === -1) {
+              const errorData = {
+                error: 'Card not in hand',
+                reason: 'CARD_NOT_IN_HAND',
+                message: `Evolution card ${evolutionCardId} is not in ${playerId}'s hand.`,
+                playerId,
+                evolutionCardId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const evolutionCard = player.hand[handCardIndex];
+
+            // Verify evolution card is a valid evolution card (stage1 or stage2)
+            if (evolutionCard.supertype !== 'Pokémon' ||
+                (evolutionCard.subtype !== 'Stage 1' && evolutionCard.subtype !== 'Stage 2')) {
+              const errorData = {
+                error: 'Invalid evolution card',
+                reason: 'INVALID_EVOLUTION',
+                message: `Card ${evolutionCardId} is not a valid evolution card. It must be a Stage 1 or Stage 2 Pokémon.`,
+                playerId,
+                evolutionCardId,
+                supertype: evolutionCard.supertype,
+                subtype: evolutionCard.subtype
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Get the target Pokemon
+            const targetPokemon = evolutionSystem.getPokemon(playerId, pokemonId);
+            if (!targetPokemon) {
+              const errorData = {
+                error: 'Pokemon not found',
+                reason: 'INVALID_TARGET',
+                message: `Pokemon ${pokemonId} is not in ${playerId}'s active or bench.`,
+                playerId,
+                pokemonId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Capture original Pokemon name before evolution
+            const originalPokemonName = targetPokemon.name;
+
+            // Check if Pokemon can evolve using EvolutionSystem
+            const canEvolveResult = evolutionSystem.canEvolve(playerId, pokemonId);
+            if (!canEvolveResult.canEvolve) {
+              const errorData = {
+                error: 'Cannot evolve Pokemon',
+                reason: canEvolveResult.reason === 'already_evolved' ? 'ALREADY_EVOLVED' :
+                       canEvolveResult.reason === 'opening_turn_restriction' ? 'FIRST_TURN_RESTRICTION' :
+                       'INVALID_EVOLUTION',
+                message: canEvolveResult.message,
+                playerId,
+                pokemonId,
+                reasonCode: canEvolveResult.reason
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Check if Pokemon already evolved this turn (tracking in gameState)
+            if (gameState.evolvedThisTurn.has(pokemonId)) {
+              const errorData = {
+                error: 'Cannot evolve Pokemon',
+                reason: 'ALREADY_EVOLVED',
+                message: 'This Pokemon has already evolved this turn',
+                playerId,
+                pokemonId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate evolution chain
+            // Stage 1 requires Basic
+            // Stage 2 requires Stage 1
+            const currentStage = targetPokemon.stage || targetPokemon.subtype || 'Basic';
+            const evolutionStage = evolutionCard.subtype || evolutionCard.stage;
+
+            if (evolutionStage === 'Stage 1' && currentStage !== 'Basic') {
+              const errorData = {
+                error: 'Invalid evolution chain',
+                reason: 'INVALID_EVOLUTION',
+                message: `Cannot evolve ${targetPokemon.name} (${currentStage}) to ${evolutionCard.name} (${evolutionStage}). Stage 1 evolution requires Basic Pokémon.`,
+                playerId,
+                pokemonId,
+                evolutionCardId,
+                currentStage,
+                evolutionStage
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            if (evolutionStage === 'Stage 2' && currentStage !== 'Stage 1') {
+              const errorData = {
+                error: 'Invalid evolution chain',
+                reason: 'INVALID_EVOLUTION',
+                message: `Cannot evolve ${targetPokemon.name} (${currentStage}) to ${evolutionCard.name} (${evolutionStage}). Stage 2 evolution requires Stage 1 Pokémon.`,
+                playerId,
+                pokemonId,
+                evolutionCardId,
+                currentStage,
+                evolutionStage
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Perform the evolution using EvolutionSystem
+            // The EvolutionSystem expects a 'stage' field, but our cards have 'subtype'
+            // Map subtype to stage for the EvolutionSystem
+            const evolutionCardForSystem = {
+              ...evolutionCard,
+              stage: evolutionCard.subtype
+            };
+
+            const evolveResult = evolutionSystem.evolve(playerId, pokemonId, evolutionCardForSystem);
+            if (!evolveResult.success) {
+              const errorData = {
+                error: 'Evolution failed',
+                reason: evolveResult.reason === 'already_evolved' ? 'ALREADY_EVOLVED' :
+                       evolveResult.reason === 'opening_turn_restriction' ? 'FIRST_TURN_RESTRICTION' :
+                       'INVALID_EVOLUTION',
+                message: evolveResult.message,
+                playerId,
+                pokemonId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Mark Pokemon as evolved this turn in gameState
+            gameState.evolvedThisTurn.add(pokemonId);
+
+            // Remove evolution card from hand
+            player.hand.splice(handCardIndex, 1);
+
+            // Get evolved Pokemon
+            const evolvedPokemon = evolutionSystem.getPokemon(playerId, pokemonId);
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              pokemonId,
+              evolutionCardId,
+              pokemon: evolvedPokemon,
+              previousStage: evolvedPokemon.previousStage || targetPokemon.subtype || targetPokemon.stage,
+              currentStage: evolvedPokemon.stage,
+              handSize: player.hand.length,
+              message: `Evolved ${originalPokemonName} to ${evolvedPokemon.name} (${evolutionCardId})`
+            };
+
+            break;
+          }
+
           default: {
             const errorData = {
               error: 'Action not yet implemented',
@@ -641,7 +840,8 @@ See README.md for full action contracts and schemas.
             currentPlayer: gameState.currentPlayer,
             turnNumber: gameState.turnNumber,
             phase: gameState.phase,
-            energyAttachedThisTurn: gameState.energyAttachedThisTurn
+            energyAttachedThisTurn: gameState.energyAttachedThisTurn,
+            evolvedThisTurn: Array.from(gameState.evolvedThisTurn)
           }
         });
 
@@ -674,6 +874,12 @@ See README.md for full action contracts and schemas.
             console.log(`Zone: ${result.zone}`);
             console.log(`Hand size: ${result.handSize}`);
             console.log(`Bench size: ${result.benchSize}`);
+          } else if (subcommand === 'evolve') {
+            console.log(`Pokemon: ${result.pokemon.name} (${result.pokemonId})`);
+            console.log(`Evolution card: ${result.evolutionCardId}`);
+            console.log(`Previous stage: ${result.previousStage}`);
+            console.log(`Current stage: ${result.currentStage}`);
+            console.log(`Hand size: ${result.handSize}`);
           }
 
           console.log(`\n${result.message}`);

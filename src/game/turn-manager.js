@@ -52,6 +52,9 @@ class TurnManager {
       this.evolutionSystem.resetTurnTracking();
     }
 
+    // Reset evolvedThisTurn tracking at the start of each player's turn
+    this.gameState.evolvedThisTurn.clear();
+
     // Reset supporter tracking at the start of each player's turn
     if (this.supporterSystem) {
       this.supporterSystem.resetTurnTracking();
