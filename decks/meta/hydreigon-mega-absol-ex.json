@@ -1,0 +1,240 @@
+[
+  {
+    "id": "B1-155",
+    "name": "Deino",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Darkness"
+    ],
+    "attacks": [
+      {
+        "name": "Headbutt",
+        "damage": 20,
+        "energyCost": [
+          "D"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-155-2",
+    "name": "Deino",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Darkness"
+    ],
+    "attacks": [
+      {
+        "name": "Headbutt",
+        "damage": 20,
+        "energyCost": [
+          "D"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-157",
+    "name": "Hydreigon",
+    "supertype": "Pokémon",
+    "hp": 150,
+    "types": [
+      "Darkness"
+    ],
+    "attacks": [
+      {
+        "name": "Hyper Ray",
+        "damage": 130,
+        "energyCost": [
+          "D",
+          "D",
+          "D"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Roar in Unison",
+        "effect": "Once during your turn, you may take 2 [D] Energy from your Energy Zone and attach it to this Pokémon. If you do, do 30 damage to this Pokémon.",
+        "rawInfo": "Ability:\nRoar in Unison"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B1-157-2",
+    "name": "Hydreigon",
+    "supertype": "Pokémon",
+    "hp": 150,
+    "types": [
+      "Darkness"
+    ],
+    "attacks": [
+      {
+        "name": "Hyper Ray",
+        "damage": 130,
+        "energyCost": [
+          "D",
+          "D",
+          "D"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Roar in Unison",
+        "effect": "Once during your turn, you may take 2 [D] Energy from your Energy Zone and attach it to this Pokémon. If you do, do 30 damage to this Pokémon.",
+        "rawInfo": "Ability:\nRoar in Unison"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B1-151",
+    "name": "Mega Absol ex",
+    "supertype": "Pokémon",
+    "hp": 170,
+    "types": [
+      "Darkness"
+    ],
+    "attacks": [
+      {
+        "name": "Darkness Claw",
+        "damage": 80,
+        "energyCost": [
+          "D",
+          "D"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A3a-042",
+    "name": "Nihilego",
+    "supertype": "Pokémon",
+    "hp": 70,
+    "types": [
+      "Darkness"
+    ],
+    "attacks": [
+      {
+        "name": "New Wave",
+        "damage": 30,
+        "energyCost": [
+          "D",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "More Poison",
+        "effect": "Your opponent's Active Pokémon takes +10 damage from being Poisoned.",
+        "rawInfo": "Ability:\nMore Poison"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4-120",
+    "name": "Absol",
+    "supertype": "Pokémon",
+    "hp": 80,
+    "types": [
+      "Darkness"
+    ],
+    "attacks": [
+      {
+        "name": "Leap Over",
+        "damage": 0,
+        "energyCost": [
+          "D"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225-2",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-145",
+    "name": "Lucky Ice Pop",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-145-2",
+    "name": "Lucky Ice Pop",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314-2",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A3-146",
+    "name": "Poison Barb",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  },
+  {
+    "id": "A3-146-2",
+    "name": "Poison Barb",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  }
+]

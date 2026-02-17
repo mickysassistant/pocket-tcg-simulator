@@ -32,6 +32,7 @@ class GameState {
     this.turnNumber = 0; // 0-indexed turn (turn 0 = first player's first turn)
     this.phase = 'setup'; // setup, draw, main, attack, checkup, end
     this.turnLog = []; // Log of turn events
+    this.energyAttachedThisTurn = false; // Track if energy was attached this turn
   }
 
   /**
@@ -177,6 +178,7 @@ class GameState {
     if (data.currentPlayer) gameState.currentPlayer = data.currentPlayer;
     if (data.turnNumber !== undefined) gameState.turnNumber = data.turnNumber;
     if (data.phase) gameState.phase = data.phase;
+    if (data.energyAttachedThisTurn !== undefined) gameState.energyAttachedThisTurn = data.energyAttachedThisTurn;
 
     // Restore player states
     if (data.players) {

@@ -88,24 +88,79 @@ class EnergySystem {
       };
     }
 
+    // Find target Pokemon in active or banque
+    const targetPokemon = this.findPokemon(playerId, targetPokemonId);
+    if (!targetPokemon) {
+      this.gameState.turnLog.push({
+        type: 'energy_attach_failed',
+        player: playerId,
+        target: targetPokemonId,
+        reason: 'invalid_target',
+        message: 'Pokemon not found in active or banque'
+      });
+
+      return {
+        success: false,
+        reason: 'invalid_target',
+        message: 'Pokemon not found in active or banque'
+      };
+    }
+
     // Get the first energy from the Energy Zone
     const energy = player.energyZone.shift();
 
-    // Attach energy to the target Pokemon
-    // Note: In a full implementation, we would locate the Pokemon in active/banque
-    // and attach the energy to it. For now, we just log the action.
-    
+    // Initialize attachedEnergy array if it doesn't exist
+    if (!targetPokemon.attachedEnergy) {
+      targetPokemon.attachedEnergy = [];
+    }
+
+    // Attach energy to the Pokemon
+    targetPokemon.attachedEnergy.push(energy);
+
     this.gameState.turnLog.push({
       type: 'energy_attached',
       player: playerId,
       target: targetPokemonId,
-      energy: energy
+      targetPokemonName: targetPokemon.name,
+      energy: energy,
+      totalEnergy: targetPokemon.attachedEnergy.length
     });
 
     return {
       success: true,
-      energy: energy
+      energy: energy,
+      targetPokemon: {
+        id: targetPokemon.id,
+        name: targetPokemon.name,
+        attachedEnergy: targetPokemon.attachedEnergy
+      }
     };
+  }
+
+  /**
+   * Find a Pokemon in active or banque by ID
+   * @param {string} playerId - 'player1' or 'player2'
+   * @param {string} pokemonId - Pokemon ID to find
+   * @returns {Object|null} Pokemon object or null if not found
+   */
+  findPokemon(playerId, pokemonId) {
+    const player = this.gameState.players[playerId];
+
+    // Check active Pokemon
+    if (player.activePokemon && player.activePokemon.id === pokemonId) {
+      return player.activePokemon;
+    }
+
+    // Check banque
+    if (player.banque) {
+      for (const pokemon of player.banque) {
+        if (pokemon.id === pokemonId) {
+          return pokemon;
+        }
+      }
+    }
+
+    return null;
   }
 
   /**

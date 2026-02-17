@@ -12,7 +12,7 @@
 const actions = require('../services/actions');
 const sessions = require('../services/sessions');
 const state = require('../services/state');
-const { GameState, TurnManager, EvolutionSystem, SupporterSystem } = require('../../index');
+const { GameState, TurnManager, EvolutionSystem, SupporterSystem, EnergySystem } = require('../../index');
 
 /**
  * Parse --session flag from positional args
@@ -333,6 +333,7 @@ See README.md for full action contracts and schemas.
         // Create game systems
         const evolutionSystem = new EvolutionSystem(gameState);
         const supporterSystem = new SupporterSystem(gameState);
+        const energySystem = new EnergySystem(gameState);
         const turnManager = new TurnManager(gameState, 30, evolutionSystem, supporterSystem);
 
         // Execute action based on actionId
@@ -417,6 +418,83 @@ See README.md for full action contracts and schemas.
             break;
           }
 
+          case 'attach_energy': {
+            const { playerId, targetPokemonId } = payload;
+
+            // Validate phase is 'main'
+            if (gameState.phase !== 'main') {
+              const errorData = {
+                error: 'Wrong phase',
+                reason: 'WRONG_PHASE',
+                message: `Energy can only be attached during main phase, current phase is ${gameState.phase}.`,
+                currentPhase: gameState.phase,
+                expectedPhase: 'main'
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that it's this player's turn
+            if (gameState.currentPlayer !== playerId) {
+              const errorData = {
+                error: 'Wrong turn',
+                reason: 'WRONG_TURN',
+                message: `Cannot attach energy: it is currently ${gameState.currentPlayer}'s turn, not ${playerId}'s turn.`,
+                currentPlayer: gameState.currentPlayer,
+                requestedPlayer: playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that energy hasn't been attached this turn
+            if (gameState.energyAttachedThisTurn) {
+              const errorData = {
+                error: 'Energy already attached this turn',
+                reason: 'ENERGY_ALREADY_ATTACHED',
+                message: 'You can only attach one energy per turn.',
+                playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Attach energy using EnergySystem
+            const attachResult = energySystem.attachEnergy(playerId, targetPokemonId);
+
+            if (!attachResult.success) {
+              const errorData = {
+                error: attachResult.message || 'Failed to attach energy',
+                reason: attachResult.reason === 'invalid_target' ? 'INVALID_TARGET' : 'ENERGY_ATTACH_FAILED',
+                message: attachResult.message,
+                playerId,
+                targetPokemonId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Mark energy as attached this turn
+            gameState.energyAttachedThisTurn = true;
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              targetPokemonId,
+              energy: attachResult.energy,
+              targetPokemon: attachResult.targetPokemon,
+              message: `Attached ${attachResult.energy} to ${attachResult.targetPokemon.name} (${attachResult.targetPokemon.id})`
+            };
+
+            break;
+          }
+
           default: {
             const errorData = {
               error: 'Action not yet implemented',
@@ -439,7 +517,8 @@ See README.md for full action contracts and schemas.
             players: gameState.players,
             currentPlayer: gameState.currentPlayer,
             turnNumber: gameState.turnNumber,
-            phase: gameState.phase
+            phase: gameState.phase,
+            energyAttachedThisTurn: gameState.energyAttachedThisTurn
           }
         });
 
@@ -463,6 +542,10 @@ See README.md for full action contracts and schemas.
             }
           } else if (subcommand === 'end_turn' && result.sessionStatus) {
             console.log(`Session status: ${result.sessionStatus}`);
+          } else if (subcommand === 'attach_energy' && result.targetPokemon) {
+            console.log(`Energy: ${result.energy}`);
+            console.log(`Target: ${result.targetPokemon.name} (${result.targetPokemonId})`);
+            console.log(`Total Energy: ${result.targetPokemon.attachedEnergy.length}`);
           }
 
           console.log(`\n${result.message}`);

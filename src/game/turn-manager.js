@@ -57,6 +57,9 @@ class TurnManager {
       this.supporterSystem.resetTurnTracking();
     }
 
+    // Reset energy attachment tracking at the start of each player's turn
+    this.gameState.energyAttachedThisTurn = false;
+
     // Record turn start
     this.gameState.startTurn(playerId);
 

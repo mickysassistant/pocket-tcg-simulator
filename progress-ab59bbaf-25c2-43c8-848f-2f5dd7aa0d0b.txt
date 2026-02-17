@@ -1,0 +1,86 @@
+# Progress Log
+Run: ab59bbaf-25c2-43c8-848f-2f5dd7aa0d0b
+Task: Implementar la ejecución de acciones en el CLI tcgp del simulador Pocket TCG.
+Started: 2025-02-17
+
+## Codebase Patterns
+- The project uses node:test for testing, run with `node --test tests/**/*.test.js`
+- Tests are defined inline with custom runTest helper for custom error formatting
+- Database persistence uses SQLite with node:sqlite DatabaseSync (synchronous API)
+- Each DB operation creates its own connection and closes it in finally block
+- GameState is the core game state object that manages players, turn tracking, etc.
+- TurnManager.startTurn(playerId) handles turn start including auto-draw of 1 card
+- Game state can be persisted to SQLite with state.save() and restored with GameState.fromJSON()
+- CLI commands are in src/cli/commands/ and use a handler(argv) async function
+- The argv object contains: json, help, positionalArgs, and formatOutput helper
+- Actions are registered in src/cli/services/actions.js with schemas for validation
+- Sessions and state are managed through repositories in src/cli/services/
+- Action validation returns { valid, reason?, errors? } object
+- CLI output supports both plain text and JSON formats via --json flag
+- TurnManager.endTurn() returns win condition result or null if game continues
+- Session status can be updated via sessions.update(sessionId, { status: 'completed' })
+
+## 2025-02-17 - ACT-001: Ejecutar start_turn: auto-draw + transición de fase
+- Implemented action execution in CLI action command handler
+- Added GameState.fromJSON() static method to restore game state from persisted data
+- Updated draw action description to "Internal: auto-executed at turn start" (not to be removed from registry)
+- Added action execution logic for start_turn action:
+  - Loads session from DB using --session flag
+  - Loads latest state from DB
+  - Restores GameState using GameState.fromJSON()
+  - Creates TurnManager and calls startTurn(playerId) which includes auto-draw
+  - Updates phase to 'main'
+  - Saves new state to DB
+  - Returns result with turn, player, hand cards, phase, and state metadata
+- Added proper error handling: SESSION_NOT_FOUND, MISSING_SESSION, SESSION_NOT_ACTIVE, NO_STATE_FOUND, VALIDATION_ERROR, INVALID_JSON, NOT_IMPLEMENTED
+- Updated action.js help text to include --session flag and execution examples
+- Files changed:
+  - src/game/game-state.js: Added fromJSON() static method
+  - src/cli/services/actions.js: Updated draw action description
+  - src/cli/commands/action.js: Added action execution handler with session flag parsing
+  - tests/cli/action-command.test.js: Updated NOT_IMPLEMENTED test to include session
+  - tests/cli/action-execution.test.js: New test file with 14 tests for start_turn execution
+- Tests: 14 new tests covering all acceptance criteria:
+  - AC1: start_turn executes without error
+  - AC2: State saved with correct phase, turn, player, and stateId
+  - AC3: Response includes hand after auto-draw
+  - AC4: SESSION_NOT_FOUND errors when no session or session doesn't exist
+  - Additional validation tests for payload validation
+- **Learnings:**
+  - GameState doesn't have built-in JSON serialization; need to manually extract fields when saving and reconstruct when loading
+  - TurnManager.startTurn() already handles the auto-draw internally (1 card), so no separate draw action is needed
+  - The fromJSON() method is essential for restoring game state from DB and continuing execution
+  - CLI action command needs --session flag to know which session to execute actions against
+  - Database locking can occur when running tests in parallel with node --test due to multiple processes accessing SQLite
+  - Tests using execTcgp() spawn child processes, which causes database locking when many tests run concurrently
+  - JSON and plain text output formats need to be kept in sync for consistency
+
+## 2025-02-17 - ACT-002: Ejecutar end_turn: cambio de jugador y avance de turno
+- Implemented end_turn action execution in CLI action command handler
+- Added turn validation: checks if requesting player is the current player (WRONG_TURN error)
+- Added end_turn action execution logic:
+  - Validates that the player ending turn is the current player
+  - Calls TurnManager.endTurn() which handles: phase→checkup, turn switch, turn increment, phase→draw
+  - Checks win condition from endTurn result
+  - Updates session status to 'completed' if game ends
+  - Saves new state to DB
+  - Returns result with new currentPlayer, turnNumber, phase, sessionStatus, and gameEnded flag
+- Updated CLI output formatting to handle end_turn specific fields
+- Files changed:
+  - src/cli/commands/action.js: Added end_turn case in action execution handler
+  - tests/cli/end-turn-action.test.js: New test file with 15 tests for end_turn execution
+- Tests: 15 new tests covering all acceptance criteria:
+  - AC1: end_turn executes without error and changes currentPlayer (p1→p2, p2→p1)
+  - AC2: Turn number increments correctly and phase is set to 'draw'
+  - AC3: Session status included in response, gameEnded flag shows if game ended
+  - AC4: WRONG_TURN error when player is not current
+  - Additional tests: payload validation, output formats, state saving, multiple turns
+- **Learnings:**
+  - TurnManager.endTurn() returns winResult (null or { winner, reason, message })
+  - Session status can be updated via sessions.update(sessionId, { status: 'completed' })
+  - Boolean fields in response should always be present (use !!winResult for gameEnded)
+  - The end_turn flow is: validate player → call TurnManager.endTurn() → check win → update session → save state → return result
+  - Wrong turn validation should happen before any game state changes
+  - Output formatting needs to handle action-specific fields (handSize for start_turn, sessionStatus/gameEnded for end_turn)
+
+---

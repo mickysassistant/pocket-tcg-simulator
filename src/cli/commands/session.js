@@ -166,6 +166,40 @@ EXAMPLES:
         const placeholderDeck = [];
         const game = createGame(placeholderDeck, placeholderDeck, 30, seed, coinQueue);
 
+        // Add some energy cards to Energy Zone for testing purposes
+        // Each player gets 10 energy cards to start
+        const testEnergyCard = { type: 'Basic Energy', energyType: 'Colorless' };
+        for (let i = 0; i < 10; i++) {
+          game.gameState.players.player1.energyZone.push({ ...testEnergyCard, id: `e1-${i}` });
+          game.gameState.players.player2.energyZone.push({ ...testEnergyCard, id: `e2-${i}` });
+        }
+
+        // Add some Pokemon to active and banque for testing
+        const testPokemon1 = {
+          id: 'B1-155',
+          name: 'Deino',
+          supertype: 'Pokémon',
+          hp: 60,
+          types: ['Darkness'],
+          subtype: 'Basic'
+        };
+        const testPokemon2 = {
+          id: 'A3a-042',
+          name: 'Nihilego',
+          supertype: 'Pokémon',
+          hp: 70,
+          types: ['Darkness'],
+          subtype: 'Basic'
+        };
+        game.gameState.players.player1.activePokemon = { ...testPokemon1 };
+        game.gameState.players.player1.banque = [
+          { ...testPokemon1, id: 'B1-155-2' }
+        ];
+        game.gameState.players.player2.activePokemon = { ...testPokemon2 };
+        game.gameState.players.player2.banque = [
+          { ...testPokemon2, id: 'A3a-042-2' }
+        ];
+
         // Save initial state
         const initialState = state.save({
           sessionId,
