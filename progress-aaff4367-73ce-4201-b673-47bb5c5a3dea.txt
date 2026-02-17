@@ -23,6 +23,10 @@ Started: 2026-02-17 14:17
 - UNIQUE constraint errors from SQLite should be caught and mapped to app-specific error codes
 - Global CLI parser should pass through unknown `--flags` to command positional args so subcommands can parse their own options
 - CLI action contracts are centralized in `src/cli/services/actions.js` with a schema-per-action registry and shared validator returning stable reason codes (`VALIDATION_ERROR`, `UNKNOWN_ACTION`, etc.)
+- Determinism is achieved via SeededRNG class (Mulberry32 algorithm) and CoinQueue class for controlled randomness
+- Game determinism: pass seed and/or coinQueue to createGame(); GameState and DeckManager use seeded RNG for all random operations
+- Session metadata stores determinism configuration (seed and coinQueue) for persistence and reproducibility
+- Snapshots are stored as independent state copies with labels; they include full state data (turn number, phase, current player, players object) for checkpoint/restoration workflows
 
 ---
 
@@ -170,4 +174,60 @@ Started: 2026-02-17 14:17
 - Updated README with action command usage and action payload contract documentation.
 - Files changed: `src/cli/services/actions.js`, `src/cli/commands/action.js`, `src/cli/index.js`, `src/cli/commands/help.js`, `tests/cli/actions.test.js`, `tests/cli/action-command.test.js`, `README.md`, progress log.
 - **Learnings:** For CLI tests that pass JSON payloads, shell argument escaping must quote payloads to avoid brace/quote parsing issues.
+
+---
+## 2026-02-17 - CLI-007: Determinismo (seed + coin queue)
+- Implemented seeded random number generator (SeededRNG class) with Mulberry32 algorithm for reproducible results
+- Added CoinQueue class for deterministic coin flips with configurable queue or RNG mode
+- Modified GameState to accept RNG and use deterministic shuffling during initialization
+- Modified DeckManager to use seeded RNG for shuffling instead of Math.random()
+- Updated createGame() to accept seed and coinQueue parameters
+- Updated session command to support --seed and --coin-queue flags
+- Session metadata now stores seed and coinQueue for persistence
+- Added comprehensive tests for RNG reproducibility (15 tests in tests/game/determinism.test.js)
+- Added CLI tests for determinism features (10 tests in tests/cli/determinism.test.js)
+- All tests pass: 25 existing session tests, 15 new determinism game tests, 10 new CLI determinism tests
+- Files changed: src/game/random.js, src/index.js, src/game/deck-manager.js, src/game/game-state.js, src/cli/commands/session.js, tests/game/determinism.test.js, tests/cli/determinism.test.js
+- **Learnings:**
+  - Seeded RNG must be passed to GameState before initialization so deck shuffling uses it
+  - Both seed and coinQueue can be used together: seed controls deck shuffling, coinQueue controls coin flips
+  - SeededRNG works with both string and number seeds, using a simple string-to-number hash
+  - CoinQueue in queue mode throws an error when exhausted; in RNG mode, unlimited flips are available
+  - Mulberry32 is a simple but effective PRNG for determinism requirements
+---
+## 2026-02-17 - CLI-008: Snapshots de sesión
+- Implemented `tcgp snapshot` command with subcommands: `save`, `load`, `list`, `delete`
+- Added snapshots table to database schema for storing labeled game state snapshots
+- Created snapshots repository in src/cli/services/snapshots.js with:
+  - save() - Save labeled snapshot from current state
+  - getById() / getByLabel() - Retrieve snapshots by ID or label
+  - list() - List all snapshots for a session
+  - deleteById() / deleteByLabel() - Delete snapshots
+  - deleteBySession() - Delete all snapshots for a session
+- `snapshot save <session> <label>` saves current state as a labeled snapshot
+- `snapshot load <session> <label>` restores session state from snapshot and creates new state record
+- `snapshot list <session>` lists all snapshots with turn/phase/player info
+- `snapshot delete <session> <label>` deletes a snapshot by label
+- Snapshot load includes automatic integrity validation checking required fields and consistency
+- Error handling with stable reason codes:
+  - SESSION_NOT_FOUND - Session doesn't exist
+  - SNAPSHOT_NOT_FOUND - Snapshot label doesn't exist
+  - SNAPSHOT_LABEL_EXISTS - Duplicate label for same session
+  - NO_STATE_FOUND - Session has no saved state to snapshot
+- Added comprehensive tests in tests/cli/snapshot.test.js:
+  - 21 tests covering all acceptance criteria
+  - Tests verify save/load/list/delete functionality
+  - Tests verify state integrity validation
+  - Tests verify error handling with reason codes
+  - Tests verify snapshot persistence and consistency
+- Updated README.md with snapshot command documentation and examples
+- All 21 new snapshot tests pass
+- All existing tests still pass (14 bootstrap, 20 config, 30 persistence, 25 session, 41 actions, 10 determinism)
+- Files changed: src/cli/commands/snapshot.js, src/cli/commands/help.js, src/cli/index.js, src/cli/services/snapshots.js, src/cli/services/storage.js, tests/cli/snapshot.test.js, README.md
+- **Learnings:**
+  - Snapshots store full state data independently, not just references to state records
+  - Integrity validation checks both required fields and consistency between snapshot metadata and state data
+  - Loading a snapshot creates a new state record, preserving the original for potential replay
+  - UNIQUE constraint on (session_id, label) ensures no duplicate labels per session
+  - Cascade delete: deleting a session also deletes all its snapshots
 ---
