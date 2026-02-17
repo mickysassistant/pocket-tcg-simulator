@@ -4,6 +4,9 @@
 
 const storage = require('./storage');
 
+// Ensure database is initialized on module load
+storage.initialize();
+
 /**
  * Save a game state snapshot
  * @param {Object} stateData - State data

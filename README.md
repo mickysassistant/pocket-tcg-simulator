@@ -72,11 +72,32 @@ tcgp --json config list
 
 Configuration is stored in `~/.tcgp/config.json` (or `$XDG_CONFIG_HOME/tcgp/config.json` if set).
 
+### Session Command
+
+Manage persistent game sessions.
+
+```bash
+# Create a session (required: --p1 and --p2, optional --seed)
+tcgp session create <name> --p1 <deck-id> --p2 <deck-id> [--seed <seed>]
+
+# List sessions
+tcgp session list
+
+# List only active/completed sessions
+tcgp session list --status active
+
+# Show session details and current state
+tcgp session show <name-or-id>
+
+# Close a session (status -> completed)
+tcgp session close <name-or-id>
+```
+
 ### Other Commands
 
 - `tcgp version` - Show version information
 - `tcgp help [command]` - Show help for a command
-- `tcgp session` - Manage game sessions (coming soon)
+- `tcgp config` - Manage configuration
 - `tcgp action` - Perform in-game actions (coming soon)
 
 ## Getting Started

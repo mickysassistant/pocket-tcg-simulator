@@ -10,6 +10,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+let isInitialized = false;
+
 /**
  * Get the data directory path
  * @returns {string} Path to data directory
@@ -131,9 +133,17 @@ function runMigrations(db) {
  * @throws {Error} If initialization fails
  */
 function initialize() {
-  const db = getDatabase();
+  // Prevent re-initialization
+  if (isInitialized) {
+    return;
+  }
+
+  const dbPath = getDatabasePath();
+  ensureDataDir();
+  const db = new DatabaseSync(dbPath);
   try {
     runMigrations(db);
+    isInitialized = true;
   } finally {
     db.close();
   }

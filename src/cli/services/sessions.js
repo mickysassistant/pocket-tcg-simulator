@@ -4,6 +4,9 @@
 
 const storage = require('./storage');
 
+// Ensure database is initialized on module load
+storage.initialize();
+
 /**
  * Create a new session
  * @param {Object} sessionData - Session data

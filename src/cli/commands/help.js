@@ -29,7 +29,7 @@ async function handler(argv) {
       },
       {
         name: 'session',
-        description: 'Manage game sessions (TBD)'
+        description: 'Manage game sessions'
       },
       {
         name: 'action',

@@ -8,6 +8,7 @@
 const versionCmd = require('./commands/version');
 const helpCmd = require('./commands/help');
 const configCmd = require('./commands/config');
+const sessionCmd = require('./commands/session');
 
 /**
  * Parse CLI arguments
@@ -32,6 +33,10 @@ function parseArgs(args) {
         result.options.json = true;
       } else if (optName === 'help' || optName === 'h') {
         result.options.help = true;
+      } else {
+        // Pass through unrecognized -- flags as positional args
+        // (for subcommand-specific options like --p1, --p2, --seed)
+        result.positionalArgs.push(arg);
       }
       i++;
     } else if (arg.startsWith('-')) {
@@ -95,8 +100,8 @@ USAGE:
 COMMANDS:
   version, v        Show version information
   help [command]    Show help information for a command
-  config            Manage configuration (TBD)
-  session           Manage game sessions (TBD)
+  config            Manage configuration
+  session           Manage game sessions
   action            Perform in-game actions (TBD)
 
 OPTIONS:
@@ -188,26 +193,7 @@ EXAMPLES:
         break;
 
       case 'session':
-        if (argv.help) {
-          console.log(`
-USAGE: tcgp session
-
-Manage game sessions.
-
-This command is not yet implemented. See CLI roadmap for details.
-
-OPTIONS:
-  --json    Output in JSON format
-  -h, --help Show this help
-`);
-        } else {
-          await argv.formatOutput({
-            error: 'Command not yet implemented',
-            reason: 'NOT_IMPLEMENTED',
-            message: 'The "session" command is not yet implemented. See CLI roadmap for details.'
-          });
-          process.exit(1);
-        }
+        await sessionCmd(argv);
         break;
 
       case 'action':

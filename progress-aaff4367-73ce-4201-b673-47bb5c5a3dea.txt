@@ -15,6 +15,13 @@ Started: 2026-02-17 14:17
 - All CLI commands support --json output via argv.formatOutput()
 - All CLI errors include stable reason codes (e.g., MISSING_ARGUMENT, UNKNOWN_SUBCOMMAND)
 - Config stored in ~/.tcgp/config.json (respects XDG_CONFIG_HOME if set)
+- Database stored in ~/.local/share/tcgp/tcgp.db (respects XDG_DATA_HOME if set)
+- node:sqlite uses DatabaseSync (synchronous API), not Database
+- Tests use XDG_DATA_HOME environment variable for isolated test databases
+- Module cache clearing with delete require.cache[require.resolve(...)] between tests
+- Foreign key constraints in SQLite: parent records must exist before child records
+- UNIQUE constraint errors from SQLite should be caught and mapped to app-specific error codes
+- Global CLI parser should pass through unknown `--flags` to command positional args so subcommands can parse their own options
 
 ---
 
@@ -86,4 +93,70 @@ Started: 2026-02-17 14:17
   - XDG_CONFIG_HOME should be respected for config storage location
   - Default values should be defined in the service and merged with user config
 
+---
+
+## 2026-02-17 - CLI-003: Persistencia de sesiones y eventos
+- Created storage service using SQLite (node:sqlite DatabaseSync) in src/cli/services/storage.js
+- Database stored in ~/.local/share/tcgp/tcgp.db (respects XDG_DATA_HOME if set)
+- Schema with 4 tables created via migration:
+  - sessions - Stores game sessions with unique names
+  - states - Stores game state snapshots with turn tracking
+  - events - Stores game events for logging and replay
+  - metadata - Stores schema version and other metadata
+- Created sessions repository in src/cli/services/sessions.js with CRUD operations:
+  - create() - Create new session with decks and metadata
+  - get() / getByName() - Retrieve sessions by ID or name
+  - list() - List all sessions, optionally filtered by status
+  - update() - Update session fields (name, status, metadata)
+  - delete() - Delete session (cascades to states and events)
+- Created state repository in src/cli/services/state.js:
+  - save() - Save game state snapshot for a session
+  - getById() - Retrieve state by record ID
+  - getLatest() - Retrieve latest state for a session
+  - getByTurn() - Retrieve state for a specific turn
+  - list() - List all states, with optional turn range filtering
+  - deleteBySession() - Delete all states for a session
+- Created events repository in src/cli/services/events.js:
+  - log() - Log an event (with optional turn number)
+  - getById() - Retrieve event by record ID
+  - list() - List all events, with optional type/turn filtering
+  - getByTurn() - Retrieve events for a specific turn
+  - getByType() - Retrieve events by type
+  - count() - Count events, optionally filtered by type
+  - deleteBySession() - Delete all events for a session
+- Cascade delete configured: Deleting a session deletes all associated states and events
+- Error handling with stable reason codes:
+  - SESSION_NAME_EXISTS - Duplicate session name
+- Added comprehensive tests in tests/cli/persistence.test.js:
+  - 30 tests covering all acceptance criteria
+  - Tests verify storage initialization and migrations
+  - Tests verify session CRUD operations
+  - Tests verify state CRUD operations
+  - Tests verify event logging and querying
+  - Tests verify cascade delete behavior
+  - Tests verify unique constraint enforcement
+- All 30 tests pass
+- All existing tests (bootstrap, config) still pass
+- Files changed: src/cli/services/storage.js, src/cli/services/sessions.js, src/cli/services/state.js, src/cli/services/events.js, tests/cli/persistence.test.js
+- **Learnings:**
+  - node:sqlite uses DatabaseSync, not Database (synchronous API)
+  - DatabaseSync requires node:sqlite import, not plain 'sqlite'
+  - Tests use XDG_DATA_HOME environment variable to create isolated test databases
+  - Foreign key constraints require valid parent records (sessions must exist before states/events)
+  - Test isolation: Each test creates a fresh database with unique UUID-based directory
+  - Module cache clearing required between tests to avoid stale database connections
+  - UNIQUE constraint error from SQLite needs to be caught and mapped to application-specific error codes
+---
+## 2026-02-17 - CLI-004: Session management MVP
+- Implemented `tcgp session` command with subcommands: `create`, `list`, `show`, and `close`
+- `session create` now supports `--p1`, `--p2`, and optional `--seed`, persists session row, initial state snapshot, and creation event
+- `session list` supports optional `--status` filter and returns human/JSON outputs
+- `session show` supports lookup by name or ID and includes latest persisted state
+- `session close` updates session status to `completed` and persists close event
+- Updated CLI router to wire `session` command and updated help text to mark it as implemented
+- Improved top-level argument parsing to preserve unknown long flags for subcommand-level parsing (`--p1`, `--p2`, `--seed`, `--status`)
+- Added README documentation for the full Session command usage
+- Added comprehensive test suite `tests/cli/session.test.js` (25 tests) covering success paths and stable reason-code error paths
+- Files changed: `src/cli/commands/session.js`, `src/cli/index.js`, `src/cli/commands/help.js`, `src/cli/services/storage.js`, `src/cli/services/sessions.js`, `src/cli/services/state.js`, `src/cli/services/events.js`, `tests/cli/session.test.js`, `README.md`, progress log
+- **Learnings:** session lifecycle is backed by sessions + states + events tables; initialization must happen before repository access; subcommand-specific flags require pass-through in global parser
 ---

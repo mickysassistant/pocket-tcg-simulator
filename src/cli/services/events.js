@@ -4,6 +4,9 @@
 
 const storage = require('./storage');
 
+// Ensure database is initialized on module load
+storage.initialize();
+
 /**
  * Log an event
  * @param {Object} eventData - Event data
