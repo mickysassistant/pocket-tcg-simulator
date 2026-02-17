@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "name": "PUP-002 Test: Opening-Turn Draw Visibility",
+  "description": "Scenario to test opening-turn draw behavior - player1's second turn (first draw)",
+  "turn": 2,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false, true, false, true, false, true],
+  "player1": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-001",
+      "currentHp": 70,
+      "energy": [],
+      "status": null,
+      "turnPlayed": 0
+    },
+    "bench": [
+      {
+        "cardId": "A1-002",
+        "currentHp": 90,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 1
+      }
+    ],
+    "hand": ["A1-004", "A1-005"],
+    "deck": [
+      "A1-001", "A1-002", "A1-003", "A1-006", "A1-007"
+    ],
+    "discard": [],
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "energyZone": {
+      "currentEnergy": null,
+      "nextEnergy": "G",
+      "configuredTypes": ["G"],
+      "usedThisTurn": false
+    },
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "player2": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-045",
+      "currentHp": 70,
+      "energy": [],
+      "status": null,
+      "turnPlayed": 0
+    },
+    "bench": [
+      {
+        "cardId": "A1-046",
+        "currentHp": 80,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 1
+      }
+    ],
+    "hand": ["A1-048", "A1-049"],
+    "deck": [
+      "A1-045", "A1-046", "A1-047", "A1-050", "A1-051"
+    ],
+    "discard": [],
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "energyZone": {
+      "currentEnergy": null,
+      "nextEnergy": "R",
+      "configuredTypes": ["R"],
+      "usedThisTurn": false
+    },
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": []
+}
