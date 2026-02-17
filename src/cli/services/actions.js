@@ -47,6 +47,34 @@ const ACTIONS = {
     }
   },
 
+  // Play Pokemon action
+  play_pokemon: {
+    id: 'play_pokemon',
+    name: 'Play Pokemon',
+    description: 'Play a Basic Pokémon from hand to active zone or bench',
+    sessionRequired: true,
+    schema: {
+      type: 'object',
+      required: ['playerId', 'cardId', 'zone'],
+      properties: {
+        playerId: {
+          type: 'string',
+          enum: ['player1', 'player2'],
+          description: 'Player playing the Pokemon'
+        },
+        cardId: {
+          type: 'string',
+          description: 'ID of the Pokemon card to play'
+        },
+        zone: {
+          type: 'string',
+          enum: ['active', 'bench'],
+          description: 'Zone to play the Pokemon to (active or bench)'
+        }
+      }
+    }
+  },
+
   // Attach energy action
   attach_energy: {
     id: 'attach_energy',

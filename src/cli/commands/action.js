@@ -495,6 +495,129 @@ See README.md for full action contracts and schemas.
             break;
           }
 
+          case 'play_pokemon': {
+            const { playerId, cardId, zone } = payload;
+
+            // Validate phase is 'main'
+            if (gameState.phase !== 'main') {
+              const errorData = {
+                error: 'Wrong phase',
+                reason: 'WRONG_PHASE',
+                message: `Pokemon can only be played during main phase, current phase is ${gameState.phase}.`,
+                currentPhase: gameState.phase,
+                expectedPhase: 'main'
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that it's this player's turn
+            if (gameState.currentPlayer !== playerId) {
+              const errorData = {
+                error: 'Wrong turn',
+                reason: 'WRONG_TURN',
+                message: `Cannot play Pokemon: it is currently ${gameState.currentPlayer}'s turn, not ${playerId}'s turn.`,
+                currentPlayer: gameState.currentPlayer,
+                requestedPlayer: playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const player = gameState.players[playerId];
+
+            // Verify card is in hand
+            const handCardIndex = player.hand.findIndex(card => card.id === cardId);
+            if (handCardIndex === -1) {
+              const errorData = {
+                error: 'Card not in hand',
+                reason: 'CARD_NOT_IN_HAND',
+                message: `Card ${cardId} is not in ${playerId}'s hand.`,
+                playerId,
+                cardId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const card = player.hand[handCardIndex];
+
+            // Verify it's a Basic Pokemon
+            if (card.supertype !== 'Pokémon' || card.subtype !== 'Basic') {
+              const errorData = {
+                error: 'Not a Basic Pokemon',
+                reason: 'NOT_BASIC',
+                message: `Card ${cardId} is not a Basic Pokémon. Cannot play non-Basic Pokémon from hand.`,
+                playerId,
+                cardId,
+                supertype: card.supertype,
+                subtype: card.subtype
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Check zone constraints
+            if (zone === 'active') {
+              // Check if active slot is already occupied
+              if (player.activePokemon) {
+                const errorData = {
+                  error: 'Active slot occupied',
+                  reason: 'ACTIVE_OCCUPIED',
+                  message: `Active Pokemon slot is already occupied by ${player.activePokemon.name} (${player.activePokemon.id}).`,
+                  playerId,
+                  currentActive: player.activePokemon
+                };
+                argv.formatOutput(errorData);
+                process.exit(1);
+              }
+
+              // Play to active slot
+              player.activePokemon = card;
+              // Remove from hand
+              player.hand.splice(handCardIndex, 1);
+            } else if (zone === 'bench') {
+              // Check if bench is full (max 3)
+              if (player.banque.length >= 3) {
+                const errorData = {
+                  error: 'Bench full',
+                  reason: 'BENCH_FULL',
+                  message: `Bench is full (max 3 Pokemon). Cannot play ${card.name} (${cardId}).`,
+                  playerId,
+                  benchSize: player.banque.length,
+                  maxBench: 3
+                };
+                argv.formatOutput(errorData);
+                process.exit(1);
+              }
+
+              // Play to bench
+              player.banque.push(card);
+              // Remove from hand
+              player.hand.splice(handCardIndex, 1);
+            }
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              cardId,
+              zone,
+              pokemon: card,
+              handSize: player.hand.length,
+              benchSize: player.banque.length,
+              activePokemon: zone === 'active' ? player.activePokemon : null,
+              message: `Played ${card.name} (${cardId}) to ${zone} zone`
+            };
+
+            break;
+          }
+
           default: {
             const errorData = {
               error: 'Action not yet implemented',
@@ -546,6 +669,11 @@ See README.md for full action contracts and schemas.
             console.log(`Energy: ${result.energy}`);
             console.log(`Target: ${result.targetPokemon.name} (${result.targetPokemonId})`);
             console.log(`Total Energy: ${result.targetPokemon.attachedEnergy.length}`);
+          } else if (subcommand === 'play_pokemon') {
+            console.log(`Pokemon: ${result.pokemon.name} (${result.cardId})`);
+            console.log(`Zone: ${result.zone}`);
+            console.log(`Hand size: ${result.handSize}`);
+            console.log(`Bench size: ${result.benchSize}`);
           }
 
           console.log(`\n${result.message}`);

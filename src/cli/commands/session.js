@@ -200,6 +200,39 @@ EXAMPLES:
           { ...testPokemon2, id: 'A3a-042-2' }
         ];
 
+        // Add some Basic Pokemon to players' hands for play_pokemon testing
+        const handPokemon1 = {
+          id: 'B1-155-hand',
+          name: 'Deino',
+          supertype: 'Pokémon',
+          hp: 60,
+          types: ['Darkness'],
+          subtype: 'Basic'
+        };
+        const handPokemon2 = {
+          id: 'A3a-042-hand',
+          name: 'Nihilego',
+          supertype: 'Pokémon',
+          hp: 70,
+          types: ['Darkness'],
+          subtype: 'Basic'
+        };
+        const benchFillerPokemon = {
+          id: 'bench-filler-1',
+          name: 'Zubat',
+          supertype: 'Pokémon',
+          hp: 40,
+          types: ['Darkness'],
+          subtype: 'Basic'
+        };
+        // Give each player some Pokemon in hand
+        game.gameState.players.player1.hand.push({ ...handPokemon1 });
+        game.gameState.players.player1.hand.push({ ...benchFillerPokemon, id: 'bench-filler-2' });
+        game.gameState.players.player1.hand.push({ ...benchFillerPokemon, id: 'bench-filler-3' });
+        game.gameState.players.player2.hand.push({ ...handPokemon2 });
+        game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-4' });
+        game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-5' });
+
         // Save initial state
         const initialState = state.save({
           sessionId,
