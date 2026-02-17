@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "name": "PUP-005 Test: Empty-Deck No-Loss Behavior",
+  "description": "Scenario to test that drawing from an empty deck does not auto-lose the game. Player1 has an empty deck and should not lose when attempting to draw.",
+  "turn": 5,
+  "currentPlayer": "player1",
+  "coinQueue": [true, false, true, true, false, true, false, true, false, true],
+  "player1": {
+    "points": 1,
+    "active": {
+      "cardId": "A1-001",
+      "currentHp": 70,
+      "energy": ["G"],
+      "status": null,
+      "turnPlayed": 0
+    },
+    "bench": [
+      {
+        "cardId": "A1-002",
+        "currentHp": 90,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 1
+      },
+      {
+        "cardId": "A1-003",
+        "currentHp": 80,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 2
+      }
+    ],
+    "hand": ["A1-004", "A1-005", "A1-006"],
+    "deck": [],
+    "discard": ["A1-007", "A1-008", "A1-009", "A1-010", "A1-011"],
+    "energyZone": {
+      "currentEnergy": "G",
+      "nextEnergy": "G",
+      "configuredTypes": ["G"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "player2": {
+    "points": 0,
+    "active": {
+      "cardId": "A1-045",
+      "currentHp": 70,
+      "energy": ["R"],
+      "status": null,
+      "turnPlayed": 0
+    },
+    "bench": [
+      {
+        "cardId": "A1-046",
+        "currentHp": 80,
+        "energy": [],
+        "status": null,
+        "turnPlayed": 1
+      }
+    ],
+    "hand": ["A1-048", "A1-049", "A1-050"],
+    "deck": [
+      "A1-045", "A1-046", "A1-047", "A1-051", "A1-052"
+    ],
+    "discard": [],
+    "energyZone": {
+      "currentEnergy": null,
+      "nextEnergy": "R",
+      "configuredTypes": ["R"],
+      "usedThisTurn": false
+    },
+    "supporterUsedThisTurn": false,
+    "retreatedThisTurn": false,
+    "normalAttachUsedThisTurn": false,
+    "attackedThisTurn": false
+  },
+  "stadium": null,
+  "turnEffects": [],
+  "log": [],
+  "_expectedBehavior": {
+    "description": "When player1 attempts to draw from an empty deck, the game should NOT automatically end or declare a winner. A log entry should be created indicating the deck is empty, but the game session should continue and remain interactive. Player1 should still be able to take actions, and the game should only end when proper win conditions are met (3 points, all Pokémon KO'd, or turn limit).",
+    "expectedNoWinner": true,
+    "expectedDeckSize": 0,
+    "expectedHandSize": 3,
+    "expectedLogMessage": "Deck vacío",
+    "expectedGameContinues": true
+  }
+}
