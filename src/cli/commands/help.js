@@ -38,6 +38,10 @@ async function handler(argv) {
       {
         name: 'snapshot',
         description: 'Manage game state snapshots'
+      },
+      {
+        name: 'replay',
+        description: 'Export and run replays for regression testing'
       }
     ],
     options: [

@@ -11,6 +11,7 @@ const configCmd = require('./commands/config');
 const sessionCmd = require('./commands/session');
 const actionCmd = require('./commands/action');
 const snapshotCmd = require('./commands/snapshot');
+const replayCmd = require('./commands/replay');
 
 /**
  * Parse CLI arguments
@@ -106,6 +107,7 @@ COMMANDS:
   session           Manage game sessions
   action            Manage and perform game actions
   snapshot          Manage game state snapshots
+  replay            Export and run replays for regression testing
 
 OPTIONS:
   --json            Output in JSON format
@@ -205,6 +207,10 @@ EXAMPLES:
 
       case 'snapshot':
         await snapshotCmd(argv);
+        break;
+
+      case 'replay':
+        await replayCmd(argv);
         break;
 
       default:
