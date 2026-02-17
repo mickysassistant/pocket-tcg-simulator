@@ -5,7 +5,10 @@
  */
 
 class GameState {
-  constructor() {
+  constructor(rng = null) {
+    // Random number generator for determinism
+    this.rng = rng;
+
     // Player states
     this.players = {
       player1: {
@@ -40,11 +43,29 @@ class GameState {
     this.players.player1.deck = [...player1Deck];
     this.players.player2.deck = [...player2Deck];
 
+    // Shuffle decks using RNG if available, otherwise Math.random
+    this._shuffleDeck(this.players.player1.deck);
+    this._shuffleDeck(this.players.player2.deck);
+
     // Draw initial 5 cards for each player
     this.drawCards('player1', 5, false);
     this.drawCards('player2', 5, false);
 
     this.phase = 'setup';
+  }
+
+  /**
+   * Shuffle a deck (Fisher-Yates)
+   * @param {Array} deck - Deck to shuffle
+   * @private
+   */
+  _shuffleDeck(deck) {
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = this.rng 
+        ? this.rng.randomInt(0, i)
+        : Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
   }
 
   /**

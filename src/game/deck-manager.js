@@ -10,8 +10,9 @@
  */
 
 class DeckManager {
-  constructor(gameState) {
+  constructor(gameState, rng = null) {
     this.gameState = gameState;
+    this.rng = rng;
   }
 
   /**
@@ -117,9 +118,14 @@ class DeckManager {
   shuffleDeck(playerId) {
     const player = this.gameState.players[playerId];
     
-    // Fisher-Yates shuffle
+    // Fisher-Yates shuffle with deterministic RNG
     for (let i = player.deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      let j;
+      if (this.rng) {
+        j = this.rng.randomInt(0, i);
+      } else {
+        j = Math.floor(Math.random() * (i + 1));
+      }
       [player.deck[i], player.deck[j]] = [player.deck[j], player.deck[i]];
     }
   }

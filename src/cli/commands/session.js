@@ -17,16 +17,17 @@ const { createGame } = require('../../index');
 const { randomUUID } = require('crypto');
 
 /**
- * Parse --p1, --p2, --seed flags from positional args
+ * Parse --p1, --p2, --seed, --coin-queue flags from positional args
  * @param {string[]} args - Positional args
- * @returns {Object} { name, p1, p2, seed }
+ * @returns {Object} { name, p1, p2, seed, coinQueue }
  */
 function parseSessionArgs(args) {
   const result = {
     name: null,
     p1: null,
     p2: null,
-    seed: null
+    seed: null,
+    coinQueue: null
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -37,6 +38,13 @@ function parseSessionArgs(args) {
       result.p2 = args[++i];
     } else if (arg === '--seed' && args[i + 1]) {
       result.seed = args[++i];
+    } else if (arg === '--coin-queue' && args[i + 1]) {
+      // Parse coin queue as JSON array of booleans: [true, false, true, ...]
+      try {
+        result.coinQueue = JSON.parse(args[++i]);
+      } catch (e) {
+        result.coinQueue = null;
+      }
     } else if (!arg.startsWith('--') && !result.name) {
       result.name = arg;
     }
@@ -60,10 +68,10 @@ USAGE: tcgp session <subcommand> [options]
 Manage game sessions.
 
 SUBCOMMANDS:
-  create <name> --p1 <deck> --p2 <deck> [--seed <seed>]  Create a new session
-  list [--status <status>]                              List all sessions
-  show <name|id>                                        Show session details
-  close <name|id>                                       Close a session
+  create <name> --p1 <deck> --p2 <deck> [--seed <seed>] [--coin-queue <queue>]  Create a new session
+  list [--status <status>]                                                    List all sessions
+  show <name|id>                                                              Show session details
+  close <name|id>                                                             Close a session
 
 OPTIONS:
   --json           Output in JSON format
@@ -73,12 +81,14 @@ ARGUMENTS:
   name             Session name (for create)
   deck             Deck identifier (for create)
   seed             Random seed for determinism (optional, for create)
+  coin-queue       JSON array of coin flip results (e.g., "[true,false,true]") for determinism (optional)
   status           Session status filter: active, completed (for list)
   name|id          Session name or ID (for show, close)
 
 EXAMPLES:
   tcgp session create my-battle --p1 pikachu-deck --p2 bulbasaur-deck
   tcgp session create my-battle --p1 deck1 --p2 deck2 --seed 12345
+  tcgp session create my-battle --p1 deck1 --p2 deck2 --seed 12345 --coin-queue "[true,false,true]"
   tcgp session list
   tcgp session list --status active
   tcgp session show my-battle
@@ -103,13 +113,13 @@ EXAMPLES:
   try {
     switch (subcommand) {
       case 'create': {
-        const { name, p1, p2, seed } = parseSessionArgs(argv.positionalArgs.slice(1));
+        const { name, p1, p2, seed, coinQueue } = parseSessionArgs(argv.positionalArgs.slice(1));
 
         if (!name) {
           const errorData = {
             error: 'Missing session name',
             reason: 'MISSING_ARGUMENT',
-            message: 'Usage: tcgp session create <name> --p1 <deck> --p2 <deck> [--seed <seed>]'
+            message: 'Usage: tcgp session create <name> --p1 <deck> --p2 <deck> [--seed <seed>] [--coin-queue "[true,false,...]"]'
           };
           argv.formatOutput(errorData);
           process.exit(1);
@@ -119,7 +129,7 @@ EXAMPLES:
           const errorData = {
             error: 'Missing --p1 argument',
             reason: 'MISSING_ARGUMENT',
-            message: 'Usage: tcgp session create <name> --p1 <deck> --p2 <deck> [--seed <seed>]'
+            message: 'Usage: tcgp session create <name> --p1 <deck> --p2 <deck> [--seed <seed>] [--coin-queue "[true,false,...]"]'
           };
           argv.formatOutput(errorData);
           process.exit(1);
@@ -129,7 +139,7 @@ EXAMPLES:
           const errorData = {
             error: 'Missing --p2 argument',
             reason: 'MISSING_ARGUMENT',
-            message: 'Usage: tcgp session create <name> --p1 <deck> --p2 <deck> [--seed <seed>]'
+            message: 'Usage: tcgp session create <name> --p1 <deck> --p2 <deck> [--seed <seed>] [--coin-queue "[true,false,...]"]'
           };
           argv.formatOutput(errorData);
           process.exit(1);
@@ -137,12 +147,16 @@ EXAMPLES:
 
         // Create session
         const sessionId = randomUUID();
+        const metadata = {};
+        if (seed) metadata.seed = seed;
+        if (coinQueue) metadata.coinQueue = coinQueue;
+
         const sessionData = {
           id: sessionId,
           name,
           player1Deck: { id: p1 },
           player2Deck: { id: p2 },
-          metadata: seed ? { seed } : {}
+          metadata
         };
 
         const session = sessions.create(sessionData);
@@ -150,7 +164,7 @@ EXAMPLES:
         // Create initial game state with placeholder decks
         // (In future, actual deck content would be loaded here)
         const placeholderDeck = [];
-        const game = createGame(placeholderDeck, placeholderDeck);
+        const game = createGame(placeholderDeck, placeholderDeck, 30, seed, coinQueue);
 
         // Save initial state
         const initialState = state.save({
@@ -174,7 +188,8 @@ EXAMPLES:
             name,
             p1,
             p2,
-            seed
+            seed,
+            coinQueue
           }
         });
 
@@ -185,6 +200,7 @@ EXAMPLES:
           player1Deck: p1,
           player2Deck: p2,
           seed: seed || null,
+          coinQueue: coinQueue || null,
           createdAt: session.createdAt,
           initialState: {
             id: initialState.id,
@@ -232,7 +248,8 @@ EXAMPLES:
             player2Deck: s.player2Deck?.id || null,
             createdAt: s.createdAt,
             updatedAt: s.updatedAt,
-            seed: s.metadata?.seed || null
+            seed: s.metadata?.seed || null,
+            coinQueue: s.metadata?.coinQueue || null
           })),
           count: sessionList.length
         };
@@ -252,6 +269,9 @@ EXAMPLES:
               console.log(`    Created: ${new Date(s.createdAt).toISOString()}`);
               if (s.metadata?.seed) {
                 console.log(`    Seed: ${s.metadata.seed}`);
+              }
+              if (s.metadata?.coinQueue) {
+                console.log(`    Coin Queue: ${JSON.stringify(s.metadata.coinQueue)}`);
               }
               console.log('');
             }
@@ -299,6 +319,7 @@ EXAMPLES:
           player1Deck: session.player1Deck?.id || null,
           player2Deck: session.player2Deck?.id || null,
           seed: session.metadata?.seed || null,
+          coinQueue: session.metadata?.coinQueue || null,
           createdAt: session.createdAt,
           updatedAt: session.updatedAt,
           currentState: latestState ? {
@@ -319,6 +340,9 @@ EXAMPLES:
           console.log(`P2 Deck: ${session.player2Deck?.id || 'N/A'}`);
           if (session.metadata?.seed) {
             console.log(`Seed: ${session.metadata.seed}`);
+          }
+          if (session.metadata?.coinQueue) {
+            console.log(`Coin Queue: ${JSON.stringify(session.metadata.coinQueue)}`);
           }
           console.log(`Created: ${new Date(session.createdAt).toISOString()}`);
           console.log(`Updated: ${new Date(session.updatedAt).toISOString()}`);
