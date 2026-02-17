@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">Pokemon TCG Pocket - Battle Simulator</title>
+    <link rel="stylesheet" href="css/battlefield.css">
+    <link rel="stylesheet" href="css/log.css">
+    <link rel="stylesheet" href="css/dialogs.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Main Container -->
+        <div id="main-container">
+            <!-- Battlefield -->
+            <div id="battlefield">
+                <!-- Opponent Zone (Top) -->
+                <div class="player-zone top" data-player="player2">
+                    <div class="player-info">
+                        <span class="player-name" data-i18n="game.opponent">Opponent</span>
+                        <span class="points-display">
+                            <span data-i18n="game.points">Points</span>: 
+                            <span class="points-value" data-bind="player2.points">0</span>/3
+                        </span>
+                    </div>
+                    
+                    <div class="hand cards-zone" data-zone="hand" data-player="player2">
+                        <!-- Hand cards rendered here -->
+                    </div>
+                    
+                    <div class="bench cards-zone" data-zone="bench" data-player="player2">
+                        <div class="bench-slot" data-index="0" data-player="player2"></div>
+                        <div class="bench-slot" data-index="1" data-player="player2"></div>
+                        <div class="bench-slot" data-index="2" data-player="player2"></div>
+                    </div>
+                    
+                    <div class="deck-discard-container">
+                        <div class="pile deck" data-zone="deck" data-player="player2">
+                            <div class="pile-icon">📚</div>
+                            <div class="pile-count" data-bind="player2.deck.length">0</div>
+                            <div class="pile-label" data-i18n="game.deck">Deck</div>
+                        </div>
+                        <div class="pile discard" data-zone="discard" data-player="player2">
+                            <div class="pile-icon">🗑️</div>
+                            <div class="pile-count" data-bind="player2.discard.length">0</div>
+                            <div class="pile-label" data-i18n="game.discard">Discard</div>
+                        </div>
+                    </div>
+                    
+                    <div class="energy-zone" data-player="player2">
+                        <div class="energy-current">
+                            <span class="energy-icon" data-bind="player2.energyZone.currentEnergy">⚡</span>
+                        </div>
+                        <div class="energy-next">
+                            <span class="energy-icon" data-bind="player2.energyZone.nextEnergy">+1</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Center Zone -->
+                <div class="center-zone">
+                    <div class="active-zone top" data-zone="active" data-player="player2">
+                        <!-- Active Pokemon rendered here -->
+                    </div>
+
+                    <div class="stadium-zone" data-zone="stadium">
+                        <div class="stadium-placeholder">🏟️</div>
+                        <!-- Stadium card rendered here -->
+                    </div>
+
+                    <div class="attack-panel" id="attack-panel">
+                        <h3 data-i18n="game.attacks">Attacks</h3>
+                        <div id="attack-buttons">
+                            <!-- Attack buttons rendered here -->
+                        </div>
+                    </div>
+
+                    <div class="active-zone bottom" data-zone="active" data-player="player1">
+                        <!-- Active Pokemon rendered here -->
+                    </div>
+                </div>
+                
+                <!-- Player Zone (Bottom) -->
+                <div class="player-zone bottom" data-player="player1">
+                    <div class="energy-zone" data-player="player1">
+                        <div class="energy-current">
+                            <span class="energy-icon" data-bind="player1.energyZone.currentEnergy">⚡</span>
+                        </div>
+                        <div class="energy-next">
+                            <span class="energy-icon" data-bind="player1.energyZone.nextEnergy">+1</span>
+                        </div>
+                    </div>
+                    
+                    <div class="deck-discard-container">
+                        <div class="pile deck" data-zone="deck" data-player="player1">
+                            <div class="pile-icon">📚</div>
+                            <div class="pile-count" data-bind="player1.deck.length">0</div>
+                            <div class="pile-label" data-i18n="game.deck">Deck</div>
+                        </div>
+                        <div class="pile discard" data-zone="discard" data-player="player1">
+                            <div class="pile-icon">🗑️</div>
+                            <div class="pile-count" data-bind="player1.discard.length">0</div>
+                            <div class="pile-label" data-i18n="game.discard">Discard</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bench cards-zone" data-zone="bench" data-player="player1">
+                        <div class="bench-slot" data-index="0" data-player="player1"></div>
+                        <div class="bench-slot" data-index="1" data-player="player1"></div>
+                        <div class="bench-slot" data-index="2" data-player="player1"></div>
+                    </div>
+                    
+                    <div class="hand cards-zone" data-zone="hand" data-player="player1">
+                        <!-- Hand cards rendered here -->
+                    </div>
+                    
+                    <div class="player-info">
+                        <span class="player-name" data-i18n="game.you">You</span>
+                        <span class="points-display">
+                            <span data-i18n="game.points">Points</span>: 
+                            <span class="points-value" data-bind="player1.points">0</span>/3
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Log Sidebar -->
+        <aside id="action-log">
+            <div class="log-header">
+                <h2 data-i18n="ui.actionLog">Action Log</h2>
+                <button id="export-log-btn" class="small-btn" data-i18n="ui.export">Export</button>
+            </div>
+            <div class="log-entries">
+                <div class="log-empty" data-i18n="ui.noActions">No actions yet</div>
+            </div>
+        </aside>
+        
+        <!-- Control Panel (Collapsible Side Panel) -->
+        <aside id="controls" class="controls-panel">
+            <button id="controls-toggle" class="controls-toggle-btn" aria-label="Toggle controls panel">
+                <span class="toggle-icon">◀</span>
+            </button>
+            
+            <div class="controls-content">
+                <div class="controls-section">
+                    <h3 class="controls-section-title" data-i18n="ui.simulationControls">Simulation</h3>
+                    <div class="controls-left">
+                        <button id="play-btn" class="btn-primary" data-i18n="ui.play">Play</button>
+                        <button id="pause-btn" class="btn-warning" data-i18n="ui.pause">Pause</button>
+                        <button id="step-btn" class="btn-secondary" data-i18n="ui.step">Step</button>
+                        <div class="speed-control">
+                            <label data-i18n="ui.speed">Speed</label>
+                            <select id="speed-select">
+                                <option value="1">1x</option>
+                                <option value="2">2x</option>
+                                <option value="5">5x</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls-section">
+                    <h3 class="controls-section-title" data-i18n="ui.gameInfo">Game Info</h3>
+                    <div class="controls-center">
+                        <div class="turn-display">
+                            <span data-i18n="game.turn">Turn</span>:
+                            <span id="turn-number" data-bind="turn">0</span>
+                        </div>
+                        <div class="current-player">
+                            <span data-i18n="game.currentPlayer">Current Player</span>:
+                            <span id="current-player" data-bind="currentPlayer">Player 1</span>
+                        </div>
+                        <div class="coin-preview" id="coin-preview">
+                            <span class="coin-label" data-i18n="ui.nextCoins">Next Coins:</span>
+                            <div id="coin-preview-display" class="coin-preview-display">
+                                <!-- Next 3 coins rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls-section">
+                    <h3 class="controls-section-title" data-i18n="ui.actions">Actions</h3>
+                    <div class="controls-right">
+                        <button id="new-game-btn" class="btn-primary" data-i18n="ui.newGame">New Game</button>
+                        <button id="load-btn" class="btn-secondary" data-i18n="ui.loadScenario">Load Scenario</button>
+                        <button id="save-btn" class="btn-secondary" data-i18n="ui.saveScenario">Save Scenario</button>
+                        <button id="edit-btn" class="btn-secondary" data-i18n="ui.editMode">Edit Mode</button>
+                        <button id="coins-btn" class="btn-secondary" data-i18n="ui.coinQueue">Coin Queue</button>
+                        <button id="lang-btn" class="btn-secondary">🌐 ES/EN</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- Modals -->
+    
+    <!-- Scenario Editor Modal -->
+    <div id="scenario-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 data-i18n="ui.scenarioEditor">Scenario Editor</h2>
+            <textarea id="scenario-json" rows="25" cols="70" spellcheck="false"></textarea>
+            <div class="modal-actions">
+                <button id="apply-scenario" class="btn-primary" data-i18n="ui.apply">Apply</button>
+                <button id="cancel-scenario" class="btn-secondary" data-i18n="ui.cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Coin Queue Modal -->
+    <div id="coin-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 data-i18n="ui.coinQueueEditor">Coin Queue Editor</h2>
+            <p data-i18n="ui.coinQueueHelp">Click coins to flip them. Queue is used in order from left to right.</p>
+            <div id="coin-queue-display" class="coin-queue">
+                <!-- Coins rendered here -->
+            </div>
+            <div class="modal-actions">
+                <button id="refill-coins" class="btn-secondary" data-i18n="ui.refill">Refill (10 random)</button>
+                <button id="close-coins" class="btn-primary" data-i18n="ui.close">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pokemon Edit Modal (T17) -->
+    <div id="pokemon-edit-modal" class="modal-overlay">
+        <div class="modal-content pokemon-edit-content">
+            <h2 data-i18n="edit.title">Edit Pokemon</h2>
+            <div class="edit-pokemon-header">
+                <img id="edit-pokemon-img" src="" alt="" class="edit-pokemon-thumb" />
+                <div>
+                    <div id="edit-pokemon-name" class="edit-pokemon-name"></div>
+                    <div id="edit-pokemon-location" class="edit-pokemon-location"></div>
+                </div>
+            </div>
+            <div class="edit-fields">
+                <label>
+                    <span data-i18n="edit.hp">HP:</span> <input type="number" id="edit-hp" min="0" max="999" step="10" />
+                    / <span id="edit-max-hp">0</span>
+                </label>
+                <label>
+                    <span data-i18n="edit.status">Status:</span>
+                    <select id="edit-status">
+                        <option value="">None</option>
+                        <option value="poison">Poison</option>
+                        <option value="poison+">Poison+</option>
+                        <option value="burn">Burn</option>
+                        <option value="sleep">Sleep</option>
+                        <option value="paralysis">Paralysis</option>
+                        <option value="confusion">Confusion</option>
+                    </select>
+                </label>
+                <div class="edit-energy-section">
+                    <label><span data-i18n="edit.energy">Energy:</span></label>
+                    <div id="edit-energy-list" class="edit-energy-list"></div>
+                    <div class="edit-energy-add">
+                        <select id="edit-energy-type">
+                            <option value="G">Grass</option>
+                            <option value="R">Fire</option>
+                            <option value="W">Water</option>
+                            <option value="L">Lightning</option>
+                            <option value="P">Psychic</option>
+                            <option value="F">Fighting</option>
+                            <option value="D">Darkness</option>
+                            <option value="M">Metal</option>
+                            <option value="C">Colorless</option>
+                        </select>
+                        <button id="edit-energy-add-btn" class="btn-secondary small-btn" data-i18n="edit.addEnergy">+ Add</button>
+                    </div>
+                </div>
+            </div>
+            <div id="edit-validation-error" class="edit-validation-error"></div>
+            <div class="modal-actions">
+                <button id="edit-pokemon-apply" class="btn-primary" data-i18n="edit.apply">Apply</button>
+                <button id="edit-pokemon-remove" class="btn-warning" data-i18n="edit.removePokemon">Remove Pokemon</button>
+                <button id="edit-pokemon-cancel" class="btn-secondary" data-i18n="edit.cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal (T19a) -->
+    <div id="error-modal" class="modal-overlay">
+        <div class="modal-content error-modal-content">
+            <div class="error-modal-icon">⚠️</div>
+            <h2 id="error-modal-title" data-i18n="error.title">Error</h2>
+            <div id="error-modal-message" class="error-modal-message"></div>
+            <div id="error-modal-suggestion" class="error-modal-suggestion"></div>
+            <div id="error-modal-details" class="error-modal-details hidden">
+                <details>
+                    <summary data-i18n="error.showDetails">Show details</summary>
+                    <pre id="error-modal-details-content"></pre>
+                </details>
+            </div>
+            <div id="error-modal-actions" class="modal-actions">
+                <button id="error-modal-primary" class="btn-primary"></button>
+                <button id="error-modal-secondary" class="btn-secondary" data-i18n="error.close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Banner (Task 19a) -->
+    <div id="game-over-banner" class="game-over-banner hidden">
+        <h2 data-i18n="error.gameOver">Game Over!</h2>
+        <p data-i18n="alerts.gameOver">Game over!</p>
+        <div id="game-over-winner" class="winner"></div>
+        <button id="game-over-load-scenario" class="btn-primary" data-i18n="ui.loadScenario">Load Scenario</button>
+    </div>
+
+    <!-- Status/Loading Overlay (T19b: Loading States) -->
+    <div id="status-overlay" class="hidden">
+        <div class="status-message">
+            <div class="spinner"></div>
+            <p id="status-text" data-i18n="ui.loading">Loading...</p>
+            <div id="status-progress" class="hidden">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="status-progress-fill"></div>
+                </div>
+                <span id="status-progress-text"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trainer Card Play Modal (Stage 1) -->
+    <div id="trainer-play-modal" class="modal-overlay">
+        <div class="modal-content trainer-play-content">
+            <h2 data-i18n="trainer.playCard">Play Trainer Card</h2>
+            <div class="trainer-card-preview">
+                <img id="trainer-card-img" src="" alt="" class="trainer-card-thumb" />
+                <div class="trainer-card-info">
+                    <div id="trainer-card-name" class="trainer-card-name"></div>
+                    <div id="trainer-card-type" class="trainer-card-type"></div>
+                </div>
+            </div>
+            <div id="trainer-target-selection" class="trainer-target-selection">
+                <!-- Target options will be rendered here -->
+            </div>
+            <div id="trainer-validation-error" class="trainer-validation-error"></div>
+            <div class="modal-actions">
+                <button id="trainer-confirm-btn" class="btn-primary" data-i18n="trainer.confirmPlay">Confirm</button>
+                <button id="trainer-cancel-btn" class="btn-secondary" data-i18n="trainer.cancelPlay">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Retreat Modal (Stage 2) -->
+    <div id="retreat-modal" class="modal-overlay">
+        <div class="modal-content retreat-play-content">
+            <h2 data-i18n="retreat.title">Retreat Active Pokemon</h2>
+            
+            <!-- Active Pokemon Info -->
+            <div class="retreat-active-info">
+                <img id="retreat-active-img" src="" alt="" class="retreat-pokemon-thumb" />
+                <div class="retreat-pokemon-info">
+                    <div id="retreat-active-name" class="retreat-pokemon-name"></div>
+                    <div class="retreat-cost-display">
+                        <span data-i18n="retreat.retreatCost">Retreat Cost:</span>
+                        <span id="retreat-cost-value" class="retreat-cost-value">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bench Selection -->
+            <div id="retreat-bench-selection" class="retreat-bench-selection">
+                <div class="target-section-title" data-i18n="retreat.selectBenchPokemon">Select a Pokemon from bench</div>
+                <div id="retreat-bench-options" class="target-options">
+                    <!-- Bench options will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Energy Discard Selection -->
+            <div id="retreat-energy-selection" class="retreat-energy-selection">
+                <div class="target-section-title" data-i18n="retreat.discardEnergy">Discard Energy</div>
+                <div id="retreat-discard-instructions" class="retreat-instructions"></div>
+                <div id="retreat-energy-list" class="retreat-energy-list">
+                    <!-- Energy cards will be rendered here -->
+                </div>
+                <div id="retreat-energy-status" class="retreat-energy-status"></div>
+            </div>
+
+            <!-- Validation Error -->
+            <div id="retreat-validation-error" class="retreat-validation-error"></div>
+
+            <!-- Actions -->
+            <div class="modal-actions">
+                <button id="retreat-confirm-btn" class="btn-primary" data-i18n="retreat.confirmRetreat">Confirm Retreat</button>
+                <button id="retreat-cancel-btn" class="btn-secondary" data-i18n="retreat.cancelRetreat">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Game Modal (Stage 3) -->
+    <div id="new-game-modal" class="modal-overlay">
+        <div class="modal-content new-game-content">
+            <h2 data-i18n="newGame.title">Start New Game</h2>
+            
+            <div class="new-game-deck-selection">
+                <!-- Player 1 Deck Selection -->
+                <div class="deck-selector" data-player="player1">
+                    <h3 data-i18n="newGame.selectDeckPlayer1">Select Deck for Player 1</h3>
+                    <select id="deck-select-player1" class="deck-select">
+                        <option value="" data-i18n="newGame.selectDeckLabel">Choose a deck</option>
+                        <!-- Deck options will be populated by JavaScript -->
+                    </select>
+                    <div id="deck-preview-player1" class="deck-preview hidden">
+                        <div class="deck-preview-info">
+                            <span data-i18n="newGame.deckSize">Cards: {size}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player 2 Deck Selection -->
+                <div class="deck-selector" data-player="player2">
+                    <h3 data-i18n="newGame.selectDeckPlayer2">Select Deck for Player 2</h3>
+                    <select id="deck-select-player2" class="deck-select">
+                        <option value="" data-i18n="newGame.selectDeckLabel">Choose a deck</option>
+                        <!-- Deck options will be populated by JavaScript -->
+                    </select>
+                    <div id="deck-preview-player2" class="deck-preview hidden">
+                        <div class="deck-preview-info">
+                            <span data-i18n="newGame.deckSize">Cards: {size}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation Error -->
+            <div id="new-game-validation-error" class="new-game-validation-error"></div>
+
+            <!-- Actions -->
+            <div class="modal-actions">
+                <button id="new-game-start-btn" class="btn-primary" data-i18n="newGame.startGame">Start Game</button>
+                <button id="new-game-cancel-btn" class="btn-secondary" data-i18n="newGame.cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main JS Entry Point -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
