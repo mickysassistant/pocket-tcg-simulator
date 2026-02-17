@@ -33,7 +33,7 @@ async function handler(argv) {
       },
       {
         name: 'action',
-        description: 'Perform in-game actions (TBD)'
+        description: 'Manage and perform game actions'
       }
     ],
     options: [

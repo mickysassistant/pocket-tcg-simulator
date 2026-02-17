@@ -22,6 +22,7 @@ Started: 2026-02-17 14:17
 - Foreign key constraints in SQLite: parent records must exist before child records
 - UNIQUE constraint errors from SQLite should be caught and mapped to app-specific error codes
 - Global CLI parser should pass through unknown `--flags` to command positional args so subcommands can parse their own options
+- CLI action contracts are centralized in `src/cli/services/actions.js` with a schema-per-action registry and shared validator returning stable reason codes (`VALIDATION_ERROR`, `UNKNOWN_ACTION`, etc.)
 
 ---
 
@@ -159,4 +160,14 @@ Started: 2026-02-17 14:17
 - Added comprehensive test suite `tests/cli/session.test.js` (25 tests) covering success paths and stable reason-code error paths
 - Files changed: `src/cli/commands/session.js`, `src/cli/index.js`, `src/cli/commands/help.js`, `src/cli/services/storage.js`, `src/cli/services/sessions.js`, `src/cli/services/state.js`, `src/cli/services/events.js`, `tests/cli/session.test.js`, `README.md`, progress log
 - **Learnings:** session lifecycle is backed by sessions + states + events tables; initialization must happen before repository access; subcommand-specific flags require pass-through in global parser
+---
+## 2026-02-17 - CLI-005: Registro de acciones y validador
+- Implemented `tcgp action` command with `list` and `validate` subcommands.
+- Added action registry service (`src/cli/services/actions.js`) with documented schema contracts for: `draw`, `attach_energy`, `evolve`, `play_supporter`, `end_turn`, `start_turn`.
+- Added payload validator with stable reason codes and `valid=false` responses for invalid payloads.
+- Wired action command into CLI router and updated help metadata.
+- Added tests for action registry and command behavior/reason codes.
+- Updated README with action command usage and action payload contract documentation.
+- Files changed: `src/cli/services/actions.js`, `src/cli/commands/action.js`, `src/cli/index.js`, `src/cli/commands/help.js`, `tests/cli/actions.test.js`, `tests/cli/action-command.test.js`, `README.md`, progress log.
+- **Learnings:** For CLI tests that pass JSON payloads, shell argument escaping must quote payloads to avoid brace/quote parsing issues.
 ---

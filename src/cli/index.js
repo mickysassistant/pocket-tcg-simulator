@@ -9,6 +9,7 @@ const versionCmd = require('./commands/version');
 const helpCmd = require('./commands/help');
 const configCmd = require('./commands/config');
 const sessionCmd = require('./commands/session');
+const actionCmd = require('./commands/action');
 
 /**
  * Parse CLI arguments
@@ -102,7 +103,7 @@ COMMANDS:
   help [command]    Show help information for a command
   config            Manage configuration
   session           Manage game sessions
-  action            Perform in-game actions (TBD)
+  action            Manage and perform game actions
 
 OPTIONS:
   --json            Output in JSON format
@@ -197,26 +198,7 @@ EXAMPLES:
         break;
 
       case 'action':
-        if (argv.help) {
-          console.log(`
-USAGE: tcgp action
-
-Perform in-game actions.
-
-This command is not yet implemented. See CLI roadmap for details.
-
-OPTIONS:
-  --json    Output in JSON format
-  -h, --help Show this help
-`);
-        } else {
-          await argv.formatOutput({
-            error: 'Command not yet implemented',
-            reason: 'NOT_IMPLEMENTED',
-            message: 'The "action" command is not yet implemented. See CLI roadmap for details.'
-          });
-          process.exit(1);
-        }
+        await actionCmd(argv);
         break;
 
       default:

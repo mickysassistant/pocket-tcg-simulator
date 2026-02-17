@@ -93,12 +93,60 @@ tcgp session show <name-or-id>
 tcgp session close <name-or-id>
 ```
 
+### Action Command
+
+List and validate action payload contracts.
+
+```bash
+# List all available actions
+ tcgp action list
+
+# Validate payload against action schema
+ tcgp action validate draw '{"playerId":"player1","count":2}'
+
+# Show action contract/schema without validating payload
+ tcgp action validate evolve
+
+# JSON output for automation
+ tcgp --json action list
+ tcgp --json action validate attach_energy '{"playerId":"player1","targetPokemonId":"active-1"}'
+```
+
+#### Action catalog (CLI-005)
+
+- `draw` payload:
+  - `playerId` (required): `player1 | player2`
+  - `count` (required): number between 1 and 10
+  - `respectHandLimit` (optional): boolean
+- `attach_energy` payload:
+  - `playerId` (required): `player1 | player2`
+  - `targetPokemonId` (required): string
+- `evolve` payload:
+  - `playerId` (required): `player1 | player2`
+  - `pokemonId` (required): string
+  - `evolutionCard` (required object):
+    - `id` (required): string
+    - `name` (required): string
+    - `stage` (required): `stage1 | stage2`
+    - `hp` (required): number >= 1
+- `play_supporter` payload:
+  - `playerId` (required): `player1 | player2`
+  - `card` (required object):
+    - `id` (required): string
+    - `name` (required): string
+- `end_turn` payload:
+  - `playerId` (required): `player1 | player2`
+- `start_turn` payload:
+  - `playerId` (required): `player1 | player2`
+
+Validation failures return stable reason codes and `valid=false` (e.g. `VALIDATION_ERROR`, `UNKNOWN_ACTION`, `INVALID_JSON`, `INVALID_PAYLOAD_TYPE`).
+
 ### Other Commands
 
 - `tcgp version` - Show version information
 - `tcgp help [command]` - Show help for a command
 - `tcgp config` - Manage configuration
-- `tcgp action` - Perform in-game actions (coming soon)
+- `tcgp action` - Manage and validate in-game actions
 
 ## Getting Started
 
