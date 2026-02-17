@@ -10,6 +10,11 @@ Started: 2026-02-17 14:17
 - Game systems: GameState, TurnManager, DrawSystem, EnergySystem, EvolutionSystem, SupporterSystem, DeckManager, WinCondition
 - Tests use assert.strictEqual and other manual assertions
 - Project uses Puppeteer for E2E smoke tests
+- CLI commands are in src/cli/commands/*.js, each exporting a handler function
+- CLI services are in src/cli/services/*.js for shared functionality
+- All CLI commands support --json output via argv.formatOutput()
+- All CLI errors include stable reason codes (e.g., MISSING_ARGUMENT, UNKNOWN_SUBCOMMAND)
+- Config stored in ~/.tcgp/config.json (respects XDG_CONFIG_HOME if set)
 
 ---
 
@@ -39,5 +44,46 @@ Started: 2026-02-17 14:17
   - CLI modules need to check both `require.main === module` AND `process.argv[1].endsWith('bin/tcgp')` to work when invoked via bin script
   - Custom parser is simpler and more reliable for this use case
   - JSON output should be consistent across all commands for easy parsing
+
+---
+
+## 2026-02-17 - CLI-002: Config service + storage
+- Implemented config service with persistent storage in src/cli/services/config.js
+- Created config command handler in src/cli/commands/config.js with subcommands:
+  - get <key> - Retrieve a config value
+  - set <key> <value> - Set a config value (supports JSON, numbers, booleans, strings)
+  - list - List all config values
+  - reset - Reset config to defaults
+- Config stored in ~/.tcgp/config.json (respects XDG_CONFIG_HOME if set)
+- Default config values: editor=vi, theme=dark, language=en, timezone=system
+- All commands support --json output
+- Error handling with stable reason codes:
+  - MISSING_SUBCOMMAND - No subcommand provided
+  - MISSING_ARGUMENT - Missing key or value argument
+  - UNKNOWN_SUBCOMMAND - Invalid subcommand
+  - INVALID_KEY - Invalid config key
+  - INVALID_VALUES - Invalid config values object
+  - INVALID_CONFIG_JSON - Malformed config file JSON
+  - CONFIG_ERROR - Generic config error
+- Updated src/cli/index.js to wire up config command
+- Updated src/cli/commands/help.js to show config as implemented
+- Added comprehensive tests in tests/cli/config.test.js:
+  - 20 tests covering all acceptance criteria
+  - Tests verify get/set/list/reset functionality
+  - Tests verify JSON output format
+  - Tests verify error handling with reason codes
+  - Tests verify config persistence
+  - Tests verify default values
+- Updated README.md with CLI documentation section
+- All 20 tests pass
+- Files changed: src/cli/commands/config.js, src/cli/commands/help.js, src/cli/index.js, src/cli/services/config.js, tests/cli/config.test.js, README.md
+- **Learnings:**
+  - Config service should provide both get/set and getAll/setAll for convenience
+  - JSON parsing for values should fallback to string if parsing fails
+  - Exit codes should be consistent (0 for success, 1 for errors)
+  - --json mode should still exit with non-zero for error conditions (like key not found)
+  - Shell escaping in tests can be tricky - use simple values or proper escaping
+  - XDG_CONFIG_HOME should be respected for config storage location
+  - Default values should be defined in the service and merged with user config
 
 ---
