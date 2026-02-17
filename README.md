@@ -93,6 +93,29 @@ tcgp session show <name-or-id>
 tcgp session close <name-or-id>
 ```
 
+### Rules Command
+
+Check whether an action is valid in the context of a session state and get an explanation when invalid.
+
+```bash
+# Check action validity against latest saved session state
+tcgp rules check-action <session-name-or-id> <action-id> '<payload-json>'
+
+# Example valid check
+tcgp rules check-action my-session draw '{"playerId":"player1","count":2}'
+
+# Example invalid check with explanation
+tcgp --json rules check-action my-session attach_energy '{"playerId":"player2","targetPokemonId":"active2"}'
+# Output includes: valid, reason, message
+```
+
+The response always includes:
+- `valid` (boolean)
+- `reason` (stable reason code or `null`)
+- `message` (human-readable explanation or `null`)
+
+Common invalid reasons include payload validation errors (`VALIDATION_ERROR`) and game rule violations (`RULE_VIOLATION`).
+
 ### Snapshot Command
 
 Save and restore labeled game state snapshots for testing and debugging.

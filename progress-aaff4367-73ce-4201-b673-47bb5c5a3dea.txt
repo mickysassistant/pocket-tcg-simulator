@@ -28,6 +28,7 @@ Started: 2026-02-17 14:17
 - Session metadata stores determinism configuration (seed and coinQueue) for persistence and reproducibility
 - Snapshots are stored as independent state copies with labels; they include full state data (turn number, phase, current player, players object) for checkpoint/restoration workflows
 - Replay files export session events with metadata; replay runner reconstructs game with mock decks and executes action events in sequence; state comparison is informational by default but can be strict with --compare flag
+- Rule-check style commands follow a two-layer validation pattern: action schema validation first, then stateful business-rule validation with explanatory messages
 
 ---
 
@@ -308,4 +309,15 @@ Started: 2026-02-17 14:17
   - Duplicate detection should count total duplicate cards, not just number of duplicated IDs
   - Testing with real card data (subset from A1a.json) ensures service works with production data format
   - Plain text output (without --json) shows usage messages, while JSON output shows structured error data
+---
+## 2026-02-17 - CLI-011: Rules check helper
+- Implemented new `tcgp rules` command with `check-action` subcommand in `src/cli/commands/rules.js`.
+- Added context-aware rule checker service in `src/cli/services/rules.js` that layers:
+  - action schema validation (`VALIDATION_ERROR`, etc.)
+  - game-state business rule checks (`RULE_VIOLATION`) with human-readable explanations.
+- Wired command into CLI router and help output (`src/cli/index.js`, `src/cli/commands/help.js`).
+- Added comprehensive test suite `tests/cli/rules.test.js` covering valid and common invalid cases with stable reason codes and `valid/reason/message` response contract.
+- Updated README with `rules check-action` usage and JSON response semantics.
+- Files changed: `src/cli/commands/rules.js`, `src/cli/services/rules.js`, `src/cli/index.js`, `src/cli/commands/help.js`, `src/cli/services/storage.js`, `tests/cli/rules.test.js`, `README.md`.
+- **Learnings:** A robust pattern for command diagnostics is to combine generic payload schema validation first, then explicit game-state rule checks for actionable invalid-reason explanations.
 ---

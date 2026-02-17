@@ -168,6 +168,14 @@ function initialize() {
 }
 
 /**
+ * Force re-initialization (for testing)
+ */
+function forceInitialize() {
+  isInitialized = false;
+  return initialize();
+}
+
+/**
  * Export storage service API
  */
 module.exports = {
@@ -175,5 +183,6 @@ module.exports = {
   getDatabasePath,
   getDatabase,
   runMigrations,
-  initialize
+  initialize,
+  forceInitialize
 };

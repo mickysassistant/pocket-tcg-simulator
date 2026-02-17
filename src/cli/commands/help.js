@@ -46,6 +46,10 @@ async function handler(argv) {
       {
         name: 'deck',
         description: 'Validate and analyze decks'
+      },
+      {
+        name: 'rules',
+        description: 'Check game rules and action validity'
       }
     ],
     options: [
