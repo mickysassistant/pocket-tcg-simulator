@@ -27,6 +27,7 @@ Started: 2026-02-17 14:17
 - Game determinism: pass seed and/or coinQueue to createGame(); GameState and DeckManager use seeded RNG for all random operations
 - Session metadata stores determinism configuration (seed and coinQueue) for persistence and reproducibility
 - Snapshots are stored as independent state copies with labels; they include full state data (turn number, phase, current player, players object) for checkpoint/restoration workflows
+- Replay files export session events with metadata; replay runner reconstructs game with mock decks and executes action events in sequence; state comparison is informational by default but can be strict with --compare flag
 
 ---
 
@@ -230,4 +231,81 @@ Started: 2026-02-17 14:17
   - Loading a snapshot creates a new state record, preserving the original for potential replay
   - UNIQUE constraint on (session_id, label) ensures no duplicate labels per session
   - Cascade delete: deleting a session also deletes all its snapshots
+---
+
+## 2026-02-17 - CLI-009: Replay export/run
+- Implemented replay functionality for regression testing
+- Created src/cli/services/replay.js with exportSession() and runReplay() functions
+- Created src/cli/commands/replay.js with export and run subcommands
+- exportSession() exports session events to consumable JSON file with session metadata, events, and final state
+- runReplay() reconstructs game from replay file, executes action events in sequence, and compares states
+- Updated src/cli/index.js to wire up replay command
+- Updated src/cli/commands/help.js to show replay as implemented
+- Added comprehensive tests in tests/cli/replay.test.js (23 tests):
+  - Tests verify export with default and custom output files
+  - Tests verify replay file format and structure
+  - Tests verify replay execution and state comparison
+  - Tests verify error handling with reason codes
+- All 23 new replay tests pass
+- All existing tests still pass (14 bootstrap, 20 config, 30 persistence, 25 session, 20+ actions, 10 determinism, 21 snapshot)
+- Files changed: src/cli/commands/replay.js, src/cli/commands/help.js, src/cli/index.js, src/cli/services/replay.js, tests/cli/replay.test.js, progress log
+- **Learnings:**
+  - Replay files should include all event types but replay runner only executes 'action' type events
+  - State comparison should be informational by default (reconstructed game uses mock decks so states won't match exactly)
+  - Mock deck creation for replay needs proper card IDs to avoid "[object Object]" issues in state comparison
+  - When comparing arrays in state comparison, use safeMap helper to handle undefined/null arrays
+  - Comparison flag (--compare) enables strict state comparison for regression testing
+
+---
+
+## 2026-02-17 - CLI-010: Deck tooling mínimo
+- Implemented deck validation and statistics functionality in src/cli/services/deck.js
+- Created deck command handler in src/cli/commands/deck.js with subcommands:
+  - validate <file> - Validate a deck file for Pocket TCG compliance
+  - stats <file> - Show statistics and metrics for a deck
+- validate checks:
+  - File exists and is valid JSON
+  - Deck is an array of cards
+  - Deck has exactly 20 cards (Pocket TCG standard)
+  - Each card has required fields (id, name)
+  - No duplicate card IDs
+- stats provides:
+  - Total card count and valid size check
+  - Duplicate card count
+  - Card types breakdown (Pokémon, Energy, Trainer)
+  - Element distribution (Grass, Fire, Water, etc.)
+  - Stage distribution (Basic, Stage 1, Stage 2)
+  - HP distribution (min, max, average)
+  - Energy cost distribution
+- All commands support --json output
+- Error handling with stable reason codes:
+  - FILE_NOT_FOUND - Deck file doesn't exist
+  - FILE_READ_ERROR - Failed to read deck file
+  - INVALID_JSON - Deck file is not valid JSON
+  - INVALID_FORMAT - Deck is not an array
+  - INVALID_DECK_SIZE - Deck doesn't have 20 cards
+  - INVALID_CARDS - Cards are missing required fields or have duplicates
+  - MISSING_ARGUMENT - Missing deck file argument
+  - UNKNOWN_SUBCOMMAND - Invalid subcommand
+- Updated src/cli/index.js to wire up deck command
+- Updated src/cli/commands/help.js to show deck as implemented
+- Added comprehensive tests in tests/cli/deck.test.js:
+  - 20 tests covering all acceptance criteria
+  - Tests verify validate functionality with valid/invalid decks
+  - Tests verify stats functionality and output format
+  - Tests verify error handling with reason codes
+  - Tests verify --json output support
+  - Tests verify validation of missing required fields
+  - Tests verify duplicate card detection
+- Updated README.md with deck command documentation and examples
+- All 20 new deck tests pass
+- All existing tests still pass (14 bootstrap, 20 config, 30 persistence, 25 session, 41 actions, 10 determinism, 21 snapshot, 23 replay)
+- Files changed: src/cli/commands/deck.js, src/cli/commands/help.js, src/cli/index.js, src/cli/services/deck.js, tests/cli/deck.test.js, README.md, progress log
+- **Learnings:**
+  - Deck validation should check both structural validity (JSON format) and content validity (card counts, required fields)
+  - Stats calculation should handle missing optional fields gracefully (e.g., attacks array)
+  - HP average calculation should filter out cards without HP to avoid skewed results
+  - Duplicate detection should count total duplicate cards, not just number of duplicated IDs
+  - Testing with real card data (subset from A1a.json) ensures service works with production data format
+  - Plain text output (without --json) shows usage messages, while JSON output shows structured error data
 ---

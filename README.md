@@ -154,6 +154,104 @@ tcgp --json snapshot list my-battle
 # Output: {"sessionId":"...","snapshots":[{"id":1,"label":"checkpoint-1",...}],"count":1}
 ```
 
+### Deck Command
+
+Validate and analyze deck files for quality control.
+
+```bash
+# Validate a deck file
+tcgp deck validate <deck-file.json>
+
+# Show statistics for a deck
+tcgp deck stats <deck-file.json>
+
+# JSON output for automation
+tcgp --json deck validate deck.json
+tcgp --json deck stats deck.json
+```
+
+#### Deck Validation
+
+The `deck validate` command checks:
+- File exists and is valid JSON
+- Deck is an array of cards
+- Deck has exactly 20 cards (Pocket TCG standard)
+- Each card has required fields (`id`, `name`)
+- No duplicate card IDs
+
+```bash
+# Validate a deck
+tcgp deck validate my-deck.json
+# ✓ Deck is valid
+#   File: my-deck.json
+#   Cards: 20
+
+# Validate with errors shown
+tcgp deck validate invalid-deck.json
+# ✗ Deck must have exactly 20 cards, found 19
+#   Errors:
+#     - Card at index 5 is missing required field: name
+#     - Duplicate card ID: A1a-001
+```
+
+#### Deck Statistics
+
+The `deck stats` command provides:
+- Total card count
+- Valid size check (20 cards)
+- Duplicate card count
+- Card types breakdown (Pokémon, Energy, Trainer)
+- Element distribution (Grass, Fire, Water, etc.)
+- Stage distribution (Basic, Stage 1, Stage 2)
+- HP distribution (min, max, average)
+- Energy cost distribution
+
+```bash
+# Show deck statistics
+tcgp deck stats my-deck.json
+# Deck Statistics: my-deck.json
+#
+#   Total Cards: 20
+#   Valid Size (20): Yes
+#   Duplicate Cards: 0
+#
+#   Card Types:
+#     Pokémon: 15
+#     Trainer: 5
+#
+#   Elements:
+#     Grass: 5
+#     Fire: 4
+#     Water: 3
+#     Lightning: 3
+#     Psychic: 5
+#
+#   Stages:
+#     Basic: 10
+#     stage1: 3
+#     stage2: 2
+#
+#   HP Distribution:
+#     Min: 50
+#     Max: 140
+#     Avg: 90
+#
+#   Energy Costs:
+#     C: 18
+#     G: 4
+#     R: 2
+```
+
+#### JSON Output
+
+```bash
+tcgp --json deck validate deck.json
+# Output: {"valid":true,"reason":"VALID","message":"Deck is valid","deckPath":"deck.json","cardCount":20}
+
+tcgp --json deck stats deck.json
+# Output: {"deckPath":"deck.json","totalCards":20,"isValidSize":true,"supertypes":{"Pokémon":15,"Trainer":5},"elementCounts":{"Grass":5,"Fire":4,...},"hpDistribution":{"min":50,"max":140,"avg":90},...}
+```
+
 ### Action Command
 
 List and validate action payload contracts.
@@ -209,6 +307,7 @@ Validation failures return stable reason codes and `valid=false` (e.g. `VALIDATI
 - `tcgp config` - Manage configuration
 - `tcgp action` - Manage and validate in-game actions
 - `tcgp snapshot` - Manage game state snapshots
+- `tcgp deck` - Validate and analyze decks
 
 ## Getting Started
 

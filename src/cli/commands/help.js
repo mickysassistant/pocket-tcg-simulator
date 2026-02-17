@@ -42,6 +42,10 @@ async function handler(argv) {
       {
         name: 'replay',
         description: 'Export and run replays for regression testing'
+      },
+      {
+        name: 'deck',
+        description: 'Validate and analyze decks'
       }
     ],
     options: [
