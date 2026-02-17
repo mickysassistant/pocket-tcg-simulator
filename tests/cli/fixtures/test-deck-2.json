@@ -1,0 +1,22 @@
+[
+  {"id": "fire1", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire2", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire3", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire4", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire5", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire6", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire7", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire8", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire9", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "fire10", "name": "Charmander", "supertype": "Pokémon", "hp": 60, "types": ["Fire"], "attacks": [{"name": "Scratch", "damage": 10}]},
+  {"id": "energy1", "name": "Fire Energy", "supertype": "Energy", "types": ["Fire"]},
+  {"id": "energy2", "name": "Fire Energy", "supertype": "Energy", "types": ["Fire"]},
+  {"id": "energy3", "name": "Fire Energy", "supertype": "Energy", "types": ["Fire"]},
+  {"id": "energy4", "name": "Fire Energy", "supertype": "Energy", "types": ["Fire"]},
+  {"id": "energy5", "name": "Fire Energy", "supertype": "Energy", "types": ["Fire"]},
+  {"id": "trainer1", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer2", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer3", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer4", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer5", "name": "Potion", "supertype": "Trainer"}
+]

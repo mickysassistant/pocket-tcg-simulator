@@ -14,6 +14,7 @@ const snapshotCmd = require('./commands/snapshot');
 const replayCmd = require('./commands/replay');
 const deckCmd = require('./commands/deck');
 const rulesCmd = require('./commands/rules');
+const simCmd = require('./commands/sim');
 
 /**
  * Parse CLI arguments
@@ -112,6 +113,7 @@ COMMANDS:
   replay            Export and run replays for regression testing
   deck              Validate and analyze decks
   rules             Check game rules and action validity
+  sim               Run batch simulations for balance analysis
 
 OPTIONS:
   --json            Output in JSON format
@@ -223,6 +225,10 @@ EXAMPLES:
 
       case 'rules':
         await rulesCmd(argv);
+        break;
+
+      case 'sim':
+        await simCmd(argv);
         break;
 
       default:

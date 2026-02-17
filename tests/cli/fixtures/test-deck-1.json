@@ -1,0 +1,22 @@
+[
+  {"id": "grass1", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass2", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass3", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass4", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass5", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass6", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass7", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass8", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass9", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "grass10", "name": "Bulbasaur", "supertype": "Pokémon", "hp": 60, "types": ["Grass"], "attacks": [{"name": "Tackle", "damage": 10}]},
+  {"id": "energy1", "name": "Grass Energy", "supertype": "Energy", "types": ["Grass"]},
+  {"id": "energy2", "name": "Grass Energy", "supertype": "Energy", "types": ["Grass"]},
+  {"id": "energy3", "name": "Grass Energy", "supertype": "Energy", "types": ["Grass"]},
+  {"id": "energy4", "name": "Grass Energy", "supertype": "Energy", "types": ["Grass"]},
+  {"id": "energy5", "name": "Grass Energy", "supertype": "Energy", "types": ["Grass"]},
+  {"id": "trainer1", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer2", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer3", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer4", "name": "Potion", "supertype": "Trainer"},
+  {"id": "trainer5", "name": "Potion", "supertype": "Trainer"}
+]

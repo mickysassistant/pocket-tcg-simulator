@@ -50,6 +50,10 @@ async function handler(argv) {
       {
         name: 'rules',
         description: 'Check game rules and action validity'
+      },
+      {
+        name: 'sim',
+        description: 'Run batch simulations for balance analysis'
       }
     ],
     options: [
