@@ -6,11 +6,15 @@
  *
  * GAP-002: [Crítico][C1] Reducción de daño recibido
  * GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio Safeguard)
+ * GAP-007: [Importante][C1] Guts (Conkeldurr) - Pre-KO coin flip survival
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
  * - damage_reduction (defender side): reduces incoming damage
  * - damage_prevention (defender side): prevents all damage from specific attackers
+ *
+ * Supported pre-KO effects:
+ * - pre_ko_survival (defender side): flip a coin to survive KO with 1 HP
  *
  * Real-card examples of damage_reduction:
  * - Magnezone (Resilience Link): reduce damage received by 30
@@ -20,6 +24,9 @@
  * Real-card examples of damage_prevention:
  * - Oricorio (Safeguard): prevents all damage from opponent's Pokémon ex
  *
+ * Real-card examples of pre_ko_survival:
+ * - Conkeldurr (Guts): flip a coin on KO; heads = survive with 1 HP
+ *
  * Attack execution flow:
  * 1. Get base damage from the attack definition
  * 2. Check if damage should be prevented (GAP-006)
@@ -27,8 +34,10 @@
  * 4. Apply damage_reduction from defending player's passive abilities
  * 5. Clamp final damage to minimum 0
  * 6. Apply final damage to defending Pokémon's current HP
- * 7. Determine if the defending Pokémon is knocked out (HP <= 0)
- * 8. Log the attack event
+ * 7. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
+ * 8. Determine if the defending Pokémon is knocked out (HP <= 0)
+ * 9. Handle KO-triggered abilities (GAP-005) if KO'd
+ * 10. Log the attack event
  */
 
 class AttackSystem {
@@ -52,8 +61,9 @@ class AttackSystem {
    * against the active Pokémon of the defending player.
    *
    * @param {string} attackingPlayerId - 'player1' or 'player2'
-   * @param {Object} attack - Attack definition: { name: string, damage: number }
-   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, finalDamage, isKO, attacker, defender, damagePrevented }
+   * @param {Object} attack - Attack definition: { name: string, damage: number, coinFlip?: Function }
+   * @param {Function} [attack.coinFlip] - Optional deterministic coin-flip function for tests; defaults to random
+   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, finalDamage, isKO, attacker, defender, damagePrevented, preKoSurvivalResult, koTriggerResults }
    */
   executeAttack(attackingPlayerId, attack) {
     const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
@@ -102,7 +112,44 @@ class AttackSystem {
     }
 
     defender.currentHp = Math.max(0, defender.currentHp - finalDamage);
-    const isKO = defender.currentHp <= 0;
+    let isKO = defender.currentHp <= 0;
+
+    // Handle pre-KO survival abilities (GAP-007) - e.g., Guts
+    let preKoSurvivalResult = null;
+    if (isKO) {
+      const preKoSurvivalAbility = this.abilitySystem.hasPreKoSurvival(
+        defendingPlayerId,
+        defender.id
+      );
+
+      if (preKoSurvivalAbility) {
+        // Flip a coin to determine if the Pokémon survives
+        // For testing, coinFlip can be passed as a parameter (defaults to random)
+        const coinFlip = attack.coinFlip || (() => Math.random() < 0.5);
+        const heads = coinFlip();
+
+        if (heads) {
+          // Pokémon survives with 1 HP
+          defender.currentHp = 1;
+          isKO = false;
+
+          preKoSurvivalResult = {
+            abilityId: preKoSurvivalAbility._abilityId || `${defendingPlayerId}:${defender.id}:guts`,
+            abilityName: preKoSurvivalAbility.name || 'Guts',
+            coinFlip: 'heads',
+            survived: true
+          };
+        } else {
+          // Coin flip tails - Pokémon is KO'd
+          preKoSurvivalResult = {
+            abilityId: preKoSurvivalAbility._abilityId || `${defendingPlayerId}:${defender.id}:guts`,
+            abilityName: preKoSurvivalAbility.name || 'Guts',
+            coinFlip: 'tails',
+            survived: false
+          };
+        }
+      }
+    }
 
     // Handle KO-triggered abilities (GAP-005)
     let koTriggerResults = [];
@@ -127,10 +174,11 @@ class AttackSystem {
       attackerName: attacker.name,
       defenderName: defender.name,
       defenderHpAfter: defender.currentHp,
-      koTriggerResults
+      koTriggerResults,
+      preKoSurvivalResult
     };
 
-    // Log the attack event
+    // Log the attack event (before pre_ko_survival log for proper order)
     this.gameState.turnLog.push({
       type: 'attack',
       attackingPlayer: attackingPlayerId,
@@ -138,6 +186,20 @@ class AttackSystem {
       attack: attack.name || 'Unknown',
       ...result
     });
+
+    // Log pre-KO survival event (if applicable) after attack log
+    if (preKoSurvivalResult) {
+      this.gameState.turnLog.push({
+        type: 'pre_ko_survival',
+        playerId: defendingPlayerId,
+        pokemonId: defender.id,
+        pokemonName: defender.name,
+        abilityName: preKoSurvivalResult.abilityName,
+        coinFlip: preKoSurvivalResult.coinFlip,
+        survived: preKoSurvivalResult.survived,
+        hpAfter: preKoSurvivalResult.survived ? 1 : 0
+      });
+    }
 
     return result;
   }

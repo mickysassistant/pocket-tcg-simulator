@@ -6,12 +6,14 @@
  * - Damage reduction abilities (Magnezone Resilience Link, Regirock Exoskeleton)
  * - Special condition immunity (Arceus ex Fabled Luster)
  * - Damage prevention abilities (Oricorio Safeguard - prevents damage from Pokémon ex)
+ * - Pre-KO survival abilities (Conkeldurr Guts - flip coin to survive KO)
  * - Continuous condition evaluation against current game state
  *
  * GAP-001: [Crítico][C1] Bonus de daño condicional
  * GAP-002: [Crítico][C1] Reducción de daño recibido
  * GAP-003: [Crítico][C1] Inmunidad a Special Conditions
  * GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio Safeguard)
+ * GAP-007: [Importante][C1] Guts (Conkeldurr) - Pre-KO coin flip survival
  *
  * Ability definition schema:
  * {
@@ -40,6 +42,7 @@
  * Supported effect types (in addition to damage_bonus / damage_reduction):
  * - 'special_condition_immunity' - Pokémon cannot be affected by any special conditions
  * - 'damage_prevention' - Prevents all damage from attacks matching criteria
+ * - 'pre_ko_survival' - Flip a coin when would be KO'd by attack; heads = survive with 1 HP
  */
 
 class AbilitySystem {
@@ -492,6 +495,49 @@ class AbilitySystem {
   _isPokemonEx(pokemon) {
     if (!pokemon || !pokemon.name) return false;
     return pokemon.name.includes('ex');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pre-KO Survival (GAP-007)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Check if a Pokémon has a pre-KO survival ability (Guts).
+   *
+   * Pre-KO survival abilities allow a Pokémon to survive being knocked out
+   * by flipping a coin. If the coin flip is heads, the Pokémon remains in play
+   * with 1 HP instead of being knocked out.
+   *
+   * Example: Conkeldurr (Guts) — "If this Pokémon would be Knocked Out by
+   * damage from an attack, flip a coin. If heads, this Pokémon is not Knocked Out
+   * and remains in play with 1 HP remaining."
+   *
+   * @param {string} playerId - 'player1' or 'player2'
+   * @param {string} pokemonId - ID of the Pokémon to check
+   * @returns {Object|null} Ability definition if pre-KO survival is active, null otherwise
+   */
+  hasPreKoSurvival(playerId, pokemonId) {
+    const key = `${playerId}:${pokemonId}`;
+    const abilities = this._abilities.get(key);
+    if (!abilities) return null;
+
+    for (const ability of abilities) {
+      if (ability.type !== 'passive') continue;
+      if (!ability.effect || ability.effect.type !== 'pre_ko_survival') continue;
+
+      // Check if the ability condition is met
+      const conditionMet = this.evaluateCondition(
+        ability.condition,
+        ability._playerId,
+        ability._pokemonId
+      );
+
+      if (conditionMet) {
+        return ability;
+      }
+    }
+
+    return null;
   }
 
   // ---------------------------------------------------------------------------
