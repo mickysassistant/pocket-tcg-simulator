@@ -15,6 +15,7 @@ const WinCondition = require('./game/win-condition');
 const AbilitySystem = require('./game/ability-system');
 const AttackSystem = require('./game/attack-system');
 const { StatusConditionSystem, SPECIAL_CONDITIONS } = require('./game/status-condition-system');
+const ActivatedAbilitySystem = require('./game/activated-ability-system');
 
 /**
  * Create a new game instance
@@ -31,6 +32,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
   const abilitySystem = new AbilitySystem(gameState);
   const attackSystem = new AttackSystem(gameState, abilitySystem);
   const statusConditionSystem = new StatusConditionSystem(gameState, abilitySystem);
+  const activatedAbilitySystem = new ActivatedAbilitySystem(gameState, abilitySystem);
 
   // Initialize game with decks
   gameState.initialize(player1Deck, player2Deck);
@@ -46,6 +48,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
     abilitySystem,
     attackSystem,
     statusConditionSystem,
+    activatedAbilitySystem,
     winCondition: turnManager.winCondition
   };
 }
@@ -63,5 +66,6 @@ module.exports = {
   AttackSystem,
   StatusConditionSystem,
   SPECIAL_CONDITIONS,
+  ActivatedAbilitySystem,
   createGame
 };
