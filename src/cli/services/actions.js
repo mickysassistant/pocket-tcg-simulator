@@ -129,25 +129,20 @@ const ACTIONS = {
   play_supporter: {
     id: 'play_supporter',
     name: 'Play Supporter',
-    description: 'Play a Supporter card',
+    description: 'Play a Supporter card from hand',
     sessionRequired: true,
     schema: {
       type: 'object',
-      required: ['playerId', 'card'],
+      required: ['playerId', 'cardId'],
       properties: {
         playerId: {
           type: 'string',
           enum: ['player1', 'player2'],
           description: 'Player playing Supporter'
         },
-        card: {
-          type: 'object',
-          required: ['id', 'name'],
-          properties: {
-            id: { type: 'string', description: 'Card ID' },
-            name: { type: 'string', description: 'Supporter name' }
-          },
-          description: 'Supporter card to play'
+        cardId: {
+          type: 'string',
+          description: 'ID of the Supporter card to play'
         }
       }
     }

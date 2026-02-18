@@ -163,7 +163,10 @@ EXAMPLES:
 
         // Create initial game state with placeholder decks
         // (In future, actual deck content would be loaded here)
-        const placeholderDeck = [];
+        // Add some dummy cards to decks for drawing functionality
+        const dummyCard = { id: 'dummy', name: 'Dummy Card', supertype: 'Pokémon' };
+        const placeholderDeck = Array(20).fill(null).map((_, i) => ({ ...dummyCard, id: `dummy-p1-${i}` }));
+        const placeholderDeck2 = Array(20).fill(null).map((_, i) => ({ ...dummyCard, id: `dummy-p2-${i}` }));
         const game = createGame(placeholderDeck, placeholderDeck, 30, seed, coinQueue);
 
         // Add some energy cards to Energy Zone for testing purposes
@@ -217,8 +220,7 @@ EXAMPLES:
         };
         game.gameState.players.player1.activePokemon = { ...testPokemon1, attachedEnergy: [] };
         game.gameState.players.player1.banque = [
-          { ...testPokemon1, id: 'B1-155-2', attachedEnergy: [] },
-          { ...testPokemon2, id: 'A3a-042-3', attachedEnergy: [] }
+          { ...testPokemon1, id: 'B1-155-2', attachedEnergy: [] }
         ];
         game.gameState.players.player2.activePokemon = { ...testPokemon2, attachedEnergy: [] };
         game.gameState.players.player2.banque = [
@@ -299,6 +301,39 @@ EXAMPLES:
         game.gameState.players.player1.hand.push(evolutionCardP1Stage2);
         game.gameState.players.player2.hand.push(evolutionCardP2Stage1);
         game.gameState.players.player2.hand.push(evolutionCardP2Stage2);
+
+        // Add Supporter cards to players' hands for play_supporter testing
+        const supporterProfessorResearch = {
+          id: 'A4b-373',
+          name: "Professor's Research",
+          supertype: 'Trainer',
+          subtype: 'Supporter'
+        };
+        const supporterCopycat = {
+          id: 'A1a-045',
+          name: 'Copycat',
+          supertype: 'Trainer',
+          subtype: 'Supporter'
+        };
+        const supporterCyrus = {
+          id: 'A1a-046',
+          name: 'Cyrus',
+          supertype: 'Trainer',
+          subtype: 'Supporter'
+        };
+        const supporterGeneric = {
+          id: 'A1a-047',
+          name: 'Generic Supporter',
+          supertype: 'Trainer',
+          subtype: 'Supporter'
+        };
+        // Give each player supporter cards
+        game.gameState.players.player1.hand.push(supporterProfessorResearch);
+        game.gameState.players.player1.hand.push(supporterCopycat);
+        game.gameState.players.player1.hand.push(supporterGeneric);
+        game.gameState.players.player2.hand.push(supporterProfessorResearch);
+        game.gameState.players.player2.hand.push(supporterCyrus);
+        game.gameState.players.player2.hand.push(supporterGeneric);
 
         // Save initial state
         const initialState = state.save({

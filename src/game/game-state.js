@@ -16,14 +16,16 @@ class GameState {
         hand: [],
         banque: [],
         activePokemon: null,
-        energyZone: []
+        energyZone: [],
+        discardPile: []
       },
       player2: {
         deck: [],
         hand: [],
         banque: [],
         activePokemon: null,
-        energyZone: []
+        energyZone: [],
+        discardPile: []
       }
     };
 
@@ -35,6 +37,7 @@ class GameState {
     this.energyAttachedThisTurn = false; // Track if energy was attached this turn
     this.evolvedThisTurn = new Set(); // Track Pokemon IDs that have evolved this turn
     this.retreatedThisTurn = false; // Track if Pokemon has retreated this turn
+    this.supporterPlayedThisTurn = false; // Track if a Supporter has been played this turn
   }
 
   /**
@@ -186,6 +189,7 @@ class GameState {
       gameState.evolvedThisTurn = new Set(data.evolvedThisTurn);
     }
     if (data.retreatedThisTurn !== undefined) gameState.retreatedThisTurn = data.retreatedThisTurn;
+    if (data.supporterPlayedThisTurn !== undefined) gameState.supporterPlayedThisTurn = data.supporterPlayedThisTurn;
 
     // Restore player states
     if (data.players) {
@@ -196,6 +200,7 @@ class GameState {
           if (playerData.banque) gameState.players[playerId].banque = [...playerData.banque];
           if (playerData.activePokemon) gameState.players[playerId].activePokemon = playerData.activePokemon;
           if (playerData.energyZone) gameState.players[playerId].energyZone = [...playerData.energyZone];
+          if (playerData.discardPile) gameState.players[playerId].discardPile = [...playerData.discardPile];
         }
       }
     }

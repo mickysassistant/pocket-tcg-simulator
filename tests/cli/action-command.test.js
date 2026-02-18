@@ -221,10 +221,7 @@ runTest('AC3h: action validate returns valid=false for invalid playerId', () => 
 runTest('AC3i: action validate accepts valid play_supporter payload', () => {
   const payload = JSON.stringify({
     playerId: 'player1',
-    card: {
-      id: 'professor-1',
-      name: 'Professor Oak'
-    }
+    cardId: 'A4b-373'
   });
   const result = execTcgp(['action', 'validate', 'play_supporter', payload]);
   assert.strictEqual(result.status, 0, 'Command should succeed');

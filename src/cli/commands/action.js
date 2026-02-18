@@ -1126,6 +1126,167 @@ See README.md for full action contracts and schemas.
             break;
           }
 
+          case 'play_supporter': {
+            const { playerId, cardId } = payload;
+
+            // Validate phase is 'main'
+            if (gameState.phase !== 'main') {
+              const errorData = {
+                error: 'Wrong phase',
+                reason: 'WRONG_PHASE',
+                message: `Supporters can only be played during main phase, current phase is ${gameState.phase}.`,
+                currentPhase: gameState.phase,
+                expectedPhase: 'main'
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that it's this player's turn
+            if (gameState.currentPlayer !== playerId) {
+              const errorData = {
+                error: 'Wrong turn',
+                reason: 'WRONG_TURN',
+                message: `Cannot play Supporter: it is currently ${gameState.currentPlayer}'s turn, not ${playerId}'s turn.`,
+                currentPlayer: gameState.currentPlayer,
+                requestedPlayer: playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const player = gameState.players[playerId];
+            const opponentId = playerId === 'player1' ? 'player2' : 'player1';
+            const opponent = gameState.players[opponentId];
+
+            // Validate that a supporter hasn't been played this turn
+            if (gameState.supporterPlayedThisTurn) {
+              const errorData = {
+                error: 'Supporter already played this turn',
+                reason: 'SUPPORTER_ALREADY_PLAYED',
+                message: 'You can only play one Supporter per turn.',
+                playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Verify card is in hand
+            const handCardIndex = player.hand.findIndex(card => card.id === cardId);
+            if (handCardIndex === -1) {
+              const errorData = {
+                error: 'Card not in hand',
+                reason: 'CARD_NOT_IN_HAND',
+                message: `Card ${cardId} is not in ${playerId}'s hand.`,
+                playerId,
+                cardId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const supporterCard = player.hand[handCardIndex];
+
+            // Verify it's a Trainer Supporter
+            if (supporterCard.supertype !== 'Trainer' || supporterCard.subtype !== 'Supporter') {
+              const errorData = {
+                error: 'Not a Supporter card',
+                reason: 'NOT_SUPPORTER',
+                message: `Card ${cardId} is not a Supporter. Cannot play non-Supporter cards.`,
+                playerId,
+                cardId,
+                supertype: supporterCard.supertype,
+                subtype: supporterCard.subtype
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Apply supporter effects
+            let effectResult = null;
+            const supporterName = supporterCard.name;
+
+            switch (supporterName) {
+              case "Professor's Research":
+                // Discard hand, then draw 2 cards
+                const discardedHand = [...player.hand];
+                player.hand = [];
+                // Add all discarded cards to discard pile
+                player.discardPile.push(...discardedHand);
+                // Draw 2 cards
+                gameState.drawCards(playerId, 2, true);
+                effectResult = {
+                  effect: "professor_research",
+                  cardsDiscarded: discardedHand.length,
+                  cardsDrawn: 2
+                };
+                break;
+
+              case 'Copycat':
+                // Draw as many cards as opponent has in hand
+                const opponentHandSize = opponent.hand.length;
+                gameState.drawCards(playerId, opponentHandSize, true);
+                effectResult = {
+                  effect: 'copycat',
+                  opponentHandSize,
+                  cardsDrawn: opponentHandSize
+                };
+                break;
+
+              case 'Cyrus':
+                // Move 1 card from opponent's prize to deck (not applicable in Pocket TCG)
+                // Log that this effect is not implemented
+                effectResult = {
+                  effect: 'cyrus',
+                  message: 'Cyrus effect not applicable in Pocket TCG'
+                };
+                break;
+
+              default:
+                // Generic supporter: log but do nothing
+                effectResult = {
+                  effect: 'generic',
+                  message: `Supporter "${supporterName}" has no specific effect implemented`
+                };
+                break;
+            }
+
+            // Move supporter card from hand to discard pile
+            player.hand.splice(handCardIndex, 1);
+            player.discardPile.push(supporterCard);
+
+            // Mark supporter as played this turn
+            gameState.supporterPlayedThisTurn = true;
+
+            // Log the supporter play
+            gameState.turnLog.push({
+              type: 'supporter_played',
+              player: playerId,
+              card: cardId,
+              cardName: supporterName,
+              effect: effectResult.effect
+            });
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              cardId,
+              supporterName,
+              handSize: player.hand.length,
+              discardPileSize: player.discardPile.length,
+              effect: effectResult,
+              message: `Played ${supporterName} (${cardId})`
+            };
+
+            break;
+          }
+
           default: {
             const errorData = {
               error: 'Action not yet implemented',
@@ -1151,7 +1312,8 @@ See README.md for full action contracts and schemas.
             phase: gameState.phase,
             energyAttachedThisTurn: gameState.energyAttachedThisTurn,
             evolvedThisTurn: Array.from(gameState.evolvedThisTurn),
-            retreatedThisTurn: gameState.retreatedThisTurn
+            retreatedThisTurn: gameState.retreatedThisTurn,
+            supporterPlayedThisTurn: gameState.supporterPlayedThisTurn
           }
         });
 
@@ -1208,6 +1370,22 @@ See README.md for full action contracts and schemas.
                 console.log(`New opponent active: ${result.newActivePokemon.name} (${result.newActivePokemon.id})`);
               } else {
                 console.log(`No more Pokemon on opponent's bench`);
+              }
+            }
+          } else if (subcommand === 'play_supporter') {
+            console.log(`Supporter: ${result.supporterName} (${result.cardId})`);
+            console.log(`Hand size: ${result.handSize}`);
+            console.log(`Discard pile size: ${result.discardPileSize}`);
+            if (result.effect) {
+              console.log(`Effect: ${result.effect.effect}`);
+              if (result.effect.cardsDrawn !== undefined) {
+                console.log(`Cards drawn: ${result.effect.cardsDrawn}`);
+              }
+              if (result.effect.cardsDiscarded !== undefined) {
+                console.log(`Cards discarded: ${result.effect.cardsDiscarded}`);
+              }
+              if (result.effect.message) {
+                console.log(`Details: ${result.effect.message}`);
               }
             }
           }
