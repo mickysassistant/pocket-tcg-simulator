@@ -9,6 +9,7 @@
  * GAP-007: [Importante][C1] Guts (Conkeldurr) - Pre-KO coin flip survival
  * GAP-010: [Importante][C1] Reducción de daño al oponente (Luxray Intimidating Fang)
  * GAP-011: [Crítico][C2] Sistema completo de ataques
+ * GAP-012: [Importante][C2] Daño escalado por Energía adjunta (Celebi ex)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -18,6 +19,11 @@
  *
  * Supported pre-KO effects:
  * - pre_ko_survival (defender side): flip a coin to survive KO with 1 HP
+ *
+ * Supported damage scaling (GAP-012):
+ * - damageScaling (attack level): scales damage based on attached energy
+ *   - damageScaling: number - adds this much damage per energy attached
+ *   - damageScaling: { perEnergy: number, energyType?: string } - perEnergy damage, optionally only for specific energy type
  *
  * Real-card examples of damage_reduction:
  * - Magnezone (Resilience Link): reduce damage received by 30
@@ -33,20 +39,25 @@
  * Real-card examples of pre_ko_survival:
  * - Conkeldurr (Guts): flip a coin on KO; heads = survive with 1 HP
  *
+ * Real-card examples of damageScaling (GAP-012):
+ * - Celebi ex: damage 10 + 10 per energy attached
+ * - Gallade ex: damage 10 + 10 per energy attached
+ *
  * Attack execution flow:
  * 1. Validate energy costs (GAP-011) - check if attacker has enough energy
  * 2. Get base damage from the attack definition
- * 3. Check if damage should be prevented (GAP-006)
- * 4. If not prevented, apply damage_bonus from attacking player's passive abilities
- * 5. Apply damage_reduction from defending player's passive abilities
- * 6. Apply opponent_damage_reduction from defending player's passive abilities
- * 7. Apply weakness (GAP-011) - add +20 damage if defender is weak to attacker's type
- * 8. Clamp final damage to minimum 0
- * 9. Apply final damage to defending Pokémon's current HP
- * 10. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
- * 11. Determine if the defending Pokémon is knocked out (HP <= 0)
- * 12. Handle KO-triggered abilities (GAP-005) if KO'd
- * 13. Log the attack event
+ * 3. Apply damageScaling (GAP-012) - add damage based on attached energy
+ * 4. Check if damage should be prevented (GAP-006)
+ * 5. If not prevented, apply damage_bonus from attacking player's passive abilities
+ * 6. Apply damage_reduction from defending player's passive abilities
+ * 7. Apply opponent_damage_reduction from defending player's passive abilities
+ * 8. Apply weakness (GAP-011) - add +20 damage if defender is weak to attacker's type
+ * 9. Clamp final damage to minimum 0
+ * 10. Apply final damage to defending Pokémon's current HP
+ * 11. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
+ * 12. Determine if the defending Pokémon is knocked out (HP <= 0)
+ * 13. Handle KO-triggered abilities (GAP-005) if KO'd
+ * 14. Log the attack event
  */
 
 class AttackSystem {
@@ -153,6 +164,65 @@ class AttackSystem {
   }
 
   // ---------------------------------------------------------------------------
+  // Damage Scaling by Attached Energy (GAP-012)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Calculate damage scaling based on attached energy.
+   *
+   * Damage scaling format (two supported formats):
+   * 1. Simple: damageScaling: number - adds this much damage per energy attached
+   *    Example: damageScaling: 10 adds 10 damage per energy
+   * 2. Object: damageScaling: { perEnergy: number, energyType?: string }
+   *    Example: { perEnergy: 10, energyType: 'grass' } adds 10 per grass energy only
+   *    Example: { perEnergy: 10 } adds 10 per any energy (same as simple format)
+   *
+   * @param {Object} pokemon - Pokémon object with energy array
+   * @param {number|Object} damageScaling - Damage scaling configuration
+   * @returns {number} Damage to add from scaling
+   */
+  calculateDamageScaling(pokemon, damageScaling) {
+    if (!damageScaling) {
+      return 0;
+    }
+
+    if (!pokemon || !pokemon.energy || pokemon.energy.length === 0) {
+      return 0;
+    }
+
+    let perEnergy = 0;
+    let energyTypeFilter = null;
+
+    // Parse damageScaling format
+    if (typeof damageScaling === 'number') {
+      perEnergy = damageScaling;
+    } else if (typeof damageScaling === 'object') {
+      perEnergy = damageScaling.perEnergy || 0;
+      energyTypeFilter = damageScaling.energyType || null;
+    }
+
+    if (perEnergy === 0) {
+      return 0;
+    }
+
+    // Count energy
+    let energyCount = 0;
+    if (energyTypeFilter) {
+      // Count only specific energy type
+      pokemon.energy.forEach(energy => {
+        if (energy.type === energyTypeFilter) {
+          energyCount++;
+        }
+      });
+    } else {
+      // Count all energy
+      energyCount = pokemon.energy.length;
+    }
+
+    return energyCount * perEnergy;
+  }
+
+  // ---------------------------------------------------------------------------
   // Weakness Calculation (GAP-011)
   // ---------------------------------------------------------------------------
 
@@ -248,7 +318,9 @@ class AttackSystem {
     // since energy is consumed at the end of the turn in Pocket TCG)
     energyCostPaid = true;
 
+    // Calculate base damage including damageScaling (GAP-012)
     const baseDamage = attack.damage || 0;
+    const damageScaling = this.calculateDamageScaling(attacker, attack.damageScaling);
 
     // Check if damage should be prevented (GAP-006)
     const damagePrevented = this.abilitySystem.preventDamage(
@@ -265,10 +337,11 @@ class AttackSystem {
 
     if (!damagePrevented) {
       // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities + opponent reduction from defender's debuff abilities)
+      // Note: baseDamage includes damageScaling here
       const modifierResult = this.abilitySystem.applyDamageModifiers(
         attackingPlayerId,
         defendingPlayerId,
-        baseDamage
+        baseDamage + damageScaling
       );
 
       let damageAfterModifiers = modifierResult.finalDamage;
@@ -344,6 +417,7 @@ class AttackSystem {
 
     const result = {
       baseDamage,
+      damageScaling,
       bonusApplied,
       reductionApplied,
       opponentReductionApplied: opponentReductionApplied || 0,
@@ -393,16 +467,20 @@ class AttackSystem {
    * @param {string} attackingPlayerId
    * @param {string} defendingPlayerId
    * @param {number} baseDamage
-   * @returns {Object} { baseDamage, bonusApplied, reductionApplied, opponentReductionApplied, weaknessApplied, finalDamage }
+   * @param {Object} [attack] - Optional attack object with damageScaling property
+   * @returns {Object} { baseDamage, damageScaling, bonusApplied, reductionApplied, opponentReductionApplied, weaknessApplied, finalDamage }
    */
-  calculateDamage(attackingPlayerId, defendingPlayerId, baseDamage) {
+  calculateDamage(attackingPlayerId, defendingPlayerId, baseDamage, attack = null) {
     const attacker = this.gameState.players[attackingPlayerId].activePokemon;
     const defender = this.gameState.players[defendingPlayerId].activePokemon;
+
+    // Calculate damage scaling if attack object is provided
+    const damageScaling = attack ? this.calculateDamageScaling(attacker, attack.damageScaling) : 0;
 
     const modifierResult = this.abilitySystem.applyDamageModifiers(
       attackingPlayerId,
       defendingPlayerId,
-      baseDamage
+      baseDamage + damageScaling
     );
 
     // Include weakness in calculation
@@ -410,6 +488,7 @@ class AttackSystem {
 
     return {
       baseDamage,
+      damageScaling,
       bonusApplied: modifierResult.bonusApplied,
       reductionApplied: modifierResult.reductionApplied,
       opponentReductionApplied: modifierResult.opponentReductionApplied || 0,

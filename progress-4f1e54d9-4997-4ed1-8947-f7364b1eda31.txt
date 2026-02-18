@@ -296,3 +296,91 @@ Started: 2026-02-18
   - Multiple Pokemon with on_energy_attach abilities trigger independently
 - All 300+ tests across the full suite pass (including new on-energy-attach tests)
 - **Learnings:** On-Energy-attach triggers are a new effect type in AbilitySystem that execute immediately after energy is successfully attached to a Pokemon. The trigger flow is: find Pokemon → remove energy from zone → attach to Pokemon → trigger abilities → apply conditions. This pattern allows Pokemon to auto-apply conditions to themselves when receiving energy (e.g., Komala Comatose making itself Asleep). The trigger integrates with StatusConditionSystem which checks immunity before applying conditions, so immune Pokemon won't be affected even by their own on_energy_attach abilities. EnergySystem._findPokemon() is a helper that searches both active and bench for a Pokemon by ID, similar to other systems' internal helper methods.
+
+---
+
+## 2026-02-18 - GAP-010: [Importante][C1] Reducción de daño al oponente (Luxray Intimidating Fang)
+- **Extended:** `src/game/ability-system.js` — opponent damage reduction support
+  - `getOpponentDamageReduction(attackingPlayerId)` — calculates total opponent damage reduction from defender's abilities
+  - Effect type `opponent_damage_reduction`: reduces damage dealt by opponent (debuff)
+  - Modified `applyDamageModifiers()` to include opponent damage reduction in final damage calculation
+  - Damage formula: `baseDamage + bonus - reduction - opponentReduction`
+  - Integration with existing condition system (is_active, has_energy_count, etc.)
+- **Updated:** `src/game/attack-system.js` — integrated opponent damage reduction
+  - Added `opponentReductionApplied` field to attack result
+  - Modified damage calculation flow to apply opponent damage reduction after defender reduction
+  - Turn log includes opponent damage reduction information
+- **Tests:** `tests/rules/opponent-damage-reduction.test.js` — 14 tests
+  - Basic opponent damage reduction (Intimidating Fang -20)
+  - No reduction when ability not registered
+  - is_active condition: only applies when Pokémon is active
+  - Stacking multiple opponent damage reductions (additive)
+  - Integration with defender damage reduction (both apply)
+  - Integration with attacker damage bonus (bonus applies before reductions)
+  - Damage floor at 0 (cannot go negative)
+  - KO detection works correctly with reduced damage
+  - getOpponentDamageReduction method returns correct value
+  - Ability removal (removeAbilities) clears opponent reduction
+  - calculateDamage preview includes opponent reduction
+  - Turn log includes opponentReductionApplied field
+  - has_energy_count condition support
+  - Both players can have opponent damage reduction abilities
+- All 300+ tests across the full suite pass (including new opponent-damage-reduction tests)
+- **Learnings:** Opponent damage reduction is the inverse of damage reduction — instead of reducing what the defender receives, it reduces what the attacker deals. This is implemented as a separate effect type `opponent_damage_reduction` and checked against the defender's abilities (the player being attacked). The damage modifier order is: base → +bonus (attacker) → -reduction (defender) → -opponentReduction (defender debuff). Both `opponent_damage_reduction` and `damage_reduction` are player-side effects that can coexist and stack additively.
+
+
+## 2026-02-18 - GAP-011: [Crítico][C2] Sistema completo de ataques
+- **Implemented:** Extended `src/game/attack-system.js` — energy cost validation and weakness calculation
+  - `canAffordEnergyCost(pokemon, energyCost)` — validates energy requirements before attack
+    - Supports specific energy types (fire, water, grass, electric, psychic, fighting)
+    - Supports colorless energy that can be satisfied by any energy type
+    - Returns detailed failure reasons: `no_energy`, `missing_specific_energy`, `insufficient_total_energy`
+    - Energy cost format: array of type strings, e.g., ['fire', 'fire', 'colorless']
+  - `calculateWeakness(attacker, defender)` — calculates weakness damage to add
+    - Adds +20 damage when defender has weakness to attacker's type (Pocket TCG rules)
+    - Supports multiple weakness formats: string ('fire'), array (['fire', 'ice']), or object ({ type: 'fire', multiplier: 2 })
+    - Case-sensitive type matching
+  - Modified `executeAttack(attackingPlayerId, attack)` — integrated both features
+    - Validates energy costs before executing attack (throws error if cannot afford)
+    - Applies weakness (+20) AFTER damage modifiers (bonus, reduction, opponentReduction)
+    - Damage formula: `baseDamage + bonus - reduction - opponentReduction + weakness`
+    - Logs energy cost failures with reason to `turnLog`
+    - Logs weakness application in attack result and `turnLog`
+    - Returns `weaknessApplied` and `energyCostPaid` fields in result
+  - Modified `calculateDamage(attackerId, defenderId, baseDamage)` — includes weakness in dry-run
+    - Returns `weaknessApplied` in result
+    - Added `opponentReductionApplied` to result (was missing)
+    - Returns complete modifier breakdown: `baseDamage`, `bonusApplied`, `reductionApplied`, `opponentReductionApplied`, `weaknessApplied`, `finalDamage`
+- **Tests:** `tests/rules/complete-attack-system.test.js` — 61 tests covering:
+  - Energy cost validation: exact matches, missing specific energy, colorless flexibility, total energy insufficient, mixed costs, edge cases
+  - Weakness calculation: no weakness, string/array/object formats, matching/non-matching types, case sensitivity, null defender, no attacker type
+  - executeAttack integration: no cost, affordable cost, insufficient cost (error), weakness applied, no weakness, weakness + reduction, weakness + bonus, weakness + prevention, KO from weakness
+  - Full integration: energy cost + weakness + all modifiers + pre-KO survival + KO triggers
+  - Edge cases: zero base damage + weakness, high damage + weakness, multiple weakness types, dry-run with weakness, empty cost, case sensitivity
+- All 340+ tests across full suite pass (including 61 new complete-attack-system tests)
+- **Learnings:** Energy cost validation follows TCG pattern: specific types must match exactly, colorless can use any energy. Weakness in Pocket TCG is simplified (+20 flat, not 2x multiplier) and is applied AFTER damage modifiers (consistent with research documentation). Energy costs are validated before any damage calculation; if validation fails, attack throws error and logs failure. The `calculateDamage()` method is a preview/dry-run that includes weakness but does NOT check energy costs or damage prevention (intentional for UI previews). Energy cost format is flexible: array of strings, empty array = no cost, undefined = no cost.
+
+
+
+## 2026-02-18 - GAP-012: [Importante][C2] Daño escalado por Energía adjunta (Celebi ex)
+- **Implemented:** Extended `src/game/attack-system.js` — damage scaling based on attached energy
+  - `calculateDamageScaling(pokemon, damageScaling)` — calculates additional damage based on attached energy
+    - Simple format: `damageScaling: number` — adds N damage per energy attached
+    - Object format: `damageScaling: { perEnergy: number, energyType?: string }` — N damage per energy, optionally filtered by type
+    - If `energyType` is specified, only counts energy of that type
+    - If Pokémon has no energy, returns 0
+  - Modified `executeAttack(attackingPlayerId, attack)` — applies damageScaling before modifiers
+    - damageScaling is calculated and added to baseDamage before ability modifiers (bonus/reduction)
+    - Damage formula: `(baseDamage + damageScaling) + bonus - reduction - opponentReduction + weakness`
+    - Returns `damageScaling` field in attack result
+  - Modified `calculateDamage(attackerId, defenderId, baseDamage)` — includes damageScaling in dry-run
+    - Passes through `attack.damageScaling` if present on attacker's active attack
+- **Tests:** `tests/rules/damage-scaling-by-energy.test.js` — 35 tests covering:
+  - calculateDamageScaling: simple number format, object format, energyType filter, no energy, no damageScaling
+  - executeAttack: basic scaling, different scaling values, energyType filter, colorless energy, 0 energy count
+  - Integration: damageScaling + bonus, + reduction, + weakness, + damage prevention, + energy cost validation
+  - Edge cases: 0 base damage, large energy count (10), energy update after calculation, multiple different attacks
+  - calculateDamage dry-run: includes damageScaling, no attack = 0 scaling
+  - Event logging: result includes damageScaling field, all new result fields present
+- All 375+ tests across full suite pass (including 35 new damage-scaling tests)
+- **Learnings:** damageScaling is an attack-level property (not an ability), applied before damage modifiers; this means bonuses and reductions apply on top of the scaled total. The energyType filter enables type-specific scaling patterns. Energy counting uses `pokemon.energy` array where each element has a `type` field.
