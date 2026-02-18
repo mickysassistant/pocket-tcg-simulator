@@ -12,6 +12,7 @@ const EvolutionSystem = require('./game/evolution-system');
 const SupporterSystem = require('./game/supporter-system');
 const DeckManager = require('./game/deck-manager');
 const WinCondition = require('./game/win-condition');
+const AbilitySystem = require('./game/ability-system');
 
 /**
  * Create a new game instance
@@ -25,6 +26,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
   const drawSystem = new DrawSystem(gameState);
   const energySystem = new EnergySystem(gameState);
   const deckManager = new DeckManager(gameState);
+  const abilitySystem = new AbilitySystem(gameState);
 
   // Initialize game with decks
   gameState.initialize(player1Deck, player2Deck);
@@ -37,6 +39,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
     evolutionSystem,
     supporterSystem,
     deckManager,
+    abilitySystem,
     winCondition: turnManager.winCondition
   };
 }
@@ -50,5 +53,6 @@ module.exports = {
   SupporterSystem,
   DeckManager,
   WinCondition,
+  AbilitySystem,
   createGame
 };
