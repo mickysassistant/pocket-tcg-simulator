@@ -4,6 +4,7 @@
  * This file implements the ability system for Pocket TCG Simulator, supporting:
  * - Passive abilities with conditional damage bonuses (Carnivine, Tyranitar Power Link)
  * - Damage reduction abilities (Magnezone Resilience Link, Regirock Exoskeleton)
+ * - Opponent damage reduction abilities (Luxray Intimidating Fang - reduces opponent's damage)
  * - Special condition immunity (Arceus ex Fabled Luster)
  * - Damage prevention abilities (Oricorio Safeguard - prevents damage from Pokémon ex)
  * - Pre-KO survival abilities (Conkeldurr Guts - flip coin to survive KO)
@@ -16,6 +17,7 @@
  * GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio Safeguard)
  * GAP-007: [Importante][C1] Guts (Conkeldurr) - Pre-KO coin flip survival
  * GAP-009: [Importante][C1] Auto-aplicación de Special Condition (Komala Comatose)
+ * GAP-010: [Importante][C1] Reducción de daño al oponente (Luxray Intimidating Fang)
  *
  * Ability definition schema:
  * {
@@ -42,6 +44,7 @@
  * - 'opponent_has_pokemon_type' - Opponent has a Pokémon of a specific type in play
  *
  * Supported effect types (in addition to damage_bonus / damage_reduction):
+ * - 'opponent_damage_reduction' - Reduces damage dealt by opponent (Intimidating Fang)
  * - 'special_condition_immunity' - Pokémon cannot be affected by any special conditions
  * - 'damage_prevention' - Prevents all damage from attacks matching criteria
  * - 'pre_ko_survival' - Flip a coin when would be KO'd by attack; heads = survive with 1 HP
@@ -290,6 +293,48 @@ class AbilitySystem {
   }
 
   /**
+   * Calculate total opponent damage reduction from passive abilities.
+   *
+   * This is the inverse of damage reduction: instead of reducing damage received
+   * by the defending player, this reduces damage dealt by the attacking player.
+   * It's a debuff that the opponent applies to the attacker's attacks.
+   *
+   * Example: Luxray (Intimidating Fang) — "Any damage done by your opponent's
+   * Active Pokémon is reduced by 20 (after applying Weakness and Resistance)."
+   *
+   * @param {string} attackingPlayerId - Player who is attacking (damage is being reduced)
+   * @returns {number} Total opponent damage reduction (positive = less damage dealt by attacker)
+   */
+  getOpponentDamageReduction(attackingPlayerId) {
+    const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
+    let total = 0;
+
+    for (const [key, abilities] of this._abilities.entries()) {
+      const [abilityPlayerId] = key.split(':');
+
+      // Check the opponent's abilities (the player being attacked)
+      if (abilityPlayerId !== defendingPlayerId) continue;
+
+      for (const ability of abilities) {
+        if (ability.type !== 'passive') continue;
+        if (!ability.effect || ability.effect.type !== 'opponent_damage_reduction') continue;
+
+        const conditionMet = this.evaluateCondition(
+          ability.condition,
+          ability._playerId,
+          ability._pokemonId
+        );
+
+        if (conditionMet) {
+          total += ability.effect.amount || 0;
+        }
+      }
+    }
+
+    return total;
+  }
+
+  /**
    * Get all active (condition-met) passive abilities for a player
    * @param {string} playerId
    * @returns {Array} Array of active ability definitions
@@ -322,19 +367,21 @@ class AbilitySystem {
    * @param {string} attackingPlayerId - Player who is attacking
    * @param {string} defendingPlayerId - Player who is defending
    * @param {number} baseDamage - Base attack damage
-   * @returns {Object} { finalDamage, bonusApplied, reductionApplied }
+   * @returns {Object} { finalDamage, baseDamage, bonusApplied, reductionApplied, opponentReductionApplied }
    */
   applyDamageModifiers(attackingPlayerId, defendingPlayerId, baseDamage) {
     const bonus = this.getDamageBonus(attackingPlayerId);
     const reduction = this.getDamageReduction(defendingPlayerId);
+    const opponentReduction = this.getOpponentDamageReduction(attackingPlayerId);
 
-    const finalDamage = Math.max(0, baseDamage + bonus - reduction);
+    const finalDamage = Math.max(0, baseDamage + bonus - reduction - opponentReduction);
 
     return {
       finalDamage,
       baseDamage,
       bonusApplied: bonus,
-      reductionApplied: reduction
+      reductionApplied: reduction,
+      opponentReductionApplied: opponentReduction
     };
   }
 

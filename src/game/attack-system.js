@@ -7,10 +7,12 @@
  * GAP-002: [Crítico][C1] Reducción de daño recibido
  * GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio Safeguard)
  * GAP-007: [Importante][C1] Guts (Conkeldurr) - Pre-KO coin flip survival
+ * GAP-010: [Importante][C1] Reducción de daño al oponente (Luxray Intimidating Fang)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
  * - damage_reduction (defender side): reduces incoming damage
+ * - opponent_damage_reduction (defender side): reduces damage dealt by opponent
  * - damage_prevention (defender side): prevents all damage from specific attackers
  *
  * Supported pre-KO effects:
@@ -20,6 +22,9 @@
  * - Magnezone (Resilience Link): reduce damage received by 30
  * - Regirock (Exoskeleton): reduce damage received by 30
  * - Shuckle ex (Solid Shell): reduce damage received by 20
+ *
+ * Real-card examples of opponent_damage_reduction:
+ * - Luxray (Intimidating Fang): reduce opponent's damage by 20
  *
  * Real-card examples of damage_prevention:
  * - Oricorio (Safeguard): prevents all damage from opponent's Pokémon ex
@@ -32,12 +37,13 @@
  * 2. Check if damage should be prevented (GAP-006)
  * 3. If not prevented, apply damage_bonus from attacking player's passive abilities
  * 4. Apply damage_reduction from defending player's passive abilities
- * 5. Clamp final damage to minimum 0
- * 6. Apply final damage to defending Pokémon's current HP
- * 7. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
- * 8. Determine if the defending Pokémon is knocked out (HP <= 0)
- * 9. Handle KO-triggered abilities (GAP-005) if KO'd
- * 10. Log the attack event
+ * 5. Apply opponent_damage_reduction from defending player's passive abilities
+ * 6. Clamp final damage to minimum 0
+ * 7. Apply final damage to defending Pokémon's current HP
+ * 8. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
+ * 9. Determine if the defending Pokémon is knocked out (HP <= 0)
+ * 10. Handle KO-triggered abilities (GAP-005) if KO'd
+ * 11. Log the attack event
  */
 
 class AttackSystem {
@@ -93,7 +99,7 @@ class AttackSystem {
     let reductionApplied = 0;
 
     if (!damagePrevented) {
-      // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities)
+      // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities + opponent reduction from defender's debuff abilities)
       const modifierResult = this.abilitySystem.applyDamageModifiers(
         attackingPlayerId,
         defendingPlayerId,
@@ -103,6 +109,7 @@ class AttackSystem {
       finalDamage = modifierResult.finalDamage;
       bonusApplied = modifierResult.bonusApplied;
       reductionApplied = modifierResult.reductionApplied;
+      var opponentReductionApplied = modifierResult.opponentReductionApplied;
     }
 
     // Apply damage to defender's HP
@@ -168,6 +175,7 @@ class AttackSystem {
       baseDamage,
       bonusApplied,
       reductionApplied,
+      opponentReductionApplied: opponentReductionApplied || 0,
       finalDamage,
       isKO,
       damagePrevented,

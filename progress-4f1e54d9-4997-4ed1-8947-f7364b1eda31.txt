@@ -7,7 +7,7 @@ Started: 2026-02-18
 
 - Pure JS (no build), Node.js. Tests run with: `node <test-file>`
 - TEST_CMD: `for test in tests/rules/*.test.js tests/rule-lock-manifest.test.js tests/integration/regression-suite.test.js; do node "$test" || exit 1; done`
-- All systems follow the pattern: `new XyzSystem(gameState)` and are wired in `src/index.js`
+- All systems follow pattern: `new XyzSystem(gameState)` and are wired in `src/index.js`
 - `createGame()` in `src/index.js` returns a single object with all system instances
 - Tests use a simple `runTest(name, fn)` pattern with custom assert helpers (no external test runner)
 - Game state uses `players.player1/player2` with fields: `deck`, `hand`, `banque`, `activePokemon`, `energyZone`
@@ -67,7 +67,7 @@ Started: 2026-02-18
   - Conditional damage reduction: only reduces when condition met
   - executeAttack logs event to gameState.turnLog
   - executeAttack without any abilities: base damage applied directly
-- All 160+ tests across the full suite pass (including new damage-reduction tests)
+- All 160+ tests across full suite pass (including new damage-reduction tests)
 - **Learnings:** AttackSystem acts as the integration point between AbilitySystem modifiers and the actual HP tracking. Damage modifiers are applied before HP deduction. Pokémon currentHp is lazily initialized from hp field on first attack.
 
 ---
@@ -239,7 +239,7 @@ Started: 2026-02-18
   - `_executeSwitchPokemon(ability, playerId, params)` — switches bench Pokemon with active Pokemon
   - Validates that ability Pokemon is on bench and has an active Pokemon to switch with
   - Cleans all special conditions from both Pokemon during switch (baseline TCG behavior)
-  - Effect type `switch_pokemon`: no additional configuration needed beyond the effect type
+  - Effect type `switch_pokemon`: no additional configuration needed beyond effect type
   - All events logged to gameState.turnLog with details: fromPokemonId, toPokemonId, conditionsRemoved
 - Updated ActivatedAbilitySystem JSDoc to document switch_pokemon effect type
 - Wired StatusConditionSystem into ActivatedAbilitySystem in src/index.js (constructor parameter)
@@ -260,3 +260,39 @@ Started: 2026-02-18
   - Switch cleans conditions and logs them
 - All 290+ tests across the full suite pass (including new switch-from-bench tests)
 - **Learnings:** Switch abilities follow the same pattern as other activated abilities with usage limits; special condition cleaning during switch follows TCG baseline (all conditions removed on both Pokemon); need to manually switch Pokemon back in tests when testing once-per-turn reset; switch effect requires both statusConditionSystem and gameState to be properly wired for condition cleaning
+
+---
+
+## 2026-02-18 - GAP-009: [Importante][C1] Auto-aplicación de Special Condition (Komala (Comatose))
+- Extended AbilitySystem (src/game/ability-system.js) with on-Energy-attach trigger support:
+  - `triggerOnEnergyAttach(playerId, pokemonId, energy)` — finds and executes abilities triggered by energy attachment
+  - Effect type `on_energy_attach`: triggers when energy is attached to the Pokémon
+  - Effect can specify `applyCondition` to auto-apply special conditions (e.g., 'asleep')
+  - Condition support: leverages AbilitySystem.evaluateCondition() for pre-trigger validation
+- Modified EnergySystem (src/game/energy-system.js) to actually attach energy and trigger abilities:
+  - Constructor now accepts optional `abilitySystem` and `statusConditionSystem` parameters
+  - `attachEnergy(playerId, targetPokemonId)` — now actually attaches energy to Pokemon's energy array
+  - Added `_findPokemon(playerId, pokemonId)` helper to locate Pokemon in active or bench
+  - Energy attachment process: (1) check canAttach(), (2) find Pokemon, (3) remove energy from zone, (4) attach to Pokemon, (5) trigger abilities, (6) apply conditions if specified
+  - Only removes energy from zone after successfully finding and attaching to Pokemon (fixes edge case)
+  - Integrates with StatusConditionSystem.applyCondition() for applying special conditions
+- Updated createGame() in src/index.js to wire abilitySystem and statusConditionSystem into energySystem
+- Updated EnergySystem JSDoc to document GAP-009 and on-Energy-attach triggers
+- Fixed tests/rules/first-turn-energy-block.test.js to set up active Pokemon for all tests (required after changes to EnergySystem)
+- Tests: tests/rules/on-energy-attach-abilities.test.js — 14 tests covering:
+  - Komala Comatose applies Asleep when energy attached to active Pokemon
+  - Komala Comatose does NOT trigger when on bench (is_active condition)
+  - Multiple energy attachments each trigger the ability
+  - Energy actually attaches to Pokemon's energy array
+  - Energy attachment works with bench Pokemon
+  - Energy attachment fails gracefully for non-existent Pokemon
+  - First turn restriction still blocks energy attachment
+  - Energy attachment and condition application logged correctly in turnLog
+  - Pokemon already Asleep — condition stays same on re-attach
+  - Pokemon immune to special conditions blocks Comatose (immunity)
+  - No ability — energy attaches normally without triggers
+  - triggerOnEnergyAttach returns empty array when no abilities registered
+  - triggerOnEnergyAttach returns empty for non-matching abilities
+  - Multiple Pokemon with on_energy_attach abilities trigger independently
+- All 300+ tests across the full suite pass (including new on-energy-attach tests)
+- **Learnings:** On-Energy-attach triggers are a new effect type in AbilitySystem that execute immediately after energy is successfully attached to a Pokemon. The trigger flow is: find Pokemon → remove energy from zone → attach to Pokemon → trigger abilities → apply conditions. This pattern allows Pokemon to auto-apply conditions to themselves when receiving energy (e.g., Komala Comatose making itself Asleep). The trigger integrates with StatusConditionSystem which checks immunity before applying conditions, so immune Pokemon won't be affected even by their own on_energy_attach abilities. EnergySystem._findPokemon() is a helper that searches both active and bench for a Pokemon by ID, similar to other systems' internal helper methods.
