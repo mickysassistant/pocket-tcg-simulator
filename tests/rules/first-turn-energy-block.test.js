@@ -67,6 +67,16 @@ function addEnergyToZone(game, playerId, count = 1) {
   }
 }
 
+// Helper: Set up active Pokemon for testing
+function setupActivePokemon(game, playerId) {
+  game.gameState.players[playerId].activePokemon = {
+    id: `${playerId}-active-pokemon`,
+    name: 'Test Pokemon',
+    hp: 100,
+    energy: []
+  };
+}
+
 // =============================================================================
 // TESTS
 // =============================================================================
@@ -103,27 +113,30 @@ runTest('AC1: Player1 on turn 0 - energy attachment rejected with validation rea
 // Test 2: Player2 on first playable turn CAN attach energy
 runTest('AC2: Player2 first turn - energy attachment allowed', () => {
   const game = createTestGame();
-  
+
   // Add energy to both players' Energy Zones
   addEnergyToZone(game, 'player1', 1);
   addEnergyToZone(game, 'player2', 1);
-  
+
   // Complete player1's first turn
   game.turnManager.startTurn('player1');
   game.turnManager.endTurn();
-  
+
   // Start player2's first turn (turn 1)
   game.turnManager.startTurn('player2');
-  
+
+  // Set up active Pokemon
+  setupActivePokemon(game, 'player2');
+
   // Player2 should be able to attach energy
-  const result = game.energySystem.attachEnergy('player2', 'active-pokemon');
-  
+  const result = game.energySystem.attachEnergy('player2', 'player2-active-pokemon');
+
   assertEqual(result.success, true, 'Energy attachment should succeed for player2');
   assert(result.energy !== undefined, 'Should return energy object');
-  
+
   // Energy should be removed from zone
   assertEqual(game.energySystem.getEnergyZoneSize('player2'), 0, 'Energy should be removed from zone');
-  
+
   // Check turn log contains attached event
   const attachLogs = game.gameState.turnLog.filter(log => log.type === 'energy_attached');
   assert(attachLogs.length > 0, 'Turn log should contain energy_attached event');
@@ -132,25 +145,28 @@ runTest('AC2: Player2 first turn - energy attachment allowed', () => {
 // Test 3: Player1 can attach energy on turn 2 (not first turn)
 runTest('AC3: Player1 turn 2 - energy attachment allowed', () => {
   const game = createTestGame();
-  
+
   // Add energy to player1's Energy Zone
   addEnergyToZone(game, 'player1', 1);
-  
+
   // Complete first full round
   game.turnManager.startTurn('player1');
   game.turnManager.endTurn();
-  
+
   game.turnManager.startTurn('player2');
   game.turnManager.endTurn();
-  
+
   // Start player1's turn 2 (not first turn anymore)
   game.turnManager.startTurn('player1');
-  
+
+  // Set up active Pokemon
+  setupActivePokemon(game, 'player1');
+
   // Player1 should be able to attach energy
-  const result = game.energySystem.attachEnergy('player1', 'active-pokemon');
-  
+  const result = game.energySystem.attachEnergy('player1', 'player1-active-pokemon');
+
   assertEqual(result.success, true, 'Energy attachment should succeed for player1 on turn 2');
-  
+
   // Energy should be removed from zone
   assertEqual(game.energySystem.getEnergyZoneSize('player1'), 0, 'Energy should be removed from zone');
 });
@@ -158,26 +174,31 @@ runTest('AC3: Player1 turn 2 - energy attachment allowed', () => {
 // Test 4: Attachment behavior unchanged after first turn
 runTest('AC3: Later turns - attachment behavior unchanged', () => {
   const game = createTestGame();
-  
+
   // Play several turns
   for (let turn = 0; turn < 5; turn++) {
     const currentPlayer = turn % 2 === 0 ? 'player1' : 'player2';
-    
+
     // Add energy to current player
     addEnergyToZone(game, currentPlayer, 1);
-    
+
     // Start turn
     game.turnManager.startTurn(currentPlayer);
-    
+
+    // Set up active Pokemon (if not already set up)
+    if (!game.gameState.players[currentPlayer].activePokemon) {
+      setupActivePokemon(game, currentPlayer);
+    }
+
     // Try to attach energy (should succeed unless it's player1 turn 0)
-    const result = game.energySystem.attachEnergy(currentPlayer, 'active-pokemon');
-    
+    const result = game.energySystem.attachEnergy(currentPlayer, `${currentPlayer}-active-pokemon`);
+
     if (turn === 0 && currentPlayer === 'player1') {
       assertEqual(result.success, false, `Turn ${turn} ${currentPlayer}: Should be blocked`);
     } else {
       assertEqual(result.success, true, `Turn ${turn} ${currentPlayer}: Should succeed`);
     }
-    
+
     game.turnManager.endTurn();
   }
 });
@@ -185,20 +206,22 @@ runTest('AC3: Later turns - attachment behavior unchanged', () => {
 // Test 5: First-turn restriction only applies to player going first
 runTest('First-turn restriction - only blocks player1 on turn 0', () => {
   const game = createTestGame();
-  
+
   // Test player1 on turn 0
   addEnergyToZone(game, 'player1', 1);
+  setupActivePokemon(game, 'player1');
   game.turnManager.startTurn('player1');
-  const p1Result = game.energySystem.attachEnergy('player1', 'active-pokemon');
+  const p1Result = game.energySystem.attachEnergy('player1', 'player1-active-pokemon');
   assertEqual(p1Result.success, false, 'Player1 on turn 0 should be blocked');
   assertEqual(p1Result.reason, 'first_turn_restriction', 'Reason should match');
-  
+
   game.turnManager.endTurn();
-  
+
   // Test player2 on turn 1
   addEnergyToZone(game, 'player2', 1);
+  setupActivePokemon(game, 'player2');
   game.turnManager.startTurn('player2');
-  const p2Result = game.energySystem.attachEnergy('player2', 'active-pokemon');
+  const p2Result = game.energySystem.attachEnergy('player2', 'player2-active-pokemon');
   assertEqual(p2Result.success, true, 'Player2 on turn 1 should succeed');
 });
 

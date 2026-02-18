@@ -28,13 +28,13 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
   const supporterSystem = new SupporterSystem(gameState);
   const turnManager = new TurnManager(gameState, turnLimit, evolutionSystem, supporterSystem);
   const drawSystem = new DrawSystem(gameState);
-  const energySystem = new EnergySystem(gameState);
-  const deckManager = new DeckManager(gameState);
   const abilitySystem = new AbilitySystem(gameState);
   const koTriggerSystem = new KoTriggerSystem(gameState);
-  const attackSystem = new AttackSystem(gameState, abilitySystem, koTriggerSystem);
   const statusConditionSystem = new StatusConditionSystem(gameState, abilitySystem);
+  const energySystem = new EnergySystem(gameState, abilitySystem, statusConditionSystem);
+  const attackSystem = new AttackSystem(gameState, abilitySystem, koTriggerSystem);
   const activatedAbilitySystem = new ActivatedAbilitySystem(gameState, abilitySystem, statusConditionSystem);
+  const deckManager = new DeckManager(gameState);
 
   // Initialize game with decks
   gameState.initialize(player1Deck, player2Deck);

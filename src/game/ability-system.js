@@ -7,6 +7,7 @@
  * - Special condition immunity (Arceus ex Fabled Luster)
  * - Damage prevention abilities (Oricorio Safeguard - prevents damage from Pokémon ex)
  * - Pre-KO survival abilities (Conkeldurr Guts - flip coin to survive KO)
+ * - On-Energy-attach triggers (Komala Comatose - auto-apply special conditions)
  * - Continuous condition evaluation against current game state
  *
  * GAP-001: [Crítico][C1] Bonus de daño condicional
@@ -14,6 +15,7 @@
  * GAP-003: [Crítico][C1] Inmunidad a Special Conditions
  * GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio Safeguard)
  * GAP-007: [Importante][C1] Guts (Conkeldurr) - Pre-KO coin flip survival
+ * GAP-009: [Importante][C1] Auto-aplicación de Special Condition (Komala Comatose)
  *
  * Ability definition schema:
  * {
@@ -43,6 +45,7 @@
  * - 'special_condition_immunity' - Pokémon cannot be affected by any special conditions
  * - 'damage_prevention' - Prevents all damage from attacks matching criteria
  * - 'pre_ko_survival' - Flip a coin when would be KO'd by attack; heads = survive with 1 HP
+ * - 'on_energy_attach' - Trigger when energy is attached to this Pokémon; can apply special conditions
  */
 
 class AbilitySystem {
@@ -538,6 +541,59 @@ class AbilitySystem {
     }
 
     return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // On-Energy-Attach Triggers (GAP-009)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Trigger on-Energy-attach abilities for a Pokémon.
+   *
+   * Called when energy is attached to a Pokémon. This method finds all
+   * on_energy_attach abilities for that Pokémon and executes their effects.
+   *
+   * Example: Komala (Comatose) — "Whenever you attach an Energy card from
+   * your hand to this Pokémon, this Pokémon is now Asleep."
+   *
+   * @param {string} playerId - 'player1' or 'player2'
+   * @param {string} pokemonId - ID of the Pokémon that received energy
+   * @param {Object} energy - Energy object that was attached
+   * @returns {Array} Array of trigger results
+   */
+  triggerOnEnergyAttach(playerId, pokemonId, energy) {
+    const key = `${playerId}:${pokemonId}`;
+    const abilities = this._abilities.get(key);
+    if (!abilities) return [];
+
+    const results = [];
+
+    for (const ability of abilities) {
+      if (ability.type !== 'passive') continue;
+      if (!ability.effect || ability.effect.type !== 'on_energy_attach') continue;
+
+      // Check if the ability condition is met
+      const conditionMet = this.evaluateCondition(
+        ability.condition,
+        ability._playerId,
+        ability._pokemonId
+      );
+
+      if (conditionMet) {
+        // The effect can specify a special condition to apply
+        // Example: { type: 'on_energy_attach', applyCondition: 'asleep' }
+        const result = {
+          abilityId: ability.id || `${playerId}:${pokemonId}:on_energy_attach`,
+          abilityName: ability.name || 'On Energy Attach',
+          pokemonId,
+          effect: ability.effect
+        };
+
+        results.push(result);
+      }
+    }
+
+    return results;
   }
 
   // ---------------------------------------------------------------------------
