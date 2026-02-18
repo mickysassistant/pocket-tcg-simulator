@@ -14,6 +14,8 @@ Started: 2026-02-18
 - `activePokemon` is a single object; `banque` is an array of Pokémon objects
 - Each Pokémon object has: `id`, `name`, `type`, `hp`, `energy` (array), `playedThisTurn`, etc.
 - AbilitySystem: abilities are keyed as `"playerId:pokemonId"` in a Map
+- KO-triggered effects are handled via KoTriggerSystem and invoked from AttackSystem when isKO=true
+- All system events (attacks, abilities, KO triggers) are logged to `gameState.turnLog` with a `type` field
 
 ---
 
@@ -40,5 +42,36 @@ Started: 2026-02-18
   - is_active, pokemon_type_in_play conditions
   - removeAbilities / removeAllAbilitiesForPlayer
 - **Learnings:** Abilities key as `playerId:pokemonId` in Map. Conditions evaluate live on each getDamageBonus() call — no caching needed. Tests must not register a Pokémon under a name that also satisfies its own condition (e.g., Tyranitar checking for "Tyranitar").
+
+---
+
+## 2026-02-18 - GAP-005: [Crítico][C1] Habilidades triggered por KO (Pyukumuku (Innards Out))
+- **Implemented:** `src/game/ko-trigger-system.js` — new KoTriggerSystem class
+  - `registerAbility(playerId, pokemonId, abilityDef)` — register KO-triggered ability
+  - `removeAbilities(playerId, pokemonId)` — cleanup when Pokémon is KO'd
+  - `removeAllAbilitiesForPlayer(playerId)` — board reset
+  - `handleKnockout(koEvent)` — main entry point called by AttackSystem when a Pokémon is KO'd
+  - Effect type `damage_to_attacker`: deals X damage to the attacking Pokémon (Innards Out)
+  - Effect type `move_energy_on_ko`: moves energy of specific type to benched Pokémon (Offload Pass)
+  - Only triggers when: (1) KO was caused by attack damage (not Poison/Burn), (2) KO'd Pokémon was in Active Spot
+  - All events logged to gameState.turnLog
+- **Updated:** `src/game/attack-system.js` — integrated KoTriggerSystem
+  - Constructor now accepts optional `koTriggerSystem` parameter
+  - After applying damage and detecting KO, calls `koTriggerSystem.handleKnockout()`
+  - KO trigger results are included in attack result
+- **Updated:** `src/index.js` — KoTriggerSystem wired into createGame(), exported
+- **Tests:** `tests/rules/ko-triggered-abilities.test.js` — 12 tests
+  - Register and retrieve KO-triggered abilities
+  - Pyukumuku Innards Out: deals 50 damage to attacker on KO, can also KO the attacker
+  - Passimian ex Offload Pass: moves Fighting energy to bench, respects 4 energy limit
+  - KO trigger only works when in Active Spot (not on bench)
+  - Remove abilities and removeAllAbilitiesForPlayer
+  - Offload Pass with no benched Pokémon (fails gracefully)
+  - Offload Pass respects 4 energy limit per Pokémon
+  - Turn log contains KO trigger events
+  - Multiple KO-triggered abilities on same Pokémon
+  - Offload Pass only moves specified energy type
+- All 280+ tests across the full suite pass (including new ko-triggered-abilities tests)
+- **Learnings:** KoTriggerSystem follows the same registration/removal pattern as AbilitySystem; KO triggers are invoked after damage is applied but before the attack completes; effect execution uses a switch pattern on `effect.type` similar to ActivatedAbilitySystem; energy movement respects Pocket's 4 energy per Pokémon limit
 
 ---

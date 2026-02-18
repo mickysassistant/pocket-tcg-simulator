@@ -5,24 +5,30 @@
  * incorporating ability-based damage modifiers from AbilitySystem.
  *
  * GAP-002: [Crítico][C1] Reducción de daño recibido
+ * GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio Safeguard)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
  * - damage_reduction (defender side): reduces incoming damage
+ * - damage_prevention (defender side): prevents all damage from specific attackers
  *
  * Real-card examples of damage_reduction:
  * - Magnezone (Resilience Link): reduce damage received by 30
  * - Regirock (Exoskeleton): reduce damage received by 30
  * - Shuckle ex (Solid Shell): reduce damage received by 20
  *
+ * Real-card examples of damage_prevention:
+ * - Oricorio (Safeguard): prevents all damage from opponent's Pokémon ex
+ *
  * Attack execution flow:
  * 1. Get base damage from the attack definition
- * 2. Apply damage_bonus from attacking player's passive abilities
- * 3. Apply damage_reduction from defending player's passive abilities
- * 4. Clamp final damage to minimum 0
- * 5. Apply final damage to defending Pokémon's current HP
- * 6. Determine if the defending Pokémon is knocked out (HP <= 0)
- * 7. Log the attack event
+ * 2. Check if damage should be prevented (GAP-006)
+ * 3. If not prevented, apply damage_bonus from attacking player's passive abilities
+ * 4. Apply damage_reduction from defending player's passive abilities
+ * 5. Clamp final damage to minimum 0
+ * 6. Apply final damage to defending Pokémon's current HP
+ * 7. Determine if the defending Pokémon is knocked out (HP <= 0)
+ * 8. Log the attack event
  */
 
 class AttackSystem {
@@ -47,7 +53,7 @@ class AttackSystem {
    *
    * @param {string} attackingPlayerId - 'player1' or 'player2'
    * @param {Object} attack - Attack definition: { name: string, damage: number }
-   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, finalDamage, isKO, attacker, defender }
+   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, finalDamage, isKO, attacker, defender, damagePrevented }
    */
   executeAttack(attackingPlayerId, attack) {
     const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
@@ -64,14 +70,30 @@ class AttackSystem {
 
     const baseDamage = attack.damage || 0;
 
-    // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities)
-    const modifierResult = this.abilitySystem.applyDamageModifiers(
+    // Check if damage should be prevented (GAP-006)
+    const damagePrevented = this.abilitySystem.preventDamage(
       attackingPlayerId,
+      attacker.id,
       defendingPlayerId,
-      baseDamage
+      defender.id
     );
 
-    const { finalDamage, bonusApplied, reductionApplied } = modifierResult;
+    let finalDamage = 0;
+    let bonusApplied = 0;
+    let reductionApplied = 0;
+
+    if (!damagePrevented) {
+      // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities)
+      const modifierResult = this.abilitySystem.applyDamageModifiers(
+        attackingPlayerId,
+        defendingPlayerId,
+        baseDamage
+      );
+
+      finalDamage = modifierResult.finalDamage;
+      bonusApplied = modifierResult.bonusApplied;
+      reductionApplied = modifierResult.reductionApplied;
+    }
 
     // Apply damage to defender's HP
     // Initialize currentHp from hp if not already set
@@ -101,6 +123,7 @@ class AttackSystem {
       reductionApplied,
       finalDamage,
       isKO,
+      damagePrevented,
       attackerName: attacker.name,
       defenderName: defender.name,
       defenderHpAfter: defender.currentHp,

@@ -5,11 +5,13 @@
  * - Passive abilities with conditional damage bonuses (Carnivine, Tyranitar Power Link)
  * - Damage reduction abilities (Magnezone Resilience Link, Regirock Exoskeleton)
  * - Special condition immunity (Arceus ex Fabled Luster)
+ * - Damage prevention abilities (Oricorio Safeguard - prevents damage from Pokémon ex)
  * - Continuous condition evaluation against current game state
  *
  * GAP-001: [Crítico][C1] Bonus de daño condicional
  * GAP-002: [Crítico][C1] Reducción de daño recibido
  * GAP-003: [Crítico][C1] Inmunidad a Special Conditions
+ * GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio Safeguard)
  *
  * Ability definition schema:
  * {
@@ -37,6 +39,7 @@
  *
  * Supported effect types (in addition to damage_bonus / damage_reduction):
  * - 'special_condition_immunity' - Pokémon cannot be affected by any special conditions
+ * - 'damage_prevention' - Prevents all damage from attacks matching criteria
  */
 
 class AbilitySystem {
@@ -398,6 +401,97 @@ class AbilitySystem {
     }
 
     return immune;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Damage Prevention (GAP-006)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Check if damage from an attack should be prevented.
+   *
+   * Damage prevention is granted by a passive ability with effect.type === 'damage_prevention'.
+   * The condition associated with the ability must be met for prevention to apply.
+   * The effect specifies which Pokémon should be prevented (e.g., pokemon_ex).
+   *
+   * Example: Oricorio (Safeguard) — "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex."
+   *
+   * @param {string} attackingPlayerId - Player who is attacking
+   * @param {string} attackingPokemonId - ID of the attacking Pokémon
+   * @param {string} defendingPlayerId - Player who is defending
+   * @param {string} defendingPokemonId - ID of the defending Pokémon
+   * @returns {boolean} true if damage should be prevented
+   */
+  preventDamage(attackingPlayerId, attackingPokemonId, defendingPlayerId, defendingPokemonId) {
+    const key = `${defendingPlayerId}:${defendingPokemonId}`;
+    const abilities = this._abilities.get(key);
+    if (!abilities) return false;
+
+    // Get the attacking Pokémon to check if it matches prevention criteria
+    const attacker = this._getPokemon(attackingPlayerId, attackingPokemonId);
+    if (!attacker) return false;
+
+    for (const ability of abilities) {
+      if (ability.type !== 'passive') continue;
+      if (!ability.effect || ability.effect.type !== 'damage_prevention') continue;
+
+      // Check if the ability condition is met
+      const conditionMet = this.evaluateCondition(
+        ability.condition,
+        ability._playerId,
+        ability._pokemonId
+      );
+
+      if (!conditionMet) continue;
+
+      // Check if the attacking Pokémon matches the prevention criteria
+      // Effect can specify: { type: 'damage_prevention', preventFrom: 'pokemon_ex' }
+      // or { type: 'damage_prevention', preventFrom: 'all' }
+      if (this._matchesPreventionCriteria(attacker, ability.effect)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if a Pokémon matches the damage prevention criteria.
+   *
+   * @param {Object} attacker - The attacking Pokémon object
+   * @param {Object} effect - The effect definition with preventFrom criteria
+   * @returns {boolean}
+   */
+  _matchesPreventionCriteria(attacker, effect) {
+    if (!effect.preventFrom) {
+      // No criteria specified → prevent from all (safe default)
+      return true;
+    }
+
+    switch (effect.preventFrom) {
+      case 'pokemon_ex':
+        // Prevent damage from Pokémon with 'ex' in their name
+        return this._isPokemonEx(attacker);
+
+      case 'all':
+        // Prevent all damage
+        return true;
+
+      default:
+        // Unknown criteria → don't prevent (safe default)
+        return false;
+    }
+  }
+
+  /**
+   * Check if a Pokémon is a Pokémon ex (has 'ex' in its name).
+   *
+   * @param {Object} pokemon - Pokémon object
+   * @returns {boolean}
+   */
+  _isPokemonEx(pokemon) {
+    if (!pokemon || !pokemon.name) return false;
+    return pokemon.name.includes('ex');
   }
 
   // ---------------------------------------------------------------------------
