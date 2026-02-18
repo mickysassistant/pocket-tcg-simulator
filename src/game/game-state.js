@@ -34,6 +34,7 @@ class GameState {
     this.turnLog = []; // Log of turn events
     this.energyAttachedThisTurn = false; // Track if energy was attached this turn
     this.evolvedThisTurn = new Set(); // Track Pokemon IDs that have evolved this turn
+    this.retreatedThisTurn = false; // Track if Pokemon has retreated this turn
   }
 
   /**
@@ -184,6 +185,7 @@ class GameState {
       // Restore evolvedThisTurn as a Set
       gameState.evolvedThisTurn = new Set(data.evolvedThisTurn);
     }
+    if (data.retreatedThisTurn !== undefined) gameState.retreatedThisTurn = data.retreatedThisTurn;
 
     // Restore player states
     if (data.players) {

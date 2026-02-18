@@ -198,31 +198,21 @@ runTest('AC3g: action validate accepts valid evolve payload', () => {
   const payload = JSON.stringify({
     playerId: 'player1',
     pokemonId: 'bulbasaur-1',
-    evolutionCard: {
-      id: 'venusaur-1',
-      name: 'Venusaur',
-      stage: 'stage2',
-      hp: 160
-    }
+    evolutionCardId: 'venusaur-1'
   });
   const result = execTcgp(['action', 'validate', 'evolve', payload]);
   assert.strictEqual(result.status, 0, 'Command should succeed');
   assert(result.stdout.includes('Valid: Yes'), 'Should show as valid');
 });
 
-runTest('AC3h: action validate returns valid=false for invalid nested field', () => {
+runTest('AC3h: action validate returns valid=false for invalid playerId', () => {
   const payload = JSON.stringify({
-    playerId: 'player1',
+    playerId: 'player3',
     pokemonId: 'bulbasaur-1',
-    evolutionCard: {
-      id: 'venusaur-1',
-      name: 'Venusaur',
-      stage: 'basic',
-      hp: 160
-    }
+    evolutionCardId: 'venusaur-1'
   });
   const result = execTcgp(['action', 'validate', 'evolve', payload, '--json']);
-  assert(result.status !== 0, 'Should fail with invalid stage');
+  assert(result.status !== 0, 'Should fail with invalid playerId');
   const json = parseJson(result.stdout);
   assert.strictEqual(json.valid, false);
   assert.strictEqual(json.reason, 'VALIDATION_ERROR');

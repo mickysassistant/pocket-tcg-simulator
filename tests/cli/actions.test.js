@@ -241,22 +241,17 @@ runTest('AC3j: validatePayload returns valid=false for array payload', () => {
   assert.strictEqual(result.reason, 'INVALID_PAYLOAD_TYPE');
 });
 
-runTest('AC3k: validatePayload returns valid=false for invalid enum in nested object', () => {
+runTest('AC3k: validatePayload returns valid=false for invalid playerId in evolve', () => {
   const payload = {
-    playerId: 'player1',
+    playerId: 'player3',
     pokemonId: 'bulbasaur-1',
-    evolutionCard: {
-      id: 'venusaur-1',
-      name: 'Venusaur',
-      stage: 'basic',
-      hp: 160
-    }
+    evolutionCardId: 'venusaur-1'
   };
   const result = actions.validatePayload('evolve', payload);
   assert.strictEqual(result.valid, false);
   assert.strictEqual(result.reason, 'VALIDATION_ERROR');
   assert(Array.isArray(result.errors));
-  assert(result.errors.some(e => e.includes('stage')));
+  assert(result.errors.some(e => e.includes('playerId')));
 });
 
 runTest('AC3l: validatePayload accepts valid attach_energy payload', () => {
@@ -326,12 +321,7 @@ runTest('AC3r: validatePayload accepts valid evolve payload', () => {
   const payload = {
     playerId: 'player1',
     pokemonId: 'bulbasaur-1',
-    evolutionCard: {
-      id: 'venusaur-1',
-      name: 'Venusaur',
-      stage: 'stage2',
-      hp: 160
-    }
+    evolutionCardId: 'venusaur-1'
   };
   const result = actions.validatePayload('evolve', payload);
   assert.strictEqual(result.valid, true);

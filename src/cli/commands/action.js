@@ -817,6 +817,129 @@ See README.md for full action contracts and schemas.
             break;
           }
 
+          case 'retreat': {
+            const { playerId, benchPokemonId } = payload;
+
+            // Validate phase is 'main'
+            if (gameState.phase !== 'main') {
+              const errorData = {
+                error: 'Wrong phase',
+                reason: 'WRONG_PHASE',
+                message: `Pokemon can only retreat during main phase, current phase is ${gameState.phase}.`,
+                currentPhase: gameState.phase,
+                expectedPhase: 'main'
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that it's this player's turn
+            if (gameState.currentPlayer !== playerId) {
+              const errorData = {
+                error: 'Wrong turn',
+                reason: 'WRONG_TURN',
+                message: `Cannot retreat Pokemon: it is currently ${gameState.currentPlayer}'s turn, not ${playerId}'s turn.`,
+                currentPlayer: gameState.currentPlayer,
+                requestedPlayer: playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that retreat hasn't already been done this turn
+            if (gameState.retreatedThisTurn) {
+              const errorData = {
+                error: 'Already retreated this turn',
+                reason: 'ALREADY_RETREATED',
+                message: 'You can only retreat once per turn.',
+                playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const player = gameState.players[playerId];
+
+            // Validate that there's an active Pokemon
+            if (!player.activePokemon) {
+              const errorData = {
+                error: 'No active Pokemon',
+                reason: 'NO_ACTIVE_POKEMON',
+                message: `Player ${playerId} has no active Pokemon to retreat.`,
+                playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Verify benchPokemonId is in the bench
+            const benchIndex = player.banque.findIndex(pokemon => pokemon.id === benchPokemonId);
+            if (benchIndex === -1) {
+              const errorData = {
+                error: 'Bench Pokemon not found',
+                reason: 'NO_BENCH_POKEMON',
+                message: `Pokemon ${benchPokemonId} is not in ${playerId}'s bench.`,
+                playerId,
+                benchPokemonId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const activePokemon = player.activePokemon;
+            const benchPokemon = player.banque[benchIndex];
+            const retreatCost = activePokemon.retreatCost || 0;
+
+            // Check if active Pokemon has enough energy attached
+            const attachedEnergy = activePokemon.attachedEnergy || [];
+            if (attachedEnergy.length < retreatCost) {
+              const errorData = {
+                error: 'Insufficient energy',
+                reason: 'INSUFFICIENT_ENERGY',
+                message: `Active Pokemon ${activePokemon.name} needs ${retreatCost} energy to retreat but only has ${attachedEnergy.length}.`,
+                playerId,
+                activePokemonId: activePokemon.id,
+                activePokemonName: activePokemon.name,
+                retreatCost,
+                currentEnergy: attachedEnergy.length
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Discard energy equal to retreat cost
+            if (retreatCost > 0) {
+              activePokemon.attachedEnergy.splice(0, retreatCost);
+            }
+
+            // Swap active and bench Pokemon
+            player.banque[benchIndex] = activePokemon;
+            player.activePokemon = benchPokemon;
+
+            // Mark retreat as done this turn
+            gameState.retreatedThisTurn = true;
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              benchPokemonId,
+              previousActivePokemon: player.banque[benchIndex],
+              newActivePokemon: player.activePokemon,
+              retreatCost,
+              energyDiscarded: retreatCost,
+              remainingEnergy: activePokemon.attachedEnergy.length,
+              message: `Retreated ${player.banque[benchIndex].name} to bench and brought ${player.activePokemon.name} to active`
+            };
+
+            break;
+          }
+
           default: {
             const errorData = {
               error: 'Action not yet implemented',
@@ -841,7 +964,8 @@ See README.md for full action contracts and schemas.
             turnNumber: gameState.turnNumber,
             phase: gameState.phase,
             energyAttachedThisTurn: gameState.energyAttachedThisTurn,
-            evolvedThisTurn: Array.from(gameState.evolvedThisTurn)
+            evolvedThisTurn: Array.from(gameState.evolvedThisTurn),
+            retreatedThisTurn: gameState.retreatedThisTurn
           }
         });
 
@@ -880,6 +1004,12 @@ See README.md for full action contracts and schemas.
             console.log(`Previous stage: ${result.previousStage}`);
             console.log(`Current stage: ${result.currentStage}`);
             console.log(`Hand size: ${result.handSize}`);
+          } else if (subcommand === 'retreat') {
+            console.log(`Previous active: ${result.previousActivePokemon.name} (${result.previousActivePokemon.id})`);
+            console.log(`New active: ${result.newActivePokemon.name} (${result.newActivePokemon.id})`);
+            console.log(`Retreat cost: ${result.retreatCost}`);
+            console.log(`Energy discarded: ${result.energyDiscarded}`);
+            console.log(`Remaining energy on previous active: ${result.remainingEnergy}`);
           }
 
           console.log(`\n${result.message}`);

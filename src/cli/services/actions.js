@@ -189,6 +189,29 @@ const ACTIONS = {
         }
       }
     }
+  },
+
+  // Retreat action
+  retreat: {
+    id: 'retreat',
+    name: 'Retreat Pokemon',
+    description: 'Retreat active Pokémon to bench and bring a bench Pokémon to active',
+    sessionRequired: true,
+    schema: {
+      type: 'object',
+      required: ['playerId', 'benchPokemonId'],
+      properties: {
+        playerId: {
+          type: 'string',
+          enum: ['player1', 'player2'],
+          description: 'Player retreating Pokemon'
+        },
+        benchPokemonId: {
+          type: 'string',
+          description: 'ID of the bench Pokemon to bring to active'
+        }
+      }
+    }
   }
 };
 

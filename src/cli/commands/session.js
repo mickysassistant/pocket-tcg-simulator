@@ -181,7 +181,8 @@ EXAMPLES:
           supertype: 'Pokémon',
           hp: 60,
           types: ['Darkness'],
-          subtype: 'Basic'
+          subtype: 'Basic',
+          retreatCost: 2
         };
         const testPokemon2 = {
           id: 'A3a-042',
@@ -189,16 +190,23 @@ EXAMPLES:
           supertype: 'Pokémon',
           hp: 70,
           types: ['Darkness'],
-          subtype: 'Basic'
+          subtype: 'Basic',
+          retreatCost: 1
         };
-        game.gameState.players.player1.activePokemon = { ...testPokemon1 };
+        game.gameState.players.player1.activePokemon = { ...testPokemon1, attachedEnergy: [] };
         game.gameState.players.player1.banque = [
-          { ...testPokemon1, id: 'B1-155-2' }
+          { ...testPokemon1, id: 'B1-155-2', attachedEnergy: [] },
+          { ...testPokemon2, id: 'A3a-042-3', attachedEnergy: [] }
         ];
-        game.gameState.players.player2.activePokemon = { ...testPokemon2 };
+        game.gameState.players.player2.activePokemon = { ...testPokemon2, attachedEnergy: [] };
         game.gameState.players.player2.banque = [
-          { ...testPokemon2, id: 'A3a-042-2' }
+          { ...testPokemon2, id: 'A3a-042-2', attachedEnergy: [] }
         ];
+
+        // Add energy to player1's active Pokemon for retreat testing (needs 2 energy for retreat)
+        for (let i = 0; i < 3; i++) {
+          game.gameState.players.player1.activePokemon.attachedEnergy.push({ type: 'Basic Energy', energyType: 'Colorless' });
+        }
 
         // Add some Basic Pokemon to players' hands for play_pokemon testing
         const handPokemon1 = {
@@ -226,12 +234,12 @@ EXAMPLES:
           subtype: 'Basic'
         };
         // Give each player some Pokemon in hand
-        game.gameState.players.player1.hand.push({ ...handPokemon1 });
-        game.gameState.players.player1.hand.push({ ...benchFillerPokemon, id: 'bench-filler-2' });
-        game.gameState.players.player1.hand.push({ ...benchFillerPokemon, id: 'bench-filler-3' });
-        game.gameState.players.player2.hand.push({ ...handPokemon2 });
-        game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-4' });
-        game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-5' });
+        game.gameState.players.player1.hand.push({ ...handPokemon1, retreatCost: 2 });
+        game.gameState.players.player1.hand.push({ ...benchFillerPokemon, id: 'bench-filler-2', retreatCost: 1 });
+        game.gameState.players.player1.hand.push({ ...benchFillerPokemon, id: 'bench-filler-3', retreatCost: 1 });
+        game.gameState.players.player2.hand.push({ ...handPokemon2, retreatCost: 1 });
+        game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-4', retreatCost: 1 });
+        game.gameState.players.player2.hand.push({ ...benchFillerPokemon, id: 'bench-filler-5', retreatCost: 1 });
 
         // Add evolution cards to players' hands for evolve testing
         const evolutionCardP1Stage1 = {

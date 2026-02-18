@@ -126,3 +126,96 @@ Started: 2025-02-17
   - Session creation should populate test data (Pokemon in active/banque, energy in Energy Zone) for action testing
   - Energy attached to a Pokemon needs to be tracked and persisted in the game state
   - Validation order matters: phase → player → turn-specific restrictions → target validity
+
+---
+## 2025-02-17 - ACT-004: Añadir y ejecutar play_pokemon: jugar Pokémon básico desde la mano
+- Implemented play_pokemon action execution in CLI action command handler
+- Added play_pokemon action definition to actions.js:
+  - id: 'play_pokemon'
+  - schema: { playerId, cardId, zone: 'active'|'bench' }
+  - description: 'Play a Basic Pokémon from hand to active zone or bench'
+- Added play_pokemon case to action command handler with validations:
+  - Phase must be 'main' (WRONG_PHASE error)
+  - Player must be current player (WRONG_TURN error)
+  - Card must be in player's hand (CARD_NOT_IN_HAND error)
+  - Card must be a Basic Pokémon (supertype === 'Pokémon' && subtype === 'Basic') (NOT_BASIC error)
+  - If zone === 'active': only if no active Pokémon (ACTIVE_OCCUPIED error)
+  - If zone === 'bench': only if bench has room (max 3) (BENCH_FULL error)
+- Moves card from hand to the target zone (active slot or banque array)
+- Updated session creation to populate test data:
+  - Added 3 Basic Pokémon to each player's hand for play_pokemon testing
+- Updated CLI output formatting for play_pokemon specific fields
+- Files changed:
+  - src/cli/services/actions.js: Added play_pokemon action definition
+  - src/cli/commands/action.js: Added play_pokemon case with execution logic
+  - src/cli/commands/session.js: Added Basic Pokemon to players' hands for testing
+  - tests/cli/play-pokemon-action.test.js: New test file with 23 tests
+- Tests: 23 new tests covering all acceptance criteria:
+  - AC1: play_pokemon executes without error to bench and active
+  - AC2: CARD_NOT_IN_HAND error when card not in hand or already played
+  - AC3: NOT_BASIC error (check exists, test covers Basic Pokemon success case)
+  - AC4: BENCH_FULL error when bench reaches 3 Pokemon
+  - AC5: ACTIVE_OCCUPIED error when active slot has Pokemon
+  - Additional tests: payload validation, output formats, state saving, player2, hand/bench size tracking
+- **Learnings:**
+  - Session creation adds 1 Pokemon to banque, so max bench capacity is effectively 2 additional Pokemon
+  - The play_pokemon action removes the card from hand (using splice) and adds it to the target zone
+  - Validation order: phase → player → card in hand → Basic Pokemon → zone constraints
+  - Zone constraints are mutually exclusive: active checks for emptiness, bench checks for capacity
+  - Card ID must be unique within a player's hand to allow proper identification
+  - Test data needs to include cards that match the expected card IDs in tests
+  - The action returns the played Pokemon card object in the response for verification
+---
+
+## 2025-02-18 - ACT-005: Ejecutar evolve: evolucionar Pokémon en activo o banca
+- Implemented evolve action execution in CLI action command handler
+- Added evolvedThisTurn tracking to GameState to prevent multiple evolutions per turn per Pokemon:
+  - Added evolvedThisTurn field to GameState (Set of pokemonIds that evolved this turn)
+  - Updated TurnManager.startTurn() to clear this Set at turn start
+  - Updated GameState.fromJSON() to restore this Set from array
+  - Action handler validates this Set and returns ALREADY_EVOLVED error if Pokemon already evolved
+- Updated evolve action schema in actions.js:
+  - Changed from full evolutionCard object to just evolutionCardId string
+  - evolutionCardId must be in player's hand (CARD_NOT_IN_HAND error)
+  - evolutionCard must be a valid evolution card (Stage 1 or Stage 2 Pokémon)
+- Added evolve case to action command handler with validations:
+  - Phase must be 'main' (WRONG_PHASE error)
+  - Player must be current player (WRONG_TURN error)
+  - Evolution card must be in player's hand (CARD_NOT_IN_HAND error)
+  - Evolution card must be a Stage 1 or Stage 2 Pokémon (INVALID_EVOLUTION error)
+  - Target Pokemon must be in active or banque (INVALID_TARGET error)
+  - Cannot evolve on turn 0 (FIRST_TURN_RESTRICTION error via EvolutionSystem.canEvolve)
+  - Cannot evolve same Pokemon twice in one turn (ALREADY_EVOLVED error)
+  - Evolution chain must be valid (Basic→Stage1→Stage2) (INVALID_EVOLUTION error)
+- Evolution is applied using EvolutionSystem.evolve():
+  - Replaces Pokemon with evolved version (keeps energy and damage)
+  - Marks Pokemon as evolved in gameState.evolvedThisTurn
+- Removes evolution card from player's hand after successful evolution
+- Updated session creation to populate test data:
+  - Added Stage 1 and Stage 2 evolution cards to each player's hand
+- Updated state saving to include evolvedThisTurn field (as array for JSON serialization)
+- Updated CLI output formatting for evolve specific fields
+- Files changed:
+  - src/game/game-state.js: Added evolvedThisTurn field and fromJSON() support
+  - src/game/turn-manager.js: Reset evolvedThisTurn in startTurn()
+  - src/cli/services/actions.js: Updated evolve action schema (evolutionCardId instead of evolutionCard)
+  - src/cli/commands/action.js: Added evolve case with full validation logic
+  - src/cli/commands/session.js: Added evolution cards to players' hands for testing
+  - tests/cli/evolve-action.test.js: New test file with 15 tests
+  - tests/cli/evolve-action-simple.test.js: Simple integration test
+- Tests: 15 new tests covering all acceptance criteria:
+  - AC1: evolve executes without error for active and bench Pokemon
+  - AC2: INVALID_EVOLUTION error for non-evolution card, wrong evolution chain, card not in hand
+  - AC3: ALREADY_EVOLVED error when Pokemon already evolved this turn
+  - AC4: FIRST_TURN_RESTRICTION error on turn 0
+  - Additional tests: WRONG_PHASE, WRONG_TURN, INVALID_TARGET, evolution chain (Basic→Stage1→Stage2), card removed from hand, JSON/plain text output
+- **Learnings:**
+  - The evolvedThisTurn tracking must be in GameState, not EvolutionSystem, because each action execution creates a new EvolutionSystem instance
+  - GameState.evolvedThisTurn is a Set, but must be serialized as array in state.save() and restored as Set in GameState.fromJSON()
+  - EvolutionSystem.evolve() updates the Pokemon in place but we need to track evolvedThisTurn separately in the handler
+  - Evolution chain validation: Stage 1 requires Basic, Stage 2 requires Stage 1
+  - EvolutionSystem.canEvolve() already checks opening turn restriction and playedThisTurn flag
+  - The evolve action handler validates additional constraints: card in hand, valid evolution card, evolution chain
+  - Session creation test data needs evolution cards matching test expectations
+  - Test data should include both Stage 1 and Stage 2 evolution cards for testing evolution chains
+---

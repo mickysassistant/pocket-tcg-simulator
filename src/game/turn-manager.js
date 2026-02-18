@@ -63,6 +63,9 @@ class TurnManager {
     // Reset energy attachment tracking at the start of each player's turn
     this.gameState.energyAttachedThisTurn = false;
 
+    // Reset retreat tracking at the start of each player's turn
+    this.gameState.retreatedThisTurn = false;
+
     // Record turn start
     this.gameState.startTurn(playerId);
 
