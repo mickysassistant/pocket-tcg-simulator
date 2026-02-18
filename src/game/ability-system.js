@@ -3,9 +3,13 @@
  *
  * This file implements the ability system for Pocket TCG Simulator, supporting:
  * - Passive abilities with conditional damage bonuses (Carnivine, Tyranitar Power Link)
+ * - Damage reduction abilities (Magnezone Resilience Link, Regirock Exoskeleton)
+ * - Special condition immunity (Arceus ex Fabled Luster)
  * - Continuous condition evaluation against current game state
  *
  * GAP-001: [Crítico][C1] Bonus de daño condicional
+ * GAP-002: [Crítico][C1] Reducción de daño recibido
+ * GAP-003: [Crítico][C1] Inmunidad a Special Conditions
  *
  * Ability definition schema:
  * {
@@ -30,6 +34,9 @@
  * - 'has_energy_count'   - Pokémon has at least N energy attached
  * - 'is_active'          - The ability Pokémon itself is in active spot
  * - 'opponent_has_pokemon_type' - Opponent has a Pokémon of a specific type in play
+ *
+ * Supported effect types (in addition to damage_bonus / damage_reduction):
+ * - 'special_condition_immunity' - Pokémon cannot be affected by any special conditions
  */
 
 class AbilitySystem {
@@ -320,6 +327,77 @@ class AbilitySystem {
       bonusApplied: bonus,
       reductionApplied: reduction
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Special Condition Immunity (GAP-003)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Check if a specific Pokémon is immune to all special conditions.
+   *
+   * Immunity is granted by a passive ability with effect.type === 'special_condition_immunity'.
+   * The condition associated with the ability must be met for immunity to apply.
+   *
+   * Example: Arceus ex (Fabled Luster) — "This Pokémon can't be affected by any Special Conditions."
+   *
+   * @param {string} playerId - 'player1' or 'player2'
+   * @param {string} pokemonId - ID of the Pokémon to check
+   * @returns {boolean} true if the Pokémon is currently immune
+   */
+  isImmuneToSpecialConditions(playerId, pokemonId) {
+    const key = `${playerId}:${pokemonId}`;
+    const abilities = this._abilities.get(key);
+    if (!abilities) return false;
+
+    for (const ability of abilities) {
+      if (ability.type !== 'passive') continue;
+      if (!ability.effect || ability.effect.type !== 'special_condition_immunity') continue;
+
+      const conditionMet = this.evaluateCondition(
+        ability.condition,
+        ability._playerId,
+        ability._pokemonId
+      );
+
+      if (conditionMet) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Get all Pokémon (by ID) on a player's side that are currently immune
+   * to special conditions.
+   *
+   * @param {string} playerId
+   * @returns {string[]} Array of pokemonId strings
+   */
+  getImmunePokemons(playerId) {
+    const immune = [];
+
+    for (const [key, abilities] of this._abilities.entries()) {
+      const [abilityPlayerId, pokemonId] = key.split(':');
+      if (abilityPlayerId !== playerId) continue;
+
+      for (const ability of abilities) {
+        if (ability.type !== 'passive') continue;
+        if (!ability.effect || ability.effect.type !== 'special_condition_immunity') continue;
+
+        const conditionMet = this.evaluateCondition(
+          ability.condition,
+          ability._playerId,
+          ability._pokemonId
+        );
+
+        if (conditionMet) {
+          immune.push(pokemonId);
+          break; // one immunity per Pokémon is enough
+        }
+      }
+    }
+
+    return immune;
   }
 
   // ---------------------------------------------------------------------------
