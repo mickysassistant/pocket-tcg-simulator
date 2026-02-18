@@ -5,11 +5,12 @@
  * supporting abilities that can be manually activated during a turn.
  *
  * GAP-004: [Crítico][C1] Habilidades de movimiento de energía (Vaporeon (Wash Out))
+ * GAP-008: [Importante][C1] Switch desde Banca a Activo (Solgaleo ex (Rising Road))
  *
  * Activated abilities differ from passive abilities in that:
  * - They must be explicitly invoked by a player
  * - They have usage limits (once per turn, per Pokemon, unlimited, etc.)
- * - They can have effects like moving energy between Pokemon
+ * - They can have effects like moving energy between Pokemon or switching positions
  *
  * Activated ability definition schema:
  * {
@@ -18,11 +19,13 @@
  *   pokemonId: string,        // ID of the Pokémon that has this ability
  *   type: 'activated',        // Always 'activated'
  *   effect: {
- *     type: 'move_energy',    // Currently only move_energy is supported
+ *     type: 'move_energy' | 'switch_pokemon',
+ *     // For move_energy:
  *     from: 'active' | 'bench' | 'any' | { pokemonId: string },
  *     to: 'active' | 'bench' | { pokemonId: string },
  *     count: number,          // Number of energy to move
- *     energyType?: string     // Optional specific energy type
+ *     energyType?: string,    // Optional specific energy type
+ *     // For switch_pokemon (no additional fields needed)
  *   },
  *   condition: {
  *     type: string,           // Condition type (see AbilitySystem)
@@ -38,9 +41,10 @@
  */
 
 class ActivatedAbilitySystem {
-  constructor(gameState, abilitySystem) {
+  constructor(gameState, abilitySystem, statusConditionSystem = null) {
     this.gameState = gameState;
     this.abilitySystem = abilitySystem;
+    this.statusConditionSystem = statusConditionSystem;
 
     // Map: pokemonId → array of activated ability definitions
     // Abilities are registered per-Pokémon when they enter play
@@ -314,6 +318,9 @@ class ActivatedAbilitySystem {
       case 'move_energy':
         return this._executeMoveEnergy(ability, playerId, params);
 
+      case 'switch_pokemon':
+        return this._executeSwitchPokemon(ability, playerId, params);
+
       default:
         return {
           success: false,
@@ -405,6 +412,89 @@ class ActivatedAbilitySystem {
         fromPokemonId: fromPokemon.id,
         toPokemonId: toPokemon.id,
         count: movedEnergy.length
+      }
+    };
+  }
+
+  /**
+   * Execute switch_pokemon effect
+   * Switches the Pokemon with this ability (from bench) with the active Pokemon.
+   * This is used for abilities like Solgaleo ex's Rising Road.
+   * @param {Object} ability - Ability definition
+   * @param {string} playerId - Player activating the ability
+   * @param {Object} params - Not used for switch_pokemon
+   * @returns {Object} Result with success boolean and details
+   */
+  _executeSwitchPokemon(ability, playerId, params) {
+    const player = this.gameState.players[playerId];
+
+    // The ability Pokemon should be on bench (condition should enforce this, but we check anyway)
+    const abilityPokemon = this._getPokemonById(playerId, ability._pokemonId);
+    if (!abilityPokemon) {
+      return {
+        success: false,
+        reason: 'pokemon_not_found',
+        message: 'Pokemon with ability not found'
+      };
+    }
+
+    // Find the ability Pokemon in the bench
+    const banque = player.banque || [];
+    const benchIndex = banque.findIndex(p => p && p.id === abilityPokemon.id);
+    if (benchIndex === -1) {
+      return {
+        success: false,
+        reason: 'pokemon_not_on_bench',
+        message: 'Pokemon must be on bench to use this ability'
+      };
+    }
+
+    // Get the active Pokemon
+    const activePokemon = player.activePokemon;
+    if (!activePokemon) {
+      return {
+        success: false,
+        reason: 'no_active_pokemon',
+        message: 'No active Pokemon to switch with'
+      };
+    }
+
+    // Track conditions that are removed (for logging)
+    const conditionsRemoved = [];
+
+    // Clean special conditions from the Pokemon moving to bench (baseline TCG behavior)
+    if (this.statusConditionSystem) {
+      const activeCondition = this.statusConditionSystem.getCondition(playerId, activePokemon.id);
+      if (activeCondition) {
+        this.statusConditionSystem.removeCondition(playerId, activePokemon.id);
+        conditionsRemoved.push({ pokemonId: activePokemon.id, condition: activeCondition });
+      }
+
+      const benchCondition = this.statusConditionSystem.getCondition(playerId, abilityPokemon.id);
+      if (benchCondition) {
+        this.statusConditionSystem.removeCondition(playerId, abilityPokemon.id);
+        conditionsRemoved.push({ pokemonId: abilityPokemon.id, condition: benchCondition });
+      }
+    } else if (activePokemon.specialCondition) {
+      // Fallback if statusConditionSystem is not available
+      conditionsRemoved.push({ pokemonId: activePokemon.id, condition: activePokemon.specialCondition });
+      activePokemon.specialCondition = null;
+      if (abilityPokemon.specialCondition) {
+        conditionsRemoved.push({ pokemonId: abilityPokemon.id, condition: abilityPokemon.specialCondition });
+        abilityPokemon.specialCondition = null;
+      }
+    }
+
+    // Perform the switch
+    player.activePokemon = abilityPokemon;
+    player.banque[benchIndex] = activePokemon;
+
+    return {
+      success: true,
+      details: {
+        fromPokemonId: abilityPokemon.id,
+        toPokemonId: activePokemon.id,
+        conditionsRemoved
       }
     };
   }
