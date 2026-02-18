@@ -11,6 +11,7 @@
  * GAP-011: [Crítico][C2] Sistema completo de ataques
  * GAP-012: [Importante][C2] Daño escalado por Energía adjunta (Celebi ex)
  * GAP-013: [Importante][C2] Auto-daño (recoil) (Arcanine)
+ * GAP-014: [Importante][C2] Efectos temporales sobre el defensor (Vulpix Tail Whip)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -51,6 +52,14 @@
  *   - Recoil damage bypasses damage modifiers (it's self-inflicted, not an attack)
  *   - Attacker can be KO'd by their own recoil
  *
+ * Supported temporary defender effects (GAP-014):
+ * - temporaryDefenderEffect (attack level): effect applied to the defending Pokémon after attack
+ *   - type: 'cannot_attack' — defender cannot use attacks on its next turn
+ *   - type: 'damage_reduction' — defender's attacks deal -value damage on its next turn
+ *   - requiresCoinFlip: true — effect only applies on coin flip heads
+ *   - duration: number — turns the effect lasts (default: 1)
+ * - Temporary effects are cleared when the target Pokémon switches out or evolves
+ *
  * Real-card examples of recoilDamage (GAP-013):
  * - Arcanine (Heat Tackle): "This Pokémon also does 20 damage to itself."
  * - Arcanine ex (Inferno Onrush): "This Pokémon also does 30 damage to itself."
@@ -81,11 +90,13 @@ class AttackSystem {
    * @param {Object} gameState - GameState instance
    * @param {Object} abilitySystem - AbilitySystem instance
    * @param {Object} koTriggerSystem - KoTriggerSystem instance (optional)
+   * @param {Object} temporaryEffectsSystem - TemporaryEffectsSystem instance (optional, GAP-014)
    */
-  constructor(gameState, abilitySystem, koTriggerSystem = null) {
+  constructor(gameState, abilitySystem, koTriggerSystem = null, temporaryEffectsSystem = null) {
     this.gameState = gameState;
     this.abilitySystem = abilitySystem;
     this.koTriggerSystem = koTriggerSystem;
+    this.temporaryEffectsSystem = temporaryEffectsSystem;
   }
 
   // ---------------------------------------------------------------------------
@@ -359,6 +370,18 @@ class AttackSystem {
       throw new Error(`${defendingPlayerId} has no active Pokémon to attack`);
     }
 
+    // Check temporary cannot_attack effect (GAP-014)
+    if (this.temporaryEffectsSystem && this.temporaryEffectsSystem.cannotAttack(attackingPlayerId, attacker.id)) {
+      this.gameState.turnLog.push({
+        type: 'attack_blocked_by_temporary_effect',
+        player: attackingPlayerId,
+        attack: attack.name || 'Unknown',
+        attacker: attacker.name,
+        reason: 'cannot_attack'
+      });
+      throw new Error(`${attacker.name} cannot attack due to a temporary effect`);
+    }
+
     // Validate energy cost (GAP-011)
     const energyCost = attack.energyCost || [];
     const energyCheck = this.canAffordEnergyCost(attacker, energyCost);
@@ -411,6 +434,18 @@ class AttackSystem {
       bonusApplied = modifierResult.bonusApplied;
       reductionApplied = modifierResult.reductionApplied;
       var opponentReductionApplied = modifierResult.opponentReductionApplied;
+
+      // Apply temporary damage reduction on attacker (GAP-014)
+      // This represents a debuff placed on the attacker by a previous attack effect
+      if (this.temporaryEffectsSystem) {
+        const temporaryReduction = this.temporaryEffectsSystem.getOutgoingDamageReduction(
+          attackingPlayerId,
+          attacker.id
+        );
+        if (temporaryReduction > 0) {
+          damageAfterModifiers -= temporaryReduction;
+        }
+      }
 
       // Apply weakness (GAP-011) - add +20 damage if defender is weak to attacker's type
       weaknessApplied = this.calculateWeakness(attacker, defender);
@@ -496,6 +531,24 @@ class AttackSystem {
       }
     }
 
+    // Apply temporary defender effect (GAP-014)
+    // e.g. Vulpix (Tail Whip): "Your opponent's Active Pokémon can't attack next turn."
+    let temporaryEffectResult = null;
+    if (attack.temporaryDefenderEffect && this.temporaryEffectsSystem && !isKO) {
+      // Only apply if defender survived the attack
+      const effectDef = {
+        ...attack.temporaryDefenderEffect,
+        sourceName: attack.temporaryDefenderEffect.sourceName || attack.name || null
+      };
+      const coinFlipForEffect = attack.coinFlip || null;
+      temporaryEffectResult = this.temporaryEffectsSystem.applyEffect(
+        defendingPlayerId,
+        defender.id,
+        effectDef,
+        coinFlipForEffect
+      );
+    }
+
     const result = {
       baseDamage,
       damageScaling,
@@ -514,7 +567,8 @@ class AttackSystem {
       energyCostPaid,
       recoilDamageApplied,
       attackerIsKO,
-      attackerHpAfter: attacker.currentHp
+      attackerHpAfter: attacker.currentHp,
+      temporaryEffectResult
     };
 
     // Log the attack event (before pre_ko_survival log for proper order)

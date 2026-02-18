@@ -17,6 +17,7 @@ const AttackSystem = require('./game/attack-system');
 const { StatusConditionSystem, SPECIAL_CONDITIONS } = require('./game/status-condition-system');
 const ActivatedAbilitySystem = require('./game/activated-ability-system');
 const KoTriggerSystem = require('./game/ko-trigger-system');
+const { TemporaryEffectsSystem, TEMPORARY_EFFECT_TYPES } = require('./game/temporary-effects-system');
 
 /**
  * Create a new game instance
@@ -31,8 +32,9 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
   const abilitySystem = new AbilitySystem(gameState);
   const koTriggerSystem = new KoTriggerSystem(gameState);
   const statusConditionSystem = new StatusConditionSystem(gameState, abilitySystem);
+  const temporaryEffectsSystem = new TemporaryEffectsSystem(gameState);
   const energySystem = new EnergySystem(gameState, abilitySystem, statusConditionSystem);
-  const attackSystem = new AttackSystem(gameState, abilitySystem, koTriggerSystem);
+  const attackSystem = new AttackSystem(gameState, abilitySystem, koTriggerSystem, temporaryEffectsSystem);
   const activatedAbilitySystem = new ActivatedAbilitySystem(gameState, abilitySystem, statusConditionSystem);
   const deckManager = new DeckManager(gameState);
 
@@ -52,6 +54,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
     attackSystem,
     statusConditionSystem,
     activatedAbilitySystem,
+    temporaryEffectsSystem,
     winCondition: turnManager.winCondition
   };
 }
@@ -71,5 +74,7 @@ module.exports = {
   SPECIAL_CONDITIONS,
   ActivatedAbilitySystem,
   KoTriggerSystem,
+  TemporaryEffectsSystem,
+  TEMPORARY_EFFECT_TYPES,
   createGame
 };
