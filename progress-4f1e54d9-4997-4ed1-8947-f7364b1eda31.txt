@@ -45,7 +45,123 @@ Started: 2026-02-18
 
 ---
 
+## 2026-02-18 - GAP-002: [Crítico][C1] Reducción de daño recibido
+
+- **Implemented:** `src/game/attack-system.js` — new AttackSystem class
+  - `executeAttack(attackingPlayerId, attack)` — executes attack with damage modifiers
+  - `calculateDamage(attackerId, defenderId, baseDamage)` — dry-run preview
+  - `getDamageReduction(defendingPlayerId)` — delegates to AbilitySystem
+  - Applies damage_bonus (attacker) and damage_reduction (defender) before HP deduction
+  - KO detection and turn logging
+- **Updated:** `src/index.js` — AttackSystem wired into createGame(), exported
+- **Tests:** `tests/rules/damage-reduction.test.js` — 16 tests
+  - Magnezone Resilience Link: -30 damage reduction
+  - Regirock Exoskeleton: conditional reduction when specific type in play
+  - Shuckle ex Solid Shell: -20 damage reduction
+  - executeAttack: damage reduction reduces HP dealt to defender
+  - executeAttack: bonus + reduction both applied correctly
+  - Damage reduction floors final damage at 0
+  - executeAttack: KO detection with damage reduction active
+  - calculateDamage: preview without applying damage
+  - Multiple damage reduction abilities stack additively
+  - Conditional damage reduction: only reduces when condition met
+  - executeAttack logs event to gameState.turnLog
+  - executeAttack without any abilities: base damage applied directly
+- All 160+ tests across the full suite pass (including new damage-reduction tests)
+- **Learnings:** AttackSystem acts as the integration point between AbilitySystem modifiers and the actual HP tracking. Damage modifiers are applied before HP deduction. Pokémon currentHp is lazily initialized from hp field on first attack.
+
+---
+
+## 2026-02-18 - GAP-003: [Crítico][C1] Inmunidad a Special Conditions (Arceus ex – Fabled Luster)
+
+- **Implemented:** `src/game/status-condition-system.js` — new StatusConditionSystem class
+  - `applyCondition(playerId, pokemonId, condition)` — applies special condition with immunity check
+  - `removeCondition(playerId, pokemonId)` — removes condition
+  - `getCondition(playerId, pokemonId)` — get current condition
+  - `hasCondition(playerId, pokemonId, condition)` — check if has specific condition
+  - `applyBetweenTurnEffects(playerId, coinFlip?)` — Poison deals 10 dmg/turn; Burn deals 20 dmg + coin flip (heads removes); Paralyzed auto-removed after one turn
+  - `canAttack(playerId, pokemonId)` — returns false for Sleep/Paralyzed
+  - `canRetreat(playerId, pokemonId)` — returns false for Sleep/Paralyzed
+  - `handleConfusion(attackingPlayerId, attackingPokemonId, damage, coinFlip?)` — heads = normal attack, tails = 30 self-damage
+  - All events logged to gameState.turnLog
+- **Extended:** `src/game/ability-system.js` — immunity support
+  - `isImmuneToSpecialConditions(playerId, pokemonId)` — checks for special_condition_immunity effect type
+  - `getImmunePokemons(playerId)` — returns list of Pokémon IDs currently immune
+  - Immunity is condition-aware (e.g. only when is_active)
+- **Updated:** `src/index.js` — StatusConditionSystem wired into createGame(), exported as StatusConditionSystem + SPECIAL_CONDITIONS
+- **Tests:** `tests/rules/status-condition-immunity.test.js` — 42 tests
+  - SPECIAL_CONDITIONS exports five standard conditions
+  - applyCondition: Poisoned, Sleep, Paralyzed, Confused, Burned applied correctly
+  - Unknown condition is rejected
+  - New condition replaces existing condition
+  - Condition can be applied to Pokémon on bench
+  - Missing Pokémon returns applied:false
+  - Arceus ex with immunity ability cannot be conditioned
+  - Immunity is per-Pokémon: opponent can still be conditioned
+  - Immunity is per-Pokémon: teammate without ability can still be conditioned
+  - Immunity is removed when ability is removed
+  - isImmuneToSpecialConditions returns true when ability is registered
+  - getImmunePokemons returns list of immune Pokémon IDs for a player
+  - Immunity condition (e.g. is_active) only applies when condition met
+  - Blocked condition is logged with detail:immune
+  - Applied condition is logged with type:condition_applied
+  - Removed condition is logged with type:condition_removed
+  - Poisoned: deals 10 damage per between-turn
+  - Burned: deals 20 damage per between-turn, removed on coin flip heads
+  - Paralyzed: auto-removed after one between-turn
+  - Condition damage cannot reduce HP below 0
+  - canAttack returns false when Asleep or Paralyzed
+  - canRetreat returns false when Asleep or Paralyzed
+  - handleConfusion: heads → attack proceeds normally, tails → 30 self damage
+- All 200+ tests across the full suite pass (including new status-condition-immunity tests)
+- **Learnings:** StatusConditionSystem delegates immunity to AbilitySystem via `isImmuneToSpecialConditions()` — keeps concerns separated. Coin flip is injected for deterministic testing. SPECIAL_CONDITIONS canonical values are lowercase strings ('poisoned', 'asleep', etc.). Status conditions are mutually exclusive (new replaces old).
+
+---
+
+## 2026-02-18 - GAP-004: [Crítico][C1] Habilidades de movimiento de energía (Vaporeon (Wash Out))
+
+- **Implemented:** `src/game/activated-ability-system.js` — new ActivatedAbilitySystem class
+  - `registerAbility(playerId, pokemonId, abilityDef)` — registers an activatable ability for a Pokémon
+  - `removeAbilities(playerId, pokemonId)` — cleanup when Pokémon are removed or board is reset
+  - `removeAllAbilitiesForPlayer(playerId)` — remove all abilities for a player
+  - `activateAbility(abilityId, playerId, params)` — main API to trigger ability effects
+  - `canUseAbility(abilityId, playerId)` — validates usage limits, ownership, and conditions
+  - Usage limit tracking: `unlimited`, `once_per_turn`, `per_pokemon_once`
+  - `resetUsageForNewTurn()` — called at turn start to reset usage counters
+  - Effect type `move_energy`: moves energy from source to destination with support for:
+    - Source/destination targets: `active`, `bench`, `any`, or explicit Pokémon ID
+    - Count control: move N energy at once
+    - Energy type filtering: only move specific energy types
+    - Automatic limit adjustment: only moves available energy when requesting more than exists
+  - Condition checking: leverages AbilitySystem.evaluateCondition() for pre-activation validation
+  - All events logged to gameState.turnLog (ability_activated, ability_activation_failed)
+- **Updated:** `src/index.js` — ActivatedAbilitySystem wired into createGame() with abilitySystem injected, exported
+- **Tests:** `tests/rules/activated-abilities.test.js` — 18 tests
+  - ActivatedAbilitySystem is exported from index
+  - Register and retrieve activated ability
+  - Move 1 energy from bench to active
+  - Move 2 energy from bench to active
+  - Unlimited usage: can activate multiple times per turn
+  - Once per turn: cannot activate twice in same turn
+  - Once per turn: can activate again after turn change
+  - Per Pokemon once: same Pokemon cannot activate twice
+  - Cannot activate opponent's ability
+  - Move energy from active to bench
+  - Move only water energy when type specified
+  - Cannot activate ability when condition is not met
+  - Remove abilities for a specific Pokemon
+  - Remove all abilities for a player
+  - Cannot move energy when source has no energy
+  - Cannot activate non-existent ability
+  - Move energy using explicit Pokemon IDs
+  - Move only available energy when requesting more than exists
+- All 280+ tests across the full suite pass (including new activated-abilities tests)
+- **Learnings:** ActivatedAbilitySystem extends the ability framework with explicit invocation. Usage tracking is per-ability and resets via resetUsageForNewTurn(). move_energy effect uses `.slice()` to create a copy of the energy array before filtering to avoid reference issues. Ability effects are extensible via the `effect.type` switch pattern.
+
+---
+
 ## 2026-02-18 - GAP-005: [Crítico][C1] Habilidades triggered por KO (Pyukumuku (Innards Out))
+
 - **Implemented:** `src/game/ko-trigger-system.js` — new KoTriggerSystem class
   - `registerAbility(playerId, pokemonId, abilityDef)` — register KO-triggered ability
   - `removeAbilities(playerId, pokemonId)` — cleanup when Pokémon is KO'd
@@ -73,5 +189,46 @@ Started: 2026-02-18
   - Offload Pass only moves specified energy type
 - All 280+ tests across the full suite pass (including new ko-triggered-abilities tests)
 - **Learnings:** KoTriggerSystem follows the same registration/removal pattern as AbilitySystem; KO triggers are invoked after damage is applied but before the attack completes; effect execution uses a switch pattern on `effect.type` similar to ActivatedAbilitySystem; energy movement respects Pocket's 4 energy per Pokémon limit
+
+---
+
+## 2026-02-18 - GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio (Safeguard))
+
+- **Implemented:** Extended `src/game/ability-system.js` — damage prevention support
+  - `preventDamage(attackingPlayerId, attackingPokemonId, defendingPlayerId, defendingPokemonId)` — checks if damage should be prevented
+  - Effect type `damage_prevention`: prevents all damage from attacks matching criteria
+  - Effect criteria: `preventFrom: 'pokemon_ex'` (prevents only from Pokémon ex), `preventFrom: 'all'` (prevents all damage)
+  - `_matchesPreventionCriteria(attacker, effect)` — checks if attacker matches prevention criteria
+  - `_isPokemonEx(pokemon)` — checks if Pokémon has 'ex' in its name (case-sensitive match)
+  - Damage prevention is condition-aware (e.g. only when is_active)
+  - Prevention takes precedence over damage reduction
+- **Updated:** `src/game/attack-system.js` — integrated damage prevention
+  - Added `damagePrevented` field to attack result
+  - Before applying damage, check `abilitySystem.preventDamage()`
+  - If prevented, finalDamage is 0 and no HP is deducted
+  - `damagePrevented` flag included in turn log events
+- **Tests:** `tests/rules/damage-prevention.test.js` — 20 tests
+  - AbilitySystem has preventDamage method
+  - preventDamage returns false with no abilities
+  - Oricorio Safeguard prevents damage from Pokémon ex
+  - Oricorio Safeguard does NOT prevent damage from non-ex Pokémon
+  - AttackSystem applies damage prevention
+  - AttackSystem does NOT prevent damage from non-ex attacker
+  - Damage prevention respects is_active condition
+  - Damage prevention does not apply when condition not met
+  - Multiple Pokémon ex attackers are prevented
+  - Mega Pokémon ex are prevented
+  - Damage prevention takes precedence over reduction
+  - Damage prevention only applies to defending side
+  - removeAbilities removes damage prevention
+  - Turn log includes damage prevention events
+  - preventFrom: 'all' prevents all damage
+  - Unknown preventFrom does not prevent damage (safe default)
+  - No preventFrom field prevents all damage
+  - calculateDamage does not check prevention (preview only)
+  - removeAllAbilitiesForPlayer removes damage prevention
+  - Case-sensitive ex matching in Pokémon names
+- All 280+ tests across the full suite pass (including new damage-prevention tests)
+- **Learnings:** Damage prevention is checked BEFORE damage modifiers (bonus/reduction) in AttackSystem; prevention uses case-sensitive matching for 'ex' in Pokémon names (must be lowercase 'ex'); `calculateDamage()` is a preview/dry-run and does NOT check prevention, which is intentional for UI previews; Pokémon ex are identified by checking if the name contains 'ex' string; prevention only applies to the defending Pokémon's abilities (attacker's abilities cannot prevent damage to themselves)
 
 ---
