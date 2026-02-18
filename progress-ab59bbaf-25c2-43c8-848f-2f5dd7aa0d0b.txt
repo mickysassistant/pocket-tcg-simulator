@@ -265,3 +265,60 @@ Started: 2025-02-17
   - Validation order: phase → player → retreatedThisTurn → active Pokemon exists → bench Pokemon exists → energy cost → swap
   - The swap operation exchanges the active Pokemon with the bench Pokemon at the specified bench index
   - Energy discarded is tracked and included in the response (energyDiscarded, remainingEnergy)
+---
+## 2025-02-18 - ACT-007: Añadir y ejecutar attack: atacar con el Pokémon activo
+- Added attack action definition to actions.js:
+  - id: 'attack'
+  - schema: { playerId, attackName }
+  - description: 'Execute an attack with the active Pokémon'
+- Added attack case to action command handler with validations:
+  - Phase must be 'main' (WRONG_PHASE error)
+  - Player must be current player (WRONG_TURN error)
+  - Player must have active Pokemon (NO_ACTIVE_POKEMON error)
+  - Opponent must have active Pokemon (NO_TARGET_POKEMON error)
+  - Attack name must exist on active Pokemon (ATTACK_NOT_FOUND error)
+  - Active Pokemon must have sufficient energy (INSUFFICIENT_ENERGY error)
+- Attack execution:
+  - Finds attack by name in active Pokemon's attacks array
+  - Calculates energy cost from attack.energyCost array length
+  - Validates that active Pokemon has enough attached energy
+  - Applies base damage to opponent's active Pokemon
+  - Applies weakness bonus (+20 damage) if target is weak to attacker's type
+  - Reduces target Pokemon HP (capped at 0)
+  - If HP <= 0 (KO):
+    - Adds 1 point to player's score
+    - Moves next bench Pokemon to active if available
+    - Checks win condition using WinCondition.checkWinCondition()
+    - Updates session status to 'completed' if game ends
+  - Changes phase to 'end' (turn ends after attacking)
+- Updated session creation to add attacks and weaknesses to test Pokemon:
+  - Deino (B1-155): Headbutt (20 damage, 1 energy), weakness to Fighting
+  - Nihilego (A3a-042): Quick Attack (10 damage, 1 energy), weakness to Fighting
+- Added WinCondition import to action command handler for win condition checking
+- Updated CLI output formatting for attack specific fields:
+  - Attacker, Attack, Damage, Target, Target HP
+  - KO result and new opponent active Pokemon if KO occurred
+  - Game ended info if win condition triggered
+- Files changed:
+  - src/cli/services/actions.js: Added attack action definition
+  - src/cli/commands/action.js: Added attack case with full validation and execution logic, imported WinCondition
+  - src/cli/commands/session.js: Added attacks and weaknesses to test Pokemon
+  - tests/cli/attack-action.test.js: New test file with 23 tests
+- Tests: 23 new tests covering all acceptance criteria:
+  - AC1: attack executes without error and applies damage
+  - AC2: weakness bonus applies (+20 damage) when target is weak to attacker's type
+  - AC3: KO adds point and promotes bench Pokemon to active
+  - AC4: WinCondition is checked after KO (logic verified in code)
+  - AC5: INSUFFICIENT_ENERGY error when not enough energy
+  - AC6: ATTACK_NOT_FOUND error for non-existent attack name
+  - Additional tests: payload validation, WRONG_PHASE, WRONG_TURN, NO_ACTIVE_POKEMON, NO_TARGET_POKEMON, output formats, state saving, phase changes to end, player2
+- **Learnings:**
+  - Attack energy cost is determined by the length of the attack.energyCost array
+  - Weakness bonus is only applied if targetPokemon.weakness.type matches attacker's primary type
+  - Weakness amount defaults to 20 if not specified
+  - When a Pokemon is KO'd, the next Pokemon from the opponent's banque (bench) is moved to active
+  - WinCondition.checkWinCondition() returns null if game continues, or { winner, reason, message } if game ends
+  - Points are tracked on the player object (player.points), initialized to 0 on first KO
+  - The attack action changes the phase to 'end', which means end_turn can be called next
+  - Attacks have damage, energyCost (array of energy types), and potentially effects (not implemented yet)
+  - Pokemon cards can have attacks array, weakness object, and other properties
