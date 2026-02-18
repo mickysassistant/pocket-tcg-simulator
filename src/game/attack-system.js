@@ -12,6 +12,7 @@
  * GAP-012: [Importante][C2] Daño escalado por Energía adjunta (Celebi ex)
  * GAP-013: [Importante][C2] Auto-daño (recoil) (Arcanine)
  * GAP-014: [Importante][C2] Efectos temporales sobre el defensor (Vulpix Tail Whip)
+ * GAP-015: [Importante][C2] Snipe (Luxray) - Selección de target (Active/Banca)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -344,6 +345,74 @@ class AttackSystem {
   }
 
   // ---------------------------------------------------------------------------
+  // Target Selection (GAP-015)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get a target Pokémon from a player's field (Active or Banque).
+   *
+   * Target format: { location: 'active' | 'banque', pokemonId?: string }
+   * - If location is 'active', pokemonId is ignored (returns active Pokemon)
+   * - If location is 'banque', pokemonId is required
+   *
+   * @param {string} playerId - 'player1' or 'player2'
+   * @param {Object} target - Target specification
+   * @returns {Object|null} The target Pokémon or null if not found
+   */
+  getTargetPokemon(playerId, target) {
+    if (!target || !target.location) {
+      throw new Error('Target must have a location property');
+    }
+
+    const player = this.gameState.players[playerId];
+
+    if (target.location === 'active') {
+      return player.activePokemon;
+    }
+
+    if (target.location === 'banque') {
+      if (!target.pokemonId) {
+        throw new Error('Target pokemonId is required for banque location');
+      }
+
+      const benched = player.banque.find(p => p.id === target.pokemonId);
+      if (!benched) {
+        return null;
+      }
+      return benched;
+    }
+
+    throw new Error(`Invalid target location: ${target.location}`);
+  }
+
+  /**
+   * Validate that a target exists and is attackable.
+   *
+   * @param {string} playerId - 'player1' or 'player2'
+   * @param {Object} target - Target specification
+   * @returns {Object} { valid: boolean, reason?: string }
+   */
+  validateTarget(playerId, target) {
+    try {
+      const pokemon = this.getTargetPokemon(playerId, target);
+
+      if (!pokemon) {
+        return {
+          valid: false,
+          reason: 'target_not_found'
+        };
+      }
+
+      return { valid: true };
+    } catch (err) {
+      return {
+        valid: false,
+        reason: err.message
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Attack Execution
   // ---------------------------------------------------------------------------
 
@@ -355,19 +424,26 @@ class AttackSystem {
    * @param {Object} attack - Attack definition: { name: string, damage: number, energyCost?: Array, coinFlip?: Function, recoilDamage?: number|Object }
    * @param {Function} [attack.coinFlip] - Optional deterministic coin-flip function for tests; defaults to random
    * @param {number|Object} [attack.recoilDamage] - Optional recoil damage config (GAP-013)
-   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, weaknessApplied, finalDamage, isKO, attacker, defender, damagePrevented, preKoSurvivalResult, koTriggerResults, energyCostPaid, recoilDamage, attackerIsKO }
+   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, weaknessApplied, finalDamage, isKO, attacker, defender, damagePrevented, preKoSurvivalResult, koTriggerResults, energyCostPaid, recoilDamage, attackerIsKO, targetLocation }
    */
-  executeAttack(attackingPlayerId, attack) {
+  executeAttack(attackingPlayerId, attack, target = null) {
     const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
 
     const attacker = this.gameState.players[attackingPlayerId].activePokemon;
-    const defender = this.gameState.players[defendingPlayerId].activePokemon;
+
+    // Default to active target if not specified (backward compatibility)
+    const effectiveTarget = target || { location: 'active' };
+
+    // Get defender based on target
+    const defender = this.getTargetPokemon(defendingPlayerId, effectiveTarget);
+
+    // Validate target exists (GAP-015)
+    if (!defender) {
+      throw new Error(`Target not found: ${JSON.stringify(effectiveTarget)}`);
+    }
 
     if (!attacker) {
       throw new Error(`${attackingPlayerId} has no active Pokémon to attack with`);
-    }
-    if (!defender) {
-      throw new Error(`${defendingPlayerId} has no active Pokémon to attack`);
     }
 
     // Check temporary cannot_attack effect (GAP-014)
@@ -508,7 +584,7 @@ class AttackSystem {
         pokemonId: defender.id,
         attackingPlayerId: attackingPlayerId,
         attackingPokemonId: attacker.id,
-        wasActive: true, // Active Pokémon can only be attacked in Active Spot
+        wasActive: effectiveTarget.location === 'active', // True if targeted active, false if benched (GAP-015)
         source: 'attack'
       });
     }
@@ -568,7 +644,8 @@ class AttackSystem {
       recoilDamageApplied,
       attackerIsKO,
       attackerHpAfter: attacker.currentHp,
-      temporaryEffectResult
+      temporaryEffectResult,
+      targetLocation: effectiveTarget.location // 'active' or 'banque' (GAP-015)
     };
 
     // Log the attack event (before pre_ko_survival log for proper order)
@@ -577,6 +654,7 @@ class AttackSystem {
       attackingPlayer: attackingPlayerId,
       defendingPlayer: defendingPlayerId,
       attack: attack.name || 'Unknown',
+      target: effectiveTarget, // Include target information (GAP-015)
       ...result
     });
 
