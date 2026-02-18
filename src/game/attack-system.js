@@ -10,6 +10,7 @@
  * GAP-010: [Importante][C1] Reducción de daño al oponente (Luxray Intimidating Fang)
  * GAP-011: [Crítico][C2] Sistema completo de ataques
  * GAP-012: [Importante][C2] Daño escalado por Energía adjunta (Celebi ex)
+ * GAP-013: [Importante][C2] Auto-daño (recoil) (Arcanine)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -43,6 +44,20 @@
  * - Celebi ex: damage 10 + 10 per energy attached
  * - Gallade ex: damage 10 + 10 per energy attached
  *
+ * Supported recoil damage (GAP-013):
+ * - recoilDamage (attack level): self-damage dealt to the attacker after attacking
+ *   - recoilDamage: number - fixed damage to attacker (always)
+ *   - recoilDamage: { amount: number, condition: 'on_ko' } - only if defender is KO'd
+ *   - Recoil damage bypasses damage modifiers (it's self-inflicted, not an attack)
+ *   - Attacker can be KO'd by their own recoil
+ *
+ * Real-card examples of recoilDamage (GAP-013):
+ * - Arcanine (Heat Tackle): "This Pokémon also does 20 damage to itself."
+ * - Arcanine ex (Inferno Onrush): "This Pokémon also does 30 damage to itself."
+ * - Rampardos (Head Smash): "This Pokémon also does 30 damage to itself."
+ * - Vespiquen (Reckless Charge): "This Pokémon also does 20 damage to itself."
+ * - Conditional: "If your opponent's Pokémon is KO'd, this Pokémon also does 50 damage to itself."
+ *
  * Attack execution flow:
  * 1. Validate energy costs (GAP-011) - check if attacker has enough energy
  * 2. Get base damage from the attack definition
@@ -57,7 +72,8 @@
  * 11. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
  * 12. Determine if the defending Pokémon is knocked out (HP <= 0)
  * 13. Handle KO-triggered abilities (GAP-005) if KO'd
- * 14. Log the attack event
+ * 14. Apply recoil damage to attacker (GAP-013) - self-damage after attacking
+ * 15. Log the attack event
  */
 
 class AttackSystem {
@@ -271,6 +287,52 @@ class AttackSystem {
   }
 
   // ---------------------------------------------------------------------------
+  // Recoil Damage Calculation (GAP-013)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Calculate the recoil damage that the attacker takes after using an attack.
+   *
+   * Supported formats:
+   * - number: fixed recoil damage (always applied)
+   *   Example: recoilDamage: 20 → attacker takes 20 damage
+   * - { amount: number, condition: 'on_ko' }: recoil only if defender was KO'd
+   *   Example: recoilDamage: { amount: 50, condition: 'on_ko' }
+   *
+   * Recoil damage bypasses all damage modifiers — it's self-inflicted damage.
+   *
+   * @param {number|Object} recoilDamage - Recoil damage config from attack definition
+   * @param {boolean} defenderWasKO - Whether the defender was KO'd by this attack
+   * @returns {number} Amount of recoil damage to apply to the attacker
+   */
+  calculateRecoilDamage(recoilDamage, defenderWasKO = false) {
+    if (!recoilDamage) {
+      return 0;
+    }
+
+    // Simple fixed number: always apply
+    if (typeof recoilDamage === 'number') {
+      return recoilDamage;
+    }
+
+    // Object format with optional condition
+    if (typeof recoilDamage === 'object') {
+      const amount = recoilDamage.amount || 0;
+      const condition = recoilDamage.condition || null;
+
+      if (condition === 'on_ko') {
+        // Only apply recoil if the defender was knocked out
+        return defenderWasKO ? amount : 0;
+      }
+
+      // No condition: always apply
+      return amount;
+    }
+
+    return 0;
+  }
+
+  // ---------------------------------------------------------------------------
   // Attack Execution
   // ---------------------------------------------------------------------------
 
@@ -279,9 +341,10 @@ class AttackSystem {
    * against the active Pokémon of the defending player.
    *
    * @param {string} attackingPlayerId - 'player1' or 'player2'
-   * @param {Object} attack - Attack definition: { name: string, damage: number, energyCost?: Array, coinFlip?: Function }
+   * @param {Object} attack - Attack definition: { name: string, damage: number, energyCost?: Array, coinFlip?: Function, recoilDamage?: number|Object }
    * @param {Function} [attack.coinFlip] - Optional deterministic coin-flip function for tests; defaults to random
-   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, weaknessApplied, finalDamage, isKO, attacker, defender, damagePrevented, preKoSurvivalResult, koTriggerResults, energyCostPaid }
+   * @param {number|Object} [attack.recoilDamage] - Optional recoil damage config (GAP-013)
+   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, weaknessApplied, finalDamage, isKO, attacker, defender, damagePrevented, preKoSurvivalResult, koTriggerResults, energyCostPaid, recoilDamage, attackerIsKO }
    */
   executeAttack(attackingPlayerId, attack) {
     const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
@@ -415,6 +478,24 @@ class AttackSystem {
       });
     }
 
+    // Apply recoil damage to attacker (GAP-013)
+    // Recoil bypasses damage modifiers — it's self-inflicted damage
+    let recoilDamageApplied = 0;
+    let attackerIsKO = false;
+    if (attack.recoilDamage) {
+      recoilDamageApplied = this.calculateRecoilDamage(attack.recoilDamage, isKO);
+
+      if (recoilDamageApplied > 0) {
+        // Initialize attacker's currentHp if not already set
+        if (attacker.currentHp === undefined || attacker.currentHp === null) {
+          attacker.currentHp = attacker.hp || 0;
+        }
+
+        attacker.currentHp = Math.max(0, attacker.currentHp - recoilDamageApplied);
+        attackerIsKO = attacker.currentHp <= 0;
+      }
+    }
+
     const result = {
       baseDamage,
       damageScaling,
@@ -430,7 +511,10 @@ class AttackSystem {
       defenderHpAfter: defender.currentHp,
       koTriggerResults,
       preKoSurvivalResult,
-      energyCostPaid
+      energyCostPaid,
+      recoilDamageApplied,
+      attackerIsKO,
+      attackerHpAfter: attacker.currentHp
     };
 
     // Log the attack event (before pre_ko_survival log for proper order)
@@ -453,6 +537,19 @@ class AttackSystem {
         coinFlip: preKoSurvivalResult.coinFlip,
         survived: preKoSurvivalResult.survived,
         hpAfter: preKoSurvivalResult.survived ? 1 : 0
+      });
+    }
+
+    // Log recoil damage event (GAP-013)
+    if (recoilDamageApplied > 0) {
+      this.gameState.turnLog.push({
+        type: 'recoil_damage',
+        playerId: attackingPlayerId,
+        pokemonId: attacker.id,
+        pokemonName: attacker.name,
+        recoilDamage: recoilDamageApplied,
+        attackerIsKO,
+        attackerHpAfter: attacker.currentHp
       });
     }
 
