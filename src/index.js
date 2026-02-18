@@ -16,6 +16,7 @@ const AbilitySystem = require('./game/ability-system');
 const AttackSystem = require('./game/attack-system');
 const { StatusConditionSystem, SPECIAL_CONDITIONS } = require('./game/status-condition-system');
 const ActivatedAbilitySystem = require('./game/activated-ability-system');
+const KoTriggerSystem = require('./game/ko-trigger-system');
 
 /**
  * Create a new game instance
@@ -30,7 +31,8 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
   const energySystem = new EnergySystem(gameState);
   const deckManager = new DeckManager(gameState);
   const abilitySystem = new AbilitySystem(gameState);
-  const attackSystem = new AttackSystem(gameState, abilitySystem);
+  const koTriggerSystem = new KoTriggerSystem(gameState);
+  const attackSystem = new AttackSystem(gameState, abilitySystem, koTriggerSystem);
   const statusConditionSystem = new StatusConditionSystem(gameState, abilitySystem);
   const activatedAbilitySystem = new ActivatedAbilitySystem(gameState, abilitySystem);
 
@@ -46,6 +48,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
     supporterSystem,
     deckManager,
     abilitySystem,
+    koTriggerSystem,
     attackSystem,
     statusConditionSystem,
     activatedAbilitySystem,
@@ -67,5 +70,6 @@ module.exports = {
   StatusConditionSystem,
   SPECIAL_CONDITIONS,
   ActivatedAbilitySystem,
+  KoTriggerSystem,
   createGame
 };

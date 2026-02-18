@@ -1,0 +1,243 @@
+[
+  {
+    "id": "A3-010",
+    "name": "Rowlet",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Skill Dive",
+        "damage": 0,
+        "energyCost": [
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A3-010-2",
+    "name": "Rowlet",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Skill Dive",
+        "damage": 0,
+        "energyCost": [
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A3a-004",
+    "name": "Dartrix",
+    "supertype": "Pokémon",
+    "hp": 80,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Skill Dive",
+        "damage": 0,
+        "energyCost": [
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "A3-012",
+    "name": "Decidueye ex",
+    "supertype": "Pokémon",
+    "hp": 170,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Pierce the Pain",
+        "damage": 0,
+        "energyCost": [
+          "C",
+          "C"
+        ]
+      },
+      {
+        "name": "Razor Leaf",
+        "damage": 80,
+        "energyCost": [
+          "G",
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A3-012-2",
+    "name": "Decidueye ex",
+    "supertype": "Pokémon",
+    "hp": 170,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Pierce the Pain",
+        "damage": 0,
+        "energyCost": [
+          "C",
+          "C"
+        ]
+      },
+      {
+        "name": "Razor Leaf",
+        "damage": 80,
+        "energyCost": [
+          "G",
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A3a-005",
+    "name": "Decidueye",
+    "supertype": "Pokémon",
+    "hp": 130,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Sniping Arrow",
+        "damage": 0,
+        "energyCost": [
+          "G",
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B1-109",
+    "name": "Chingling",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "0 Jingly Noise",
+        "damage": 10,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A3a-008",
+    "name": "Kartana",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Thrash Metal",
+        "damage": 40,
+        "energyCost": [
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225-2",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-348",
+    "name": "Lillie",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-328",
+    "name": "Erika",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314-2",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B1a-067",
+    "name": "Quick-Grow Extract",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-324",
+    "name": "Leaf Cape",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  }
+]

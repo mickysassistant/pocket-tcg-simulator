@@ -29,10 +29,12 @@ class AttackSystem {
   /**
    * @param {Object} gameState - GameState instance
    * @param {Object} abilitySystem - AbilitySystem instance
+   * @param {Object} koTriggerSystem - KoTriggerSystem instance (optional)
    */
-  constructor(gameState, abilitySystem) {
+  constructor(gameState, abilitySystem, koTriggerSystem = null) {
     this.gameState = gameState;
     this.abilitySystem = abilitySystem;
+    this.koTriggerSystem = koTriggerSystem;
   }
 
   // ---------------------------------------------------------------------------
@@ -80,6 +82,19 @@ class AttackSystem {
     defender.currentHp = Math.max(0, defender.currentHp - finalDamage);
     const isKO = defender.currentHp <= 0;
 
+    // Handle KO-triggered abilities (GAP-005)
+    let koTriggerResults = [];
+    if (isKO && this.koTriggerSystem) {
+      koTriggerResults = this.koTriggerSystem.handleKnockout({
+        playerId: defendingPlayerId,
+        pokemonId: defender.id,
+        attackingPlayerId: attackingPlayerId,
+        attackingPokemonId: attacker.id,
+        wasActive: true, // Active Pokémon can only be attacked in Active Spot
+        source: 'attack'
+      });
+    }
+
     const result = {
       baseDamage,
       bonusApplied,
@@ -88,7 +103,8 @@ class AttackSystem {
       isKO,
       attackerName: attacker.name,
       defenderName: defender.name,
-      defenderHpAfter: defender.currentHp
+      defenderHpAfter: defender.currentHp,
+      koTriggerResults
     };
 
     // Log the attack event
