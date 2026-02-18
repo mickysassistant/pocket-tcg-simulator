@@ -1208,10 +1208,10 @@ See README.md for full action contracts and schemas.
 
             switch (supporterName) {
               case "Professor's Research":
-                // Discard hand, then draw 2 cards
-                const discardedHand = [...player.hand];
+                // Discard hand (excluding the supporter card itself, which is discarded by post-switch code)
+                const discardedHand = player.hand.filter(c => c.id !== cardId);
                 player.hand = [];
-                // Add all discarded cards to discard pile
+                // Add all discarded cards to discard pile (supporter card excluded to avoid double-discard)
                 player.discardPile.push(...discardedHand);
                 // Draw 2 cards
                 gameState.drawCards(playerId, 2, true);
