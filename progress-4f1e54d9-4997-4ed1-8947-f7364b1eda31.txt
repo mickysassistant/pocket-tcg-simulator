@@ -1,0 +1,44 @@
+# Progress Log
+Run: 4f1e54d9-4997-4ed1-8947-f7364b1eda31
+Task: Implementar los 80 gaps identificados en el análisis de research vs implementation.
+Started: 2026-02-18
+
+## Codebase Patterns
+
+- Pure JS (no build), Node.js. Tests run with: `node <test-file>`
+- TEST_CMD: `for test in tests/rules/*.test.js tests/rule-lock-manifest.test.js tests/integration/regression-suite.test.js; do node "$test" || exit 1; done`
+- All systems follow the pattern: `new XyzSystem(gameState)` and are wired in `src/index.js`
+- `createGame()` in `src/index.js` returns a single object with all system instances
+- Tests use a simple `runTest(name, fn)` pattern with custom assert helpers (no external test runner)
+- Game state uses `players.player1/player2` with fields: `deck`, `hand`, `banque`, `activePokemon`, `energyZone`
+- `activePokemon` is a single object; `banque` is an array of Pokémon objects
+- Each Pokémon object has: `id`, `name`, `type`, `hp`, `energy` (array), `playedThisTurn`, etc.
+- AbilitySystem: abilities are keyed as `"playerId:pokemonId"` in a Map
+
+---
+
+## 2026-02-18 - GAP-001: [Crítico][C1] Bonus de daño condicional
+
+- **Implemented:** `src/game/ability-system.js` — new AbilitySystem class
+  - `registerAbility(playerId, pokemonId, abilityDef)` — register passive ability
+  - `removeAbilities(playerId, pokemonId)` — remove on KO/retreat
+  - `removeAllAbilitiesForPlayer(playerId)` — board reset
+  - `evaluateCondition(condition, playerId, pokemonId)` — continuous eval
+  - Condition types: `always`, `pokemon_in_play`, `pokemon_type_in_play`, `has_energy_count`, `is_active`, `opponent_has_pokemon_type`
+  - `getDamageBonus(attackingPlayerId)` — aggregate bonus from passive abilities
+  - `getDamageReduction(defendingPlayerId)` — aggregate reduction
+  - `applyDamageModifiers(attacker, defender, baseDamage)` — final damage calc
+  - `getActiveAbilities(playerId)` — inspection of currently-active abilities
+- **Updated:** `src/index.js` — AbilitySystem exported, `abilitySystem` added to `createGame()` return value
+- **Tests:** `tests/rules/conditional-damage-bonus.test.js` — 18 tests
+  - Carnivine pattern (+30 when Arceus in play on own side)
+  - Tyranitar Power Link pattern (pre-evo check)
+  - Stacking multiple abilities
+  - applyDamageModifiers with bonus + reduction, min 0
+  - Continuous evaluation (conditions checked live against game state)
+  - Case-insensitive pokemon name matching
+  - is_active, pokemon_type_in_play conditions
+  - removeAbilities / removeAllAbilitiesForPlayer
+- **Learnings:** Abilities key as `playerId:pokemonId` in Map. Conditions evaluate live on each getDamageBonus() call — no caching needed. Tests must not register a Pokémon under a name that also satisfies its own condition (e.g., Tyranitar checking for "Tyranitar").
+
+---
