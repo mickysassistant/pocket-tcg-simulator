@@ -182,7 +182,18 @@ EXAMPLES:
           hp: 60,
           types: ['Darkness'],
           subtype: 'Basic',
-          retreatCost: 2
+          retreatCost: 2,
+          attacks: [
+            {
+              name: 'Headbutt',
+              damage: 20,
+              energyCost: ['D']
+            }
+          ],
+          weakness: {
+            type: 'Fighting',
+            amount: 20
+          }
         };
         const testPokemon2 = {
           id: 'A3a-042',
@@ -191,7 +202,18 @@ EXAMPLES:
           hp: 70,
           types: ['Darkness'],
           subtype: 'Basic',
-          retreatCost: 1
+          retreatCost: 1,
+          attacks: [
+            {
+              name: 'Quick Attack',
+              damage: 10,
+              energyCost: ['D']
+            }
+          ],
+          weakness: {
+            type: 'Fighting',
+            amount: 20
+          }
         };
         game.gameState.players.player1.activePokemon = { ...testPokemon1, attachedEnergy: [] };
         game.gameState.players.player1.banque = [
@@ -203,10 +225,8 @@ EXAMPLES:
           { ...testPokemon2, id: 'A3a-042-2', attachedEnergy: [] }
         ];
 
-        // Add energy to player1's active Pokemon for retreat testing (needs 2 energy for retreat)
-        for (let i = 0; i < 3; i++) {
-          game.gameState.players.player1.activePokemon.attachedEnergy.push({ type: 'Basic Energy', energyType: 'Colorless' });
-        }
+        // Note: We don't add initial energy to allow testing of energy-dependent actions
+        // Tests will attach energy as needed using attach_energy action
 
         // Add some Basic Pokemon to players' hands for play_pokemon testing
         const handPokemon1 = {

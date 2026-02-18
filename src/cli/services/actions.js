@@ -212,6 +212,29 @@ const ACTIONS = {
         }
       }
     }
+  },
+
+  // Attack action
+  attack: {
+    id: 'attack',
+    name: 'Attack',
+    description: 'Execute an attack with the active Pokémon',
+    sessionRequired: true,
+    schema: {
+      type: 'object',
+      required: ['playerId', 'attackName'],
+      properties: {
+        playerId: {
+          type: 'string',
+          enum: ['player1', 'player2'],
+          description: 'Player attacking'
+        },
+        attackName: {
+          type: 'string',
+          description: 'Name of the attack to execute'
+        }
+      }
+    }
   }
 };
 

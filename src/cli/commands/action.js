@@ -12,7 +12,7 @@
 const actions = require('../services/actions');
 const sessions = require('../services/sessions');
 const state = require('../services/state');
-const { GameState, TurnManager, EvolutionSystem, SupporterSystem, EnergySystem } = require('../../index');
+const { GameState, TurnManager, EvolutionSystem, SupporterSystem, EnergySystem, WinCondition } = require('../../index');
 
 /**
  * Parse --session flag from positional args
@@ -940,6 +940,192 @@ See README.md for full action contracts and schemas.
             break;
           }
 
+          case 'attack': {
+            const { playerId, attackName } = payload;
+
+            // Validate phase is 'main'
+            if (gameState.phase !== 'main') {
+              const errorData = {
+                error: 'Wrong phase',
+                reason: 'WRONG_PHASE',
+                message: `Pokemon can only attack during main phase, current phase is ${gameState.phase}.`,
+                currentPhase: gameState.phase,
+                expectedPhase: 'main'
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that it's this player's turn
+            if (gameState.currentPlayer !== playerId) {
+              const errorData = {
+                error: 'Wrong turn',
+                reason: 'WRONG_TURN',
+                message: `Cannot attack: it is currently ${gameState.currentPlayer}'s turn, not ${playerId}'s turn.`,
+                currentPlayer: gameState.currentPlayer,
+                requestedPlayer: playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const player = gameState.players[playerId];
+            const opponentId = playerId === 'player1' ? 'player2' : 'player1';
+            const opponent = gameState.players[opponentId];
+
+            // Validate that player has an active Pokemon
+            if (!player.activePokemon) {
+              const errorData = {
+                error: 'No active Pokemon',
+                reason: 'NO_ACTIVE_POKEMON',
+                message: `Player ${playerId} has no active Pokemon to attack with.`,
+                playerId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Validate that opponent has an active Pokemon
+            if (!opponent.activePokemon) {
+              const errorData = {
+                error: 'Opponent has no active Pokemon',
+                reason: 'NO_TARGET_POKEMON',
+                message: `Opponent ${opponentId} has no active Pokemon to attack.`,
+                opponentId
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            const activePokemon = player.activePokemon;
+            const targetPokemon = opponent.activePokemon;
+
+            // Find the attack by name
+            const attack = activePokemon.attacks && activePokemon.attacks.find(a => a.name === attackName);
+            if (!attack) {
+              const errorData = {
+                error: 'Attack not found',
+                reason: 'ATTACK_NOT_FOUND',
+                message: `Pokemon ${activePokemon.name} does not have an attack named "${attackName}".`,
+                playerId,
+                pokemonId: activePokemon.id,
+                pokemonName: activePokemon.name,
+                attackName,
+                availableAttacks: activePokemon.attacks ? activePokemon.attacks.map(a => a.name) : []
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Calculate energy cost
+            const energyCost = attack.energyCost ? attack.energyCost.length : 0;
+
+            // Check if active Pokemon has enough energy
+            const attachedEnergy = activePokemon.attachedEnergy || [];
+            if (attachedEnergy.length < energyCost) {
+              const errorData = {
+                error: 'Insufficient energy',
+                reason: 'INSUFFICIENT_ENERGY',
+                message: `Active Pokemon ${activePokemon.name} needs ${energyCost} energy to use ${attackName} but only has ${attachedEnergy.length}.`,
+                playerId,
+                pokemonId: activePokemon.id,
+                pokemonName: activePokemon.name,
+                attackName,
+                energyCost,
+                currentEnergy: attachedEnergy.length
+              };
+              argv.formatOutput(errorData);
+              process.exit(1);
+            }
+
+            // Apply damage
+            let damage = attack.damage || 0;
+
+            // Apply weakness bonus (+20 if target is weak to attacker's type)
+            if (targetPokemon.weakness && activePokemon.types) {
+              const attackerType = activePokemon.types[0]; // Primary type
+              if (targetPokemon.weakness.type === attackerType) {
+                const weaknessBonus = targetPokemon.weakness.amount || 20;
+                damage += weaknessBonus;
+              }
+            }
+
+            // Apply damage to target Pokemon
+            targetPokemon.hp = Math.max(0, targetPokemon.hp - damage);
+
+            // Track KO
+            let ko = false;
+            let newActivePokemon = null;
+
+            // Check if target Pokemon is defeated (HP <= 0)
+            if (targetPokemon.hp <= 0) {
+              ko = true;
+
+              // Add point to player's score
+              if (!player.points) {
+                player.points = 0;
+              }
+              player.points++;
+
+              // Move next bench Pokemon to active if available
+              if (opponent.banque.length > 0) {
+                newActivePokemon = opponent.banque.shift();
+                opponent.activePokemon = newActivePokemon;
+              } else {
+                opponent.activePokemon = null;
+              }
+
+              // Check win condition
+              const winCondition = new WinCondition(gameState, 30);
+              const winResult = winCondition.checkWinCondition();
+
+              if (winResult) {
+                // Update session status to completed
+                sessions.update(session.id, { status: 'completed' });
+                session.status = 'completed';
+
+                result.winner = winResult.winner;
+                result.endReason = winResult.reason;
+                result.endMessage = winResult.message;
+                result.gameEnded = true;
+              }
+            }
+
+            // Change phase to 'end' (turn ends after attacking)
+            gameState.phase = 'end';
+
+            // Prepare result
+            result = {
+              actionId: subcommand,
+              sessionId: session.id,
+              sessionName: session.name,
+              turnNumber: gameState.turnNumber,
+              currentPlayer: gameState.currentPlayer,
+              phase: gameState.phase,
+              playerId,
+              opponentId,
+              attackName,
+              damage,
+              ko,
+              newActivePokemon: newActivePokemon ? {
+                id: newActivePokemon.id,
+                name: newActivePokemon.name,
+                hp: newActivePokemon.hp
+              } : null,
+              targetPokemon: {
+                id: targetPokemon.id,
+                name: targetPokemon.name,
+                hp: targetPokemon.hp,
+                originalHp: targetPokemon.hp + damage
+              },
+              message: ko
+                ? `Knocked out ${targetPokemon.name} with ${attackName} (${damage} damage)!${newActivePokemon ? ` ${opponentId} sent out ${newActivePokemon.name}.` : ' No more Pokemon on bench.'}`
+                : `${activePokemon.name} used ${attackName} for ${damage} damage to ${targetPokemon.name}.`
+            };
+
+            break;
+          }
+
           default: {
             const errorData = {
               error: 'Action not yet implemented',
@@ -1010,6 +1196,20 @@ See README.md for full action contracts and schemas.
             console.log(`Retreat cost: ${result.retreatCost}`);
             console.log(`Energy discarded: ${result.energyDiscarded}`);
             console.log(`Remaining energy on previous active: ${result.remainingEnergy}`);
+          } else if (subcommand === 'attack') {
+            console.log(`Attacker: ${result.currentPlayer}`);
+            console.log(`Attack: ${result.attackName}`);
+            console.log(`Damage: ${result.damage}`);
+            console.log(`Target: ${result.targetPokemon.name} (${result.targetPokemon.id})`);
+            console.log(`Target HP: ${result.targetPokemon.hp} / ${result.targetPokemon.originalHp}`);
+            if (result.ko) {
+              console.log(`Result: KO!`);
+              if (result.newActivePokemon) {
+                console.log(`New opponent active: ${result.newActivePokemon.name} (${result.newActivePokemon.id})`);
+              } else {
+                console.log(`No more Pokemon on opponent's bench`);
+              }
+            }
           }
 
           console.log(`\n${result.message}`);
