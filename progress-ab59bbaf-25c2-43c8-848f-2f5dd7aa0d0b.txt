@@ -219,3 +219,49 @@ Started: 2025-02-17
   - Session creation test data needs evolution cards matching test expectations
   - Test data should include both Stage 1 and Stage 2 evolution cards for testing evolution chains
 ---
+## 2025-02-18 - ACT-006: Añadir y ejecutar retreat: retirar Pokémon activo a la banca
+- Added retreatedThisTurn tracking to GameState to prevent multiple retreats per turn:
+  - Added retreatedThisTurn field to GameState (boolean flag)
+  - Updated TurnManager.startTurn() to reset this flag at turn start
+  - Updated GameState.fromJSON() to restore this flag
+  - Action handler validates this flag and returns ALREADY_RETREATED error if already retreated
+- Added retreat action definition to actions.js:
+  - id: 'retreat'
+  - schema: { playerId, benchPokemonId }
+  - description: 'Retreat active Pokémon to bench and bring a bench Pokémon to active'
+- Added retreat case to action command handler with validations:
+  - Phase must be 'main' (WRONG_PHASE error)
+  - Player must be current player (WRONG_TURN error)
+  - Not already retreated this turn (ALREADY_RETREATED error)
+  - Must have active Pokemon (NO_ACTIVE_POKEMON error)
+  - benchPokemonId must be in player's bench (NO_BENCH_POKEMON error)
+  - Active Pokemon must have sufficient energy for retreat cost (INSUFFICIENT_ENERGY error)
+- Retreat execution:
+  - Calculates retreat cost from active Pokemon's retreatCost property
+  - Validates that active Pokemon has enough attached energy
+  - Discards energy equal to retreat cost (removes from attachedEnergy array)
+  - Swaps active Pokemon with bench Pokemon (active → bench, bench → active)
+  - Marks retreatedThisTurn = true
+- Updated state saving to include retreatedThisTurn field
+- Updated CLI output formatting for retreat specific fields
+- Files changed:
+  - src/game/game-state.js: Added retreatedThisTurn field and fromJSON() support
+  - src/game/turn-manager.js: Reset retreatedThisTurn in startTurn()
+  - src/cli/services/actions.js: Added retreat action definition
+  - src/cli/commands/action.js: Added retreat case with full validation logic and state saving
+  - tests/cli/retreat-action.test.js: New test file with 20 tests
+- Tests: 20 new tests covering all acceptance criteria:
+  - AC1: retreat executes without error, returns updated state, swaps active and bench Pokemon
+  - AC2: INSUFFICIENT_ENERGY error when active Pokemon has insufficient energy for retreat cost
+  - AC3: NO_BENCH_POKEMON error for non-existent bench Pokemon or opponent's bench
+  - AC4: ALREADY_RETREATED error when trying to retreat twice in same turn
+  - Additional tests: WRONG_PHASE, WRONG_TURN, payload validation, energy discard tracking, state saving, retreat allowed again after turn ends, player2
+- **Learnings:**
+  - Retreat cost is defined on the Pokemon card as a retreatCost property (default 0)
+  - Energy is discarded from the active Pokemon's attachedEnergy array (splice from beginning)
+  - The retreatedThisTurn tracking must be in GameState to persist across action executions
+  - RetreatedThisTurn is a simple boolean (unlike evolvedThisTurn which is a Set), as only one retreat is allowed per turn total
+  - Pokemon can only retreat once per turn, regardless of which Pokemon is being retreated
+  - Validation order: phase → player → retreatedThisTurn → active Pokemon exists → bench Pokemon exists → energy cost → swap
+  - The swap operation exchanges the active Pokemon with the bench Pokemon at the specified bench index
+  - Energy discarded is tracked and included in the response (energyDiscarded, remainingEnergy)
