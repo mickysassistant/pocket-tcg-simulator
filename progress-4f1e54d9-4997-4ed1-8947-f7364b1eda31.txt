@@ -232,3 +232,31 @@ Started: 2026-02-18
 - **Learnings:** Damage prevention is checked BEFORE damage modifiers (bonus/reduction) in AttackSystem; prevention uses case-sensitive matching for 'ex' in Pokémon names (must be lowercase 'ex'); `calculateDamage()` is a preview/dry-run and does NOT check prevention, which is intentional for UI previews; Pokémon ex are identified by checking if the name contains 'ex' string; prevention only applies to the defending Pokémon's abilities (attacker's abilities cannot prevent damage to themselves)
 
 ---
+
+## 2026-02-18 - GAP-008: [Importante][C1] Switch desde Banca a Activo (Solgaleo ex (Rising Road))
+- Extended ActivatedAbilitySystem (src/game/activated-ability-system.js) with switch support:
+  - Constructor now accepts optional `statusConditionSystem` parameter
+  - `_executeSwitchPokemon(ability, playerId, params)` — switches bench Pokemon with active Pokemon
+  - Validates that ability Pokemon is on bench and has an active Pokemon to switch with
+  - Cleans all special conditions from both Pokemon during switch (baseline TCG behavior)
+  - Effect type `switch_pokemon`: no additional configuration needed beyond the effect type
+  - All events logged to gameState.turnLog with details: fromPokemonId, toPokemonId, conditionsRemoved
+- Updated ActivatedAbilitySystem JSDoc to document switch_pokemon effect type
+- Wired StatusConditionSystem into ActivatedAbilitySystem in src/index.js (constructor parameter)
+- Tests: tests/rules/switch-from-bench.test.js — 16 tests covering:
+  - Basic switch from bench to active
+  - Switch cleans special conditions from Pokemon moving to bench
+  - Switch cleans special conditions from Pokemon moving to active
+  - Switch cleans all special condition types (Poison, Burn, Sleep, Paralyze, Confuse)
+  - Cannot switch if Pokemon is not on bench
+  - Cannot switch if no active Pokemon
+  - Once per turn usage limit works
+  - Once per turn can be used again after turn reset
+  - Condition validation prevents activation when not met
+  - Cannot activate opponent's ability
+  - Switch with multiple Pokemon on bench finds the correct one
+  - Turn log contains switch event
+  - Remove abilities cleans up switch ability
+  - Switch cleans conditions and logs them
+- All 290+ tests across the full suite pass (including new switch-from-bench tests)
+- **Learnings:** Switch abilities follow the same pattern as other activated abilities with usage limits; special condition cleaning during switch follows TCG baseline (all conditions removed on both Pokemon); need to manually switch Pokemon back in tests when testing once-per-turn reset; switch effect requires both statusConditionSystem and gameState to be properly wired for condition cleaning
