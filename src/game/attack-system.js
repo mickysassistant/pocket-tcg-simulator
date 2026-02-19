@@ -14,6 +14,7 @@
  * GAP-014: [Importante][C2] Efectos temporales sobre el defensor (Vulpix Tail Whip)
  * GAP-015: [Importante][C2] Snipe (Luxray) - Selección de target (Active/Banca)
  * GAP-016: [Importante][C2] Spread damage (Raichu (Gigashock))
+ * GAP-017: [Importante][C2] Daño escalado por Pokémon en Banca (Cinccino)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -70,6 +71,21 @@
  * - Each target's damage is calculated independently (modifiers, weakness, etc.)
  * - KO triggers fire for each target that is KO'd
  *
+ * Supported bench scaling (GAP-017):
+ * - benchScaling (attack level): adds damage based on number of Pokémon in Banca
+ *   - benchScaling: number - adds this much damage per Pokémon in Banca (counts self's bench by default)
+ *   - benchScaling: { perPokemon: number, player: 'self' | 'opponent', type?: string, name?: string }
+ *     - perPokemon: damage to add per Pokémon
+ *     - player: 'self' (default) = count your own bench, 'opponent' = count opponent's bench
+ *     - type: optional, only count Pokémon of this type (e.g., 'electric')
+ *     - name: optional, only count Pokémon with this name (e.g., 'Nidoking')
+ *
+ * Real-card examples of benchScaling (GAP-017):
+ * - Cinccino (Do the Wave): "This attack does 30 damage for each of your Benched Pokémon." → { perPokemon: 30, player: 'self' }
+ * - Pikachu (Circle Circuit): "This attack does 10 damage for each of your Benched [L] Pokémon." → { perPokemon: 10, player: 'self', type: 'electric' }
+ * - Beheeyem (Mind Jack): "This attack does 20 more damage for each of your opponent's Benched Pokémon." → { perPokemon: 20, player: 'opponent' }
+ * - Nidoqueen (Lovestrike): "This attack does 50 more damage for each of your Benched Nidoking." → { perPokemon: 50, player: 'self', name: 'Nidoking' }
+ *
  * Real-card examples of recoilDamage (GAP-013):
  * - Arcanine (Heat Tackle): "This Pokémon also does 20 damage to itself."
  * - Arcanine ex (Inferno Onrush): "This Pokémon also does 30 damage to itself."
@@ -86,19 +102,20 @@
  * 1. Validate energy costs (GAP-011) - check if attacker has enough energy
  * 2. Get base damage from the attack definition
  * 3. Apply damageScaling (GAP-012) - add damage based on attached energy
- * 4. Check if damage should be prevented (GAP-006)
- * 5. If not prevented, apply damage_bonus from attacking player's passive abilities
- * 6. Apply damage_reduction from defending player's passive abilities
- * 7. Apply opponent_damage_reduction from defending player's passive abilities
- * 8. Apply weakness (GAP-011) - add +20 damage if defender is weak to attacker's type
- * 9. Clamp final damage to minimum 0
- * 10. Apply final damage to defending Pokémon's current HP
- * 11. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
- * 12. Determine if the defending Pokémon is knocked out (HP <= 0)
- * 13. Handle KO-triggered abilities (GAP-005) if KO'd
- * 14. Apply recoil damage to attacker (GAP-013) - self-damage after attacking
- * 15. Apply spread damage to Benched Pokémon (GAP-016) - if attack has spreadDamage config
- * 16. Log the attack event
+ * 4. Apply benchScaling (GAP-017) - add damage based on Pokémon in Banca
+ * 5. Check if damage should be prevented (GAP-006)
+ * 6. If not prevented, apply damage_bonus from attacking player's passive abilities
+ * 7. Apply damage_reduction from defending player's passive abilities
+ * 8. Apply opponent_damage_reduction from defending player's passive abilities
+ * 9. Apply weakness (GAP-011) - add +20 damage if defender is weak to attacker's type
+ * 10. Clamp final damage to minimum 0
+ * 11. Apply final damage to defending Pokémon's current HP
+ * 12. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
+ * 13. Determine if the defending Pokémon is knocked out (HP <= 0)
+ * 14. Handle KO-triggered abilities (GAP-005) if KO'd
+ * 15. Apply recoil damage to attacker (GAP-013) - self-damage after attacking
+ * 16. Apply spread damage to Benched Pokémon (GAP-016) - if attack has spreadDamage config
+ * 17. Log the attack event
  */
 
 class AttackSystem {
@@ -204,6 +221,96 @@ class AttackSystem {
     }
 
     return { canAfford: true };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Damage Scaling by Bench Count (GAP-017)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Calculate damage scaling based on number of Pokémon in Banca.
+   *
+   * Bench scaling format (two supported formats):
+   * 1. Simple: benchScaling: number - adds this much damage per Pokémon in your bench
+   *    Example: benchScaling: 30 adds 30 damage per Benched Pokémon
+   * 2. Object: benchScaling: { perPokemon: number, player?: 'self' | 'opponent', type?: string, name?: string }
+   *    Example: { perPokemon: 30 } adds 30 per Benched Pokémon (your bench)
+   *    Example: { perPokemon: 20, player: 'opponent' } adds 20 per opponent's Benched Pokémon
+   *    Example: { perPokemon: 10, player: 'self', type: 'electric' } adds 10 per electric Pokémon in your bench
+   *    Example: { perPokemon: 50, player: 'self', name: 'Nidoking' } adds 50 per Nidoking in your bench
+   *
+   * Note: In Pocket TCG, the maximum bench size is 3 Pokémon (vs 5 in physical TCG).
+   *
+   * @param {string} attackingPlayerId - 'player1' or 'player2'
+   * @param {number|Object} benchScaling - Bench scaling configuration
+   * @returns {number} Damage to add from bench scaling
+   */
+  calculateBenchScaling(attackingPlayerId, benchScaling) {
+    if (!benchScaling) {
+      return 0;
+    }
+
+    let perPokemon = 0;
+    let targetPlayer = 'self'; // Default: count your own bench
+    let typeFilter = null;
+    let nameFilter = null;
+
+    // Parse benchScaling format
+    if (typeof benchScaling === 'number') {
+      perPokemon = benchScaling;
+    } else if (typeof benchScaling === 'object') {
+      perPokemon = benchScaling.perPokemon || 0;
+      targetPlayer = benchScaling.player || 'self';
+      typeFilter = benchScaling.type || null;
+      nameFilter = benchScaling.name || null;
+    }
+
+    if (perPokemon === 0) {
+      return 0;
+    }
+
+    // Determine which player's bench to count
+    let playerIdToCount;
+    if (targetPlayer === 'self') {
+      playerIdToCount = attackingPlayerId;
+    } else if (targetPlayer === 'opponent') {
+      playerIdToCount = attackingPlayerId === 'player1' ? 'player2' : 'player1';
+    } else {
+      throw new Error(`Invalid bench scaling player: ${targetPlayer}`);
+    }
+
+    const player = this.gameState.players[playerIdToCount];
+    const bench = player.banque || [];
+
+    // Count matching Pokémon in the bench
+    let pokemonCount = 0;
+    bench.forEach(pokemon => {
+      if (!pokemon) {
+        return;
+      }
+
+      // Skip KO'd Pokémon
+      if (pokemon.currentHp !== undefined && pokemon.currentHp <= 0) {
+        return;
+      }
+
+      // Apply filters if specified
+      if (typeFilter) {
+        if (pokemon.type !== typeFilter) {
+          return;
+        }
+      }
+
+      if (nameFilter) {
+        if (pokemon.name !== nameFilter) {
+          return;
+        }
+      }
+
+      pokemonCount++;
+    });
+
+    return pokemonCount * perPokemon;
   }
 
   // ---------------------------------------------------------------------------
@@ -640,9 +747,10 @@ class AttackSystem {
     // since energy is consumed at the end of the turn in Pocket TCG)
     energyCostPaid = true;
 
-    // Calculate base damage including damageScaling (GAP-012)
+    // Calculate base damage including damageScaling (GAP-012) and benchScaling (GAP-017)
     const baseDamage = attack.damage || 0;
     const damageScaling = this.calculateDamageScaling(attacker, attack.damageScaling);
+    const benchScaling = this.calculateBenchScaling(attackingPlayerId, attack.benchScaling);
 
     // Check if damage should be prevented (GAP-006)
     const damagePrevented = this.abilitySystem.preventDamage(
@@ -659,11 +767,11 @@ class AttackSystem {
 
     if (!damagePrevented) {
       // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities + opponent reduction from defender's debuff abilities)
-      // Note: baseDamage includes damageScaling here
+      // Note: baseDamage includes damageScaling and benchScaling here
       const modifierResult = this.abilitySystem.applyDamageModifiers(
         attackingPlayerId,
         defendingPlayerId,
-        baseDamage + damageScaling
+        baseDamage + damageScaling + benchScaling
       );
 
       let damageAfterModifiers = modifierResult.finalDamage;
@@ -795,6 +903,7 @@ class AttackSystem {
     const result = {
       baseDamage,
       damageScaling,
+      benchScaling,
       bonusApplied,
       reductionApplied,
       opponentReductionApplied: opponentReductionApplied || 0,
@@ -873,11 +982,12 @@ class AttackSystem {
 
     // Calculate damage scaling if attack object is provided
     const damageScaling = attack ? this.calculateDamageScaling(attacker, attack.damageScaling) : 0;
+    const benchScaling = attack ? this.calculateBenchScaling(attackingPlayerId, attack.benchScaling) : 0;
 
     const modifierResult = this.abilitySystem.applyDamageModifiers(
       attackingPlayerId,
       defendingPlayerId,
-      baseDamage + damageScaling
+      baseDamage + damageScaling + benchScaling
     );
 
     // Include weakness in calculation
@@ -886,6 +996,7 @@ class AttackSystem {
     return {
       baseDamage,
       damageScaling,
+      benchScaling,
       bonusApplied: modifierResult.bonusApplied,
       reductionApplied: modifierResult.reductionApplied,
       opponentReductionApplied: modifierResult.opponentReductionApplied || 0,
