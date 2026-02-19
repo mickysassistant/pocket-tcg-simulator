@@ -16,6 +16,7 @@
  * GAP-016: [Importante][C2] Spread damage (Raichu (Gigashock))
  * GAP-017: [Importante][C2] Daño escalado por Pokémon en Banca (Cinccino)
  * GAP-018: [Importante][C2] Halve HP (Bidoof)
+ * GAP-019: [Importante][C2] Bonus por "energía extra" adjunta (Blastoise)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -110,6 +111,26 @@
  *
  * Real-card examples of halveHp (GAP-018):
  * - Bidoof (Super Fang): "Halve your opponent's Active Pokémon's remaining HP, rounded down."
+ *
+ * Supported extra energy bonus (GAP-019):
+ * - extraEnergyBonus (attack level): adds damage based on energy beyond the attack cost
+ *   - energyType: string - only count energy of this type (optional)
+ *   - perExtraEnergy: number - damage to add per extra energy
+ *   - threshold: number - minimum extra energy required for bonus to apply (default: 1)
+ *   - bonusAmount: number - fixed bonus if threshold is met (alternative to perExtraEnergy)
+ *
+ * "Extra energy" = total energy attached - energy required by attack cost
+ * Example: Attack costs 3 [W] Energy, Pokémon has 5 [W] Energy attached → 2 extra [W] Energy
+ *
+ * Real-card examples of extraEnergyBonus (GAP-019):
+ * - Blastoise (Hydro Pump): "This attack does 30 more damage for each extra [W] Energy attached."
+ *   → { energyType: 'water', perExtraEnergy: 30 }
+ * - Lapras (Hydro Pump): "If this Pokémon has at least 2 extra [W] Energy attached, this attack does 50 more damage."
+ *   → { energyType: 'water', threshold: 2, bonusAmount: 50 }
+ * - Dhelmise (Energy Whip): "This attack does 20 more damage for each extra [G] Energy attached."
+ *   → { energyType: 'grass', perExtraEnergy: 20 }
+ * - Electivire (Exciting Voltage): "If this Pokémon has at least 3 extra [L] Energy attached, this attack does 90 more damage."
+ *   → { energyType: 'electric', threshold: 3, bonusAmount: 90 }
  *
  * Attack execution flow:
  * 1. Validate energy costs (GAP-011) - check if attacker has enough energy
@@ -384,6 +405,99 @@ class AttackSystem {
     }
 
     return energyCount * perEnergy;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Extra Energy Bonus Calculation (GAP-019)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Calculate bonus damage based on extra energy attached (beyond the attack cost).
+   *
+   * "Extra energy" = total energy attached - energy required by attack cost
+   *
+   * Extra energy bonus format:
+   * - energyType: string - only count energy of this type (optional)
+   * - perExtraEnergy: number - damage to add per extra energy
+   * - threshold: number - minimum extra energy required (default: 1)
+   * - bonusAmount: number - fixed bonus if threshold is met (alternative to perExtraEnergy)
+   *
+   * Two modes of operation:
+   * 1. Per-extra mode: perExtraEnergy specifies damage per extra energy
+   *    Example: { energyType: 'water', perExtraEnergy: 30 }
+   *    If attack costs 3 [W] and Pokémon has 5 [W], bonus = 2 * 30 = 60
+   *
+   * 2. Threshold mode: threshold + bonusAmount for fixed bonus
+   *    Example: { energyType: 'water', threshold: 2, bonusAmount: 50 }
+   *    If attack costs 3 [W] and Pokémon has 5 [W] (2 extra), bonus = 50
+   *    If attack costs 3 [W] and Pokémon has 4 [W] (1 extra), bonus = 0 (below threshold)
+   *
+   * @param {Object} pokemon - Pokémon object with energy array
+   * @param {Array} energyCost - Energy cost array (for calculating "extra" energy)
+   * @param {Object} extraEnergyBonus - Extra energy bonus configuration
+   * @returns {number} Damage bonus from extra energy
+   */
+  calculateExtraEnergyBonus(pokemon, energyCost, extraEnergyBonus) {
+    if (!extraEnergyBonus) {
+      return 0;
+    }
+
+    if (!pokemon || !pokemon.energy || pokemon.energy.length === 0) {
+      return 0;
+    }
+
+    if (!energyCost || energyCost.length === 0) {
+      // No energy cost means all energy is "extra"
+      energyCost = [];
+    }
+
+    // Parse extraEnergyBonus configuration
+    const energyTypeFilter = extraEnergyBonus.energyType || null;
+    const perExtraEnergy = extraEnergyBonus.perExtraEnergy || 0;
+    const threshold = extraEnergyBonus.threshold || 1;
+    const bonusAmount = extraEnergyBonus.bonusAmount || 0;
+
+    // Count required energy by type
+    const requiredByType = {};
+    energyCost.forEach(costType => {
+      const type = costType || 'colorless';
+      requiredByType[type] = (requiredByType[type] || 0) + 1;
+    });
+
+    // Count available energy by type
+    const availableByType = {};
+    pokemon.energy.forEach(energy => {
+      const type = energy.type || 'colorless';
+      availableByType[type] = (availableByType[type] || 0) + 1;
+    });
+
+    let extraEnergyCount = 0;
+
+    if (energyTypeFilter) {
+      // Filter by specific energy type
+      const availableOfFilter = availableByType[energyTypeFilter] || 0;
+      const requiredOfFilter = requiredByType[energyTypeFilter] || 0;
+
+      extraEnergyCount = Math.max(0, availableOfFilter - requiredOfFilter);
+    } else {
+      // Count all extra energy (total - cost)
+      // This is tricky because colorless can satisfy any specific cost
+      // Simplified approach: count total energy minus total cost
+      const totalEnergy = pokemon.energy.length;
+      const totalCost = energyCost.length;
+      extraEnergyCount = Math.max(0, totalEnergy - totalCost);
+    }
+
+    // Apply bonus based on mode
+    if (perExtraEnergy > 0) {
+      // Per-extra mode: bonus = extra energy count * perExtraEnergy
+      return extraEnergyCount * perExtraEnergy;
+    } else if (bonusAmount > 0) {
+      // Threshold mode: bonus = bonusAmount if extra energy >= threshold
+      return (extraEnergyCount >= threshold) ? bonusAmount : 0;
+    }
+
+    return 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -761,10 +875,11 @@ class AttackSystem {
     // since energy is consumed at the end of the turn in Pocket TCG)
     energyCostPaid = true;
 
-    // Calculate base damage including halveHp (GAP-018), damageScaling (GAP-012), and benchScaling (GAP-017)
+    // Calculate base damage including halveHp (GAP-018), damageScaling (GAP-012), benchScaling (GAP-017), and extraEnergyBonus (GAP-019)
     let baseDamage = attack.damage || 0;
     let damageScaling = 0;
     let benchScaling = 0;
+    let extraEnergyBonus = 0;
     let halveHpApplied = false;
 
     // Check if this is a halveHp attack (GAP-018)
@@ -782,6 +897,7 @@ class AttackSystem {
       // Normal damage calculation with scaling
       damageScaling = this.calculateDamageScaling(attacker, attack.damageScaling);
       benchScaling = this.calculateBenchScaling(attackingPlayerId, attack.benchScaling);
+      extraEnergyBonus = this.calculateExtraEnergyBonus(attacker, energyCost, attack.extraEnergyBonus);
     }
 
     // Check if damage should be prevented (GAP-006)
@@ -799,11 +915,11 @@ class AttackSystem {
 
     if (!damagePrevented) {
       // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities + opponent reduction from defender's debuff abilities)
-      // Note: baseDamage includes damageScaling and benchScaling here
+      // Note: baseDamage includes damageScaling, benchScaling, and extraEnergyBonus here
       const modifierResult = this.abilitySystem.applyDamageModifiers(
         attackingPlayerId,
         defendingPlayerId,
-        baseDamage + damageScaling + benchScaling
+        baseDamage + damageScaling + benchScaling + extraEnergyBonus
       );
 
       let damageAfterModifiers = modifierResult.finalDamage;
@@ -936,6 +1052,7 @@ class AttackSystem {
       baseDamage,
       damageScaling,
       benchScaling,
+      extraEnergyBonus,
       halveHpApplied,
       bonusApplied,
       reductionApplied,
@@ -1007,7 +1124,7 @@ class AttackSystem {
    * @param {string} defendingPlayerId
    * @param {number} baseDamage
    * @param {Object} [attack] - Optional attack object with damageScaling property
-   * @returns {Object} { baseDamage, damageScaling, bonusApplied, reductionApplied, opponentReductionApplied, weaknessApplied, finalDamage }
+   * @returns {Object} { baseDamage, damageScaling, benchScaling, extraEnergyBonus, bonusApplied, reductionApplied, opponentReductionApplied, weaknessApplied, finalDamage }
    */
   calculateDamage(attackingPlayerId, defendingPlayerId, baseDamage, attack = null) {
     const attacker = this.gameState.players[attackingPlayerId].activePokemon;
@@ -1016,11 +1133,13 @@ class AttackSystem {
     // Calculate damage scaling if attack object is provided
     const damageScaling = attack ? this.calculateDamageScaling(attacker, attack.damageScaling) : 0;
     const benchScaling = attack ? this.calculateBenchScaling(attackingPlayerId, attack.benchScaling) : 0;
+    const energyCost = attack ? (attack.energyCost || []) : [];
+    const extraEnergyBonus = attack ? this.calculateExtraEnergyBonus(attacker, energyCost, attack.extraEnergyBonus) : 0;
 
     const modifierResult = this.abilitySystem.applyDamageModifiers(
       attackingPlayerId,
       defendingPlayerId,
-      baseDamage + damageScaling + benchScaling
+      baseDamage + damageScaling + benchScaling + extraEnergyBonus
     );
 
     // Include weakness in calculation
@@ -1030,6 +1149,7 @@ class AttackSystem {
       baseDamage,
       damageScaling,
       benchScaling,
+      extraEnergyBonus,
       bonusApplied: modifierResult.bonusApplied,
       reductionApplied: modifierResult.reductionApplied,
       opponentReductionApplied: modifierResult.opponentReductionApplied || 0,

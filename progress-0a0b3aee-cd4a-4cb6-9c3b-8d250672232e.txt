@@ -1,0 +1,34 @@
+# Progress Log
+Run: 0a0b3aee-cd4a-4cb6-9c3b-8d250672232e
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19
+
+## Codebase Patterns
+
+### Testing Framework
+- Tests use a custom assertion framework (assert, assertEqual, assertDeepEqual)
+- Test utilities: createGame(), setActive(), addEnergy()
+- Run tests with: `for test in tests/rules/*.test.js; do node "$test" || exit 1; done`
+
+### Project Structure
+- Main game logic in `src/game/`
+- Tests in `tests/rules/` and `tests/integration/`
+- Main entry point: `src/index.js`
+
+### Attack System Pattern
+- AttackSystem in `src/game/attack-system.js` handles attack execution
+- Damage modifiers flow: base → scaling → modifiers → weakness → final
+- Attack config supports: damageScaling, benchScaling, extraEnergyBonus
+- Result includes: baseDamage, damageScaling, benchScaling, bonusApplied, reductionApplied, weaknessApplied, finalDamage
+
+### Energy Cost Pattern
+- Energy costs are arrays of energy type strings
+- Colorless energy can be satisfied by any energy type
+- Specific types require exact match
+
+### Ability System Pattern
+- AbilitySystem handles passive abilities and damage modifiers
+- Supports: damage_bonus, damage_reduction, damage_prevention, opponent_damage_reduction
+- Register abilities with `abilitySystem.registerAbility()`
+
+---
