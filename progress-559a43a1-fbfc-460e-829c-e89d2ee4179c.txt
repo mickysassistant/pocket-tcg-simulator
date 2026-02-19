@@ -1,0 +1,16 @@
+# Progress Log
+Run: 559a43a1-fbfc-460e-829c-e89d2ee4179c
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19
+
+## Codebase Patterns
+- **Project Structure**: Pure JavaScript/Node.js simulator for Pocket TCG
+- **Testing**: Uses custom test runner with `assert()` functions, not a testing framework
+- **Test naming convention**: tests are organized by feature in `tests/rules/` directory
+- **Ability System**: Use `abilitySystem.registerAbility(playerId, pokemonId, abilityDefinition)` to register abilities
+- **Attack System**: Attack effects are properties on the attack object (e.g., `halveHp: true`, `recoilDamage: 20`)
+- **Damage Modifiers**: Damage modifiers (bonus, reduction, weakness) are applied to the base damage, including halveHp damage
+- **Test file pattern**: Each gap/story has its own test file named like `gap-XXX-feature-name.test.js`
+- **Game State**: Pokémon HP is tracked with both `hp` (max) and `currentHp` (remaining)
+
+---

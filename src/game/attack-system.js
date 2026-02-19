@@ -15,6 +15,7 @@
  * GAP-015: [Importante][C2] Snipe (Luxray) - Selección de target (Active/Banca)
  * GAP-016: [Importante][C2] Spread damage (Raichu (Gigashock))
  * GAP-017: [Importante][C2] Daño escalado por Pokémon en Banca (Cinccino)
+ * GAP-018: [Importante][C2] Halve HP (Bidoof)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -98,24 +99,37 @@
  * - Palkia ex (Dimensional Storm): "This attack also does 20 damage to each of your opponent's Benched Pokémon."
  * - Alolan Ninetales (Frost Breath): "This attack also does 10 damage to each of your opponent's Benched Pokémon."
  *
+ * Supported halve HP effect (GAP-018):
+ * - halveHp (attack level): sets damage to half of the defender's remaining HP (rounded down)
+ *   - halveHp: true - damage = Math.floor(defender.currentHp / 2)
+ *   - When halveHp is true, the attack's base damage is ignored
+ *   - Damage modifiers (bonus, reduction, weakness) still apply to the halved damage
+ *   - If the defender has 1 HP remaining, halveHp does 0 damage (Math.floor(1/2) = 0)
+ *   - If the defender has 0 HP (KO'd), halveHp does 0 damage
+ *   - If halveHp results in 0 damage but defender is already at 0 HP, defender remains KO'd
+ *
+ * Real-card examples of halveHp (GAP-018):
+ * - Bidoof (Super Fang): "Halve your opponent's Active Pokémon's remaining HP, rounded down."
+ *
  * Attack execution flow:
  * 1. Validate energy costs (GAP-011) - check if attacker has enough energy
- * 2. Get base damage from the attack definition
- * 3. Apply damageScaling (GAP-012) - add damage based on attached energy
- * 4. Apply benchScaling (GAP-017) - add damage based on Pokémon in Banca
- * 5. Check if damage should be prevented (GAP-006)
- * 6. If not prevented, apply damage_bonus from attacking player's passive abilities
- * 7. Apply damage_reduction from defending player's passive abilities
- * 8. Apply opponent_damage_reduction from defending player's passive abilities
- * 9. Apply weakness (GAP-011) - add +20 damage if defender is weak to attacker's type
- * 10. Clamp final damage to minimum 0
- * 11. Apply final damage to defending Pokémon's current HP
- * 12. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
- * 13. Determine if the defending Pokémon is knocked out (HP <= 0)
- * 14. Handle KO-triggered abilities (GAP-005) if KO'd
- * 15. Apply recoil damage to attacker (GAP-013) - self-damage after attacking
- * 16. Apply spread damage to Benched Pokémon (GAP-016) - if attack has spreadDamage config
- * 17. Log the attack event
+ * 2. Calculate halveHp damage if attack has halveHp: true (GAP-018) - damage = Math.floor(defender.currentHp / 2)
+ * 3. If not halveHp, get base damage from the attack definition
+ * 4. Apply damageScaling (GAP-012) - add damage based on attached energy (skipped if halveHp)
+ * 5. Apply benchScaling (GAP-017) - add damage based on Pokémon in Banca (skipped if halveHp)
+ * 6. Check if damage should be prevented (GAP-006)
+ * 7. If not prevented, apply damage_bonus from attacking player's passive abilities
+ * 8. Apply damage_reduction from defending player's passive abilities
+ * 9. Apply opponent_damage_reduction from defending player's passive abilities
+ * 10. Apply weakness (GAP-011) - add +20 damage if defender is weak to attacker's type
+ * 11. Clamp final damage to minimum 0
+ * 12. Apply final damage to defending Pokémon's current HP
+ * 13. Check for pre-KO survival abilities (GAP-007) - flip coin to survive
+ * 14. Determine if the defending Pokémon is knocked out (HP <= 0)
+ * 15. Handle KO-triggered abilities (GAP-005) if KO'd
+ * 16. Apply recoil damage to attacker (GAP-013) - self-damage after attacking
+ * 17. Apply spread damage to Benched Pokémon (GAP-016) - if attack has spreadDamage config
+ * 18. Log the attack event
  */
 
 class AttackSystem {
@@ -747,10 +761,28 @@ class AttackSystem {
     // since energy is consumed at the end of the turn in Pocket TCG)
     energyCostPaid = true;
 
-    // Calculate base damage including damageScaling (GAP-012) and benchScaling (GAP-017)
-    const baseDamage = attack.damage || 0;
-    const damageScaling = this.calculateDamageScaling(attacker, attack.damageScaling);
-    const benchScaling = this.calculateBenchScaling(attackingPlayerId, attack.benchScaling);
+    // Calculate base damage including halveHp (GAP-018), damageScaling (GAP-012), and benchScaling (GAP-017)
+    let baseDamage = attack.damage || 0;
+    let damageScaling = 0;
+    let benchScaling = 0;
+    let halveHpApplied = false;
+
+    // Check if this is a halveHp attack (GAP-018)
+    if (attack.halveHp) {
+      // Initialize defender's currentHp from hp if not already set
+      if (defender.currentHp === undefined || defender.currentHp === null) {
+        defender.currentHp = defender.hp || 0;
+      }
+
+      // Halve HP: damage = Math.floor(remaining HP / 2), rounded down
+      const remainingHp = defender.currentHp;
+      baseDamage = Math.floor(remainingHp / 2);
+      halveHpApplied = true;
+    } else {
+      // Normal damage calculation with scaling
+      damageScaling = this.calculateDamageScaling(attacker, attack.damageScaling);
+      benchScaling = this.calculateBenchScaling(attackingPlayerId, attack.benchScaling);
+    }
 
     // Check if damage should be prevented (GAP-006)
     const damagePrevented = this.abilitySystem.preventDamage(
@@ -904,6 +936,7 @@ class AttackSystem {
       baseDamage,
       damageScaling,
       benchScaling,
+      halveHpApplied,
       bonusApplied,
       reductionApplied,
       opponentReductionApplied: opponentReductionApplied || 0,

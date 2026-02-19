@@ -1,0 +1,54 @@
+# Progress Log
+Run: 8f4607d7-e754-4201-b546-df93727ac382
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19 03:22
+
+## Codebase Patterns
+
+### Testing Pattern
+- Tests use a custom test framework with `runTest(name, fn)` helper
+- Helper functions: `assert()`, `assertEqual()`, `assertDeepEqual()`
+- Tests are in `tests/` directory with `.test.js` extension
+- Run tests with: `find tests -name "*.test.js" -exec node {} \;`
+
+### Game System Pattern
+- Game state is in `GameState` class
+- Systems are passed `gameState` in constructor
+- Systems interact via `AbilitySystem`, `KoTriggerSystem`, etc.
+- Attack system supports: energy costs, weakness, damage scaling, recoil, temporary effects, target selection (Active/Banque)
+
+### Attack Definition Pattern
+- Attacks are objects: `{ name, damage, energyCost?, damageScaling?, recoilDamage?, temporaryDefenderEffect?, ... }`
+- `executeAttack(playerId, attack, target?)` executes an attack
+- Targets: `{ location: 'active' | 'banque', pokemonId? }`
+
+### Spread Damage Pattern (NEW - GAP-016)
+- Spread damage applies to opponent's Benched Pokémon
+- Config: `spreadDamage: { amount: number, target: 'banque' | 'all' }`
+  - `target: 'banque'` - damage only to Benched Pokémon (Raichu Gigashock pattern)
+  - `target: 'all'` - damage to all opponent's Pokémon (Active + Banque)
+- Damage to each Benched Pokémon is calculated independently
+- Each Benched Pokémon's damage goes through full damage calculation (modifiers, weakness, etc.)
+- KO triggers fire for each Benched Pokémon that is KO'd
+- Result includes `spreadDamageResults` array with damage to each Benched Pokémon
+
+---
+
+## 2026-02-19 03:28 - GAP-016: Spread damage (Raichu (Gigashock))
+- Implemented spread damage functionality in AttackSystem
+- Added `applySpreadDamage()` method to calculate and apply damage to multiple opponent Pokémon
+- Supports two target modes: 'banque' (Benched only) and 'all' (Active + Banque)
+- Each target's damage calculated independently with full modifier support (bonus, reduction, weakness, prevention)
+- KO triggers fire for each target that is KO'd
+- Added comprehensive test suite with 25 tests covering all scenarios
+- Files changed:
+  - src/game/attack-system.js (+1392 lines)
+  - tests/rules/spread-damage.test.js (new file, +36141 bytes)
+- All tests pass (25/25 in spread-damage.test.js, all existing tests still pass)
+- **Learnings:**
+  - Spread damage is calculated after main attack damage and recoil
+  - Each Benched Pokémon receives independent damage calculation
+  - Zero amount spread damage is valid (applies 0 damage to each target)
+  - KO triggers only work on Active Pokémon, not Benched (by design per card rules)
+  - Use `amount !== undefined && amount !== null` check instead of `!amount` to allow zero values
+---

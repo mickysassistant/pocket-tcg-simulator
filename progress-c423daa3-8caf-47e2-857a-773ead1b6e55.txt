@@ -1,0 +1,47 @@
+# Progress Log
+Run: c423daa3-8caf-47e2-857a-773ead1b6e55
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19 05:02 GMT+1
+
+## Codebase Patterns
+- Project uses JavaScript (Node.js), no TypeScript
+- Test files are run directly with `node <test-file>.js`
+- No build or typecheck scripts defined in package.json
+- Main systems: AttackSystem, AbilitySystem, EnergySystem, EvolutionSystem, TurnManager
+- Tests use custom assert functions (assert, assertEqual, assertDeepEqual)
+- Tests report with ✓/✗ and summary at the end
+- Attack execution flow: energy cost → base damage → damageScaling → benchScaling → modifiers → weakness → apply damage
+- Game state in `gameState.players[playerId]` with activePokemon and banque (bench)
+- Energy is in pokemon.energy array with { type, id } objects
+- Bench (banque) is an array of Pokémon objects
+- Pocket TCG maximum bench size is 3 Pokémon
+
+---
+## 2026-02-19 05:10 - GAP-017: [Importante][C2] Daño escalado por Pokémon en Banca (Cinccino)
+- Implemented `calculateBenchScaling` method in AttackSystem
+- Added bench scaling support to attack execution flow
+- Bench scaling formats:
+  - Simple: `benchScaling: number` - adds damage per Pokémon on bench (your bench by default)
+  - Object: `benchScaling: { perPokemon: number, player?: 'self' | 'opponent', type?: string, name?: string }`
+- Supports filtering by player (self/opponent), type, and name
+- KO'd Pokémon on bench are not counted
+- Integrated with existing damage modifiers (bonus, reduction, weakness)
+- Created comprehensive test suite (36 tests) covering:
+  - Simple and object format bench scaling
+  - Self and opponent bench counting
+  - Type and name filtering
+  - Integration with damage modifiers
+  - Real card examples (Cinccino, Pikachu, Beheeyem, Nidoqueen)
+  - Edge cases (empty bench, KO'd Pokémon, invalid parameters)
+- Files changed:
+  - src/game/attack-system.js: Added calculateBenchScaling method and integrated into attack flow
+  - tests/rules/damage-scaling-by-bench.test.js: New test file with 36 tests
+- All existing tests still pass (verified with complete-attack-system, damage-scaling-by-energy, combined-rules-integration)
+- **Learnings:**
+  - Bench scaling follows the same pattern as energy scaling (damageScaling)
+  - The scaling is applied after energy scaling but before damage modifiers
+  - Both self and opponent bench can be counted, enabling cards like Beheeyem's Mind Jack
+  - Type and name filters allow precise control (Pikachu's Circle Circuit, Nidoqueen's Lovestrike)
+  - KO'd Pokémon are excluded from counting (important for bench-based abilities)
+  - Maximum bench in Pocket TCG is 3 (vs 5 in physical TCG)
+---
