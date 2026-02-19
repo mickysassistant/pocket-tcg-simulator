@@ -20,6 +20,7 @@
  * GAP-020: [Importante][C2] Switch del atacante (Magikarp)
  * GAP-021: [Importante][C2] Forzar switch del oponente (Grapploct)
  * GAP-022: [Importante][C2] Descartar Pokémon de propia Banca para bonus de daño (Gyarados)
+ * GAP-023: [Moderado][C2] Revelar mano del oponente (Mew (Psy Report))
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -1010,6 +1011,63 @@ class AttackSystem {
   }
 
   // ---------------------------------------------------------------------------
+  // Reveal Opponent's Hand (GAP-023)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reveal the opponent's hand as an attack effect.
+   *
+   * Reveal hand format:
+   * - revealHand: true - Reveal the opponent's hand
+   *
+   * When the opponent's hand is revealed:
+   * - All cards in the opponent's hand become visible to both players
+   * - The revelation is logged to the turn log for information purposes
+   * - This is an informational effect only (no game state changes)
+   *
+   * Real-card examples (GAP-023):
+   * - Mew (Psy Report): "Your opponent reveals their hand."
+   *
+   * Mechanics:
+   * - The reveal happens as part of the attack execution
+   * - The revealed cards are logged in the turn log
+   * - No cards are removed or modified - this is pure information
+   * - If the opponent has no cards in hand, the hand is still revealed (empty)
+   *
+   * @param {string} attackingPlayerId - 'player1' or 'player2' (the attacker)
+   * @returns {Object} Result with success status and revealed cards
+   */
+  applyRevealHand(attackingPlayerId) {
+    const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
+    const defendingPlayer = this.gameState.players[defendingPlayerId];
+    const hand = defendingPlayer.hand || [];
+
+    // Create a summary of the revealed hand (card names)
+    const revealedCards = hand.map(card => ({
+      id: card.id,
+      name: card.name
+    }));
+
+    // Log the reveal hand event
+    this.gameState.turnLog.push({
+      type: 'reveal_hand',
+      attacker: attackingPlayerId,
+      defendingPlayer: defendingPlayerId,
+      revealedCards: revealedCards,
+      cardCount: revealedCards.length
+    });
+
+    return {
+      success: true,
+      details: {
+        playerId: defendingPlayerId,
+        cardCount: revealedCards.length,
+        revealedCards: revealedCards
+      }
+    };
+  }
+
+  // ---------------------------------------------------------------------------
   // Spread Damage Calculation (GAP-016)
   // ---------------------------------------------------------------------------
 
@@ -1474,6 +1532,13 @@ class AttackSystem {
       );
     }
 
+    // Apply reveal opponent's hand effect (GAP-023)
+    // e.g. Mew (Psy Report): "Your opponent reveals their hand."
+    let revealHandResult = null;
+    if (attack.revealHand) {
+      revealHandResult = this.applyRevealHand(attackingPlayerId);
+    }
+
     // Apply forced opponent switch (GAP-021)
     // e.g. Grapploct, Victreebel: force opponent to switch their Active Pokémon
     let forcedOpponentSwitchResult = null;
@@ -1513,6 +1578,7 @@ class AttackSystem {
       attackerIsKO,
       attackerHpAfter: attacker.currentHp,
       temporaryEffectResult,
+      revealHandResult, // GAP-023: Result of reveal opponent's hand
       forcedOpponentSwitchResult, // GAP-021: Result of forced opponent switch
       postAttackSwitchResult, // GAP-020: Result of post-attack switch
       sacrificeResult, // GAP-022: Result of sacrifice from Banca
