@@ -18,6 +18,7 @@
  * GAP-018: [Importante][C2] Halve HP (Bidoof)
  * GAP-019: [Importante][C2] Bonus por "energía extra" adjunta (Blastoise)
  * GAP-020: [Importante][C2] Switch del atacante (Magikarp)
+ * GAP-021: [Importante][C2] Forzar switch del oponente (Grapploct)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -647,6 +648,153 @@ class AttackSystem {
   }
 
   // ---------------------------------------------------------------------------
+  // Forced Opponent Switch (GAP-021)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Force the opponent to switch their Active Pokémon with a Benched Pokémon.
+   *
+   * Forced opponent switch format:
+   * - { to: 'bench' } - Force switch with any Benched Pokémon (opponent chooses)
+   * - { to: 'bench', pokemonId: string } - Force switch with specific Benched Pokémon
+   *
+   * When the opponent is forced to switch:
+   * - The opponent's Active Pokémon moves to their Banca
+   * - The chosen Benched Pokémon becomes the Active Pokémon
+   * - All special conditions on both Pokémon are removed
+   *
+   * Real-card examples (GAP-021):
+   * - Grapploct: Attacks, then forces opponent to switch their Active Pokémon
+   * - Victreebel: Similar mechanic - force opponent switch after attacking
+   * - Supporter cards: Cyrus, Sabrina, Lana (force opponent switch)
+   *
+   * Switch mechanics:
+   * - The switch happens AFTER all other attack effects (damage, recoil, spread, temporary effects)
+   * - The opponent gets to choose which Benched Pokémon to switch to
+   * - If the opponent's Active Pokémon is KO'd by the attack, no switch occurs (they must replace it normally)
+   * - If the opponent has no valid Benched Pokémon to switch to, the switch fails
+   * - Switching clears all special conditions from both Pokémon (poison, burn, sleep, paralyzed, confused)
+   *
+   * @param {string} attackingPlayerId - 'player1' or 'player2' (the attacker forcing the switch)
+   * @param {Object} forcedOpponentSwitchConfig - Forced opponent switch configuration
+   * @returns {Object} Result with success status and details
+   */
+  applyForcedOpponentSwitch(attackingPlayerId, forcedOpponentSwitchConfig) {
+    if (!forcedOpponentSwitchConfig) {
+      return {
+        success: false,
+        reason: 'no_config',
+        message: 'No forced opponent switch configuration provided'
+      };
+    }
+
+    const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
+    const defendingPlayer = this.gameState.players[defendingPlayerId];
+    const banque = defendingPlayer.banque || [];
+    const activePokemon = defendingPlayer.activePokemon;
+
+    // Check if opponent's Active Pokémon was KO'd (can't switch if dead - they must replace normally)
+    if (!activePokemon || activePokemon.currentHp <= 0) {
+      return {
+        success: false,
+        reason: 'opponent_active_ko',
+        message: "Opponent's Active Pokémon was KO'd, cannot force switch"
+      };
+    }
+
+    // Determine target Pokémon (the opponent's choice - in this simulator we default to first valid)
+    let targetPokemon = null;
+    let targetIndex = -1;
+
+    if (forcedOpponentSwitchConfig.pokemonId) {
+      // Switch with specific Pokémon (if opponent has multiple choices)
+      targetIndex = banque.findIndex(p => p && p.id === forcedOpponentSwitchConfig.pokemonId);
+      if (targetIndex === -1) {
+        return {
+          success: false,
+          reason: 'target_not_found',
+          message: `Target Pokémon with id ${forcedOpponentSwitchConfig.pokemonId} not found on opponent's bench`
+        };
+      }
+      targetPokemon = banque[targetIndex];
+    } else {
+      // Switch with first available Pokémon on bench (opponent's choice in real play)
+      targetIndex = banque.findIndex(p => p && p.currentHp > 0);
+      if (targetIndex === -1) {
+        return {
+          success: false,
+          reason: 'no_valid_targets',
+          message: "Opponent has no valid Pokémon on bench to switch to"
+        };
+      }
+      targetPokemon = banque[targetIndex];
+    }
+
+    // Check if target is KO'd
+    if (targetPokemon.currentHp <= 0) {
+      return {
+        success: false,
+        reason: 'target_ko',
+        message: "Target Pokémon on opponent's bench is KO'd, cannot switch"
+      };
+    }
+
+    // Track conditions that are removed (for logging)
+    const conditionsRemoved = [];
+
+    // Clean special conditions from the Pokémon moving to bench
+    if (this.statusConditionSystem) {
+      const activeCondition = this.statusConditionSystem.getCondition(defendingPlayerId, activePokemon.id);
+      if (activeCondition) {
+        this.statusConditionSystem.removeCondition(defendingPlayerId, activePokemon.id);
+        conditionsRemoved.push({ pokemonId: activePokemon.id, pokemonName: activePokemon.name, condition: activeCondition });
+      }
+
+      const targetCondition = this.statusConditionSystem.getCondition(defendingPlayerId, targetPokemon.id);
+      if (targetCondition) {
+        this.statusConditionSystem.removeCondition(defendingPlayerId, targetPokemon.id);
+        conditionsRemoved.push({ pokemonId: targetPokemon.id, pokemonName: targetPokemon.name, condition: targetCondition });
+      }
+    } else if (activePokemon.specialCondition) {
+      // Fallback if statusConditionSystem is not available
+      conditionsRemoved.push({ pokemonId: activePokemon.id, pokemonName: activePokemon.name, condition: activePokemon.specialCondition });
+      activePokemon.specialCondition = null;
+      if (targetPokemon.specialCondition) {
+        conditionsRemoved.push({ pokemonId: targetPokemon.id, pokemonName: targetPokemon.name, condition: targetPokemon.specialCondition });
+        targetPokemon.specialCondition = null;
+      }
+    }
+
+    // Perform the switch
+    const oldActive = activePokemon;
+    defendingPlayer.activePokemon = targetPokemon;
+    defendingPlayer.banque[targetIndex] = oldActive;
+
+    // Log the forced switch event
+    this.gameState.turnLog.push({
+      type: 'forced_opponent_switch',
+      attacker: attackingPlayerId,
+      defendingPlayer: defendingPlayerId,
+      fromPokemonId: oldActive.id,
+      fromPokemonName: oldActive.name,
+      toPokemonId: targetPokemon.id,
+      toPokemonName: targetPokemon.name,
+      conditionsRemoved
+    });
+
+    return {
+      success: true,
+      details: {
+        fromPokemonId: oldActive.id,
+        fromPokemonName: oldActive.name,
+        toPokemonId: targetPokemon.id,
+        toPokemonName: targetPokemon.name,
+        conditionsRemoved
+      }
+    };
+  }
+
+  // ---------------------------------------------------------------------------
   // Weakness Calculation (GAP-011)
   // ---------------------------------------------------------------------------
 
@@ -965,7 +1113,8 @@ class AttackSystem {
    * @param {Object} attack - Attack definition: { name: string, damage: number, energyCost?: Array, coinFlip?: Function, recoilDamage?: number|Object }
    * @param {Function} [attack.coinFlip] - Optional deterministic coin-flip function for tests; defaults to random
    * @param {number|Object} [attack.recoilDamage] - Optional recoil damage config (GAP-013)
-   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, weaknessApplied, finalDamage, isKO, attacker, defender, damagePrevented, preKoSurvivalResult, koTriggerResults, energyCostPaid, recoilDamage, attackerIsKO, targetLocation }
+   * @param {Object} [attack.forcedOpponentSwitch] - Optional forced opponent switch config (GAP-021)
+   * @returns {Object} Result: { baseDamage, bonusApplied, reductionApplied, weaknessApplied, finalDamage, isKO, attacker, defender, damagePrevented, preKoSurvivalResult, koTriggerResults, energyCostPaid, recoilDamage, attackerIsKO, targetLocation, forcedOpponentSwitchResult }
    */
   executeAttack(attackingPlayerId, attack, target = null) {
     const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
@@ -1194,6 +1343,13 @@ class AttackSystem {
       );
     }
 
+    // Apply forced opponent switch (GAP-021)
+    // e.g. Grapploct, Victreebel: force opponent to switch their Active Pokémon
+    let forcedOpponentSwitchResult = null;
+    if (attack.forcedOpponentSwitch) {
+      forcedOpponentSwitchResult = this.applyForcedOpponentSwitch(attackingPlayerId, attack.forcedOpponentSwitch);
+    }
+
     // Apply post-attack switch (GAP-020)
     // e.g. Magikarp, Cosmog: switch with a Benched Pokémon after attacking
     let postAttackSwitchResult = null;
@@ -1225,6 +1381,7 @@ class AttackSystem {
       attackerIsKO,
       attackerHpAfter: attacker.currentHp,
       temporaryEffectResult,
+      forcedOpponentSwitchResult, // GAP-021: Result of forced opponent switch
       postAttackSwitchResult, // GAP-020: Result of post-attack switch
       targetLocation: effectiveTarget.location, // 'active' or 'banque' (GAP-015)
       spreadDamageResults // GAP-016: Results of spread damage to Benched Pokémon
