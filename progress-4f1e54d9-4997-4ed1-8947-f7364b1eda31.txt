@@ -1,0 +1,386 @@
+# Progress Log
+Run: 4f1e54d9-4997-4ed1-8947-f7364b1eda31
+Task: Implementar los 80 gaps identificados en el análisis de research vs implementation.
+Started: 2026-02-18
+
+## Codebase Patterns
+
+- Pure JS (no build), Node.js. Tests run with: `node <test-file>`
+- TEST_CMD: `for test in tests/rules/*.test.js tests/rule-lock-manifest.test.js tests/integration/regression-suite.test.js; do node "$test" || exit 1; done`
+- All systems follow pattern: `new XyzSystem(gameState)` and are wired in `src/index.js`
+- `createGame()` in `src/index.js` returns a single object with all system instances
+- Tests use a simple `runTest(name, fn)` pattern with custom assert helpers (no external test runner)
+- Game state uses `players.player1/player2` with fields: `deck`, `hand`, `banque`, `activePokemon`, `energyZone`
+- `activePokemon` is a single object; `banque` is an array of Pokémon objects
+- Each Pokémon object has: `id`, `name`, `type`, `hp`, `energy` (array), `playedThisTurn`, etc.
+- AbilitySystem: abilities are keyed as `"playerId:pokemonId"` in a Map
+- KO-triggered effects are handled via KoTriggerSystem and invoked from AttackSystem when isKO=true
+- All system events (attacks, abilities, KO triggers) are logged to `gameState.turnLog` with a `type` field
+
+---
+
+## 2026-02-18 - GAP-001: [Crítico][C1] Bonus de daño condicional
+
+- **Implemented:** `src/game/ability-system.js` — new AbilitySystem class
+  - `registerAbility(playerId, pokemonId, abilityDef)` — register passive ability
+  - `removeAbilities(playerId, pokemonId)` — remove on KO/retreat
+  - `removeAllAbilitiesForPlayer(playerId)` — board reset
+  - `evaluateCondition(condition, playerId, pokemonId)` — continuous eval
+  - Condition types: `always`, `pokemon_in_play`, `pokemon_type_in_play`, `has_energy_count`, `is_active`, `opponent_has_pokemon_type`
+  - `getDamageBonus(attackingPlayerId)` — aggregate bonus from passive abilities
+  - `getDamageReduction(defendingPlayerId)` — aggregate reduction
+  - `applyDamageModifiers(attacker, defender, baseDamage)` — final damage calc
+  - `getActiveAbilities(playerId)` — inspection of currently-active abilities
+- **Updated:** `src/index.js` — AbilitySystem exported, `abilitySystem` added to `createGame()` return value
+- **Tests:** `tests/rules/conditional-damage-bonus.test.js` — 18 tests
+  - Carnivine pattern (+30 when Arceus in play on own side)
+  - Tyranitar Power Link pattern (pre-evo check)
+  - Stacking multiple abilities
+  - applyDamageModifiers with bonus + reduction, min 0
+  - Continuous evaluation (conditions checked live against game state)
+  - Case-insensitive pokemon name matching
+  - is_active, pokemon_type_in_play conditions
+  - removeAbilities / removeAllAbilitiesForPlayer
+- **Learnings:** Abilities key as `playerId:pokemonId` in Map. Conditions evaluate live on each getDamageBonus() call — no caching needed. Tests must not register a Pokémon under a name that also satisfies its own condition (e.g., Tyranitar checking for "Tyranitar").
+
+---
+
+## 2026-02-18 - GAP-002: [Crítico][C1] Reducción de daño recibido
+
+- **Implemented:** `src/game/attack-system.js` — new AttackSystem class
+  - `executeAttack(attackingPlayerId, attack)` — executes attack with damage modifiers
+  - `calculateDamage(attackerId, defenderId, baseDamage)` — dry-run preview
+  - `getDamageReduction(defendingPlayerId)` — delegates to AbilitySystem
+  - Applies damage_bonus (attacker) and damage_reduction (defender) before HP deduction
+  - KO detection and turn logging
+- **Updated:** `src/index.js` — AttackSystem wired into createGame(), exported
+- **Tests:** `tests/rules/damage-reduction.test.js` — 16 tests
+  - Magnezone Resilience Link: -30 damage reduction
+  - Regirock Exoskeleton: conditional reduction when specific type in play
+  - Shuckle ex Solid Shell: -20 damage reduction
+  - executeAttack: damage reduction reduces HP dealt to defender
+  - executeAttack: bonus + reduction both applied correctly
+  - Damage reduction floors final damage at 0
+  - executeAttack: KO detection with damage reduction active
+  - calculateDamage: preview without applying damage
+  - Multiple damage reduction abilities stack additively
+  - Conditional damage reduction: only reduces when condition met
+  - executeAttack logs event to gameState.turnLog
+  - executeAttack without any abilities: base damage applied directly
+- All 160+ tests across full suite pass (including new damage-reduction tests)
+- **Learnings:** AttackSystem acts as the integration point between AbilitySystem modifiers and the actual HP tracking. Damage modifiers are applied before HP deduction. Pokémon currentHp is lazily initialized from hp field on first attack.
+
+---
+
+## 2026-02-18 - GAP-003: [Crítico][C1] Inmunidad a Special Conditions (Arceus ex – Fabled Luster)
+
+- **Implemented:** `src/game/status-condition-system.js` — new StatusConditionSystem class
+  - `applyCondition(playerId, pokemonId, condition)` — applies special condition with immunity check
+  - `removeCondition(playerId, pokemonId)` — removes condition
+  - `getCondition(playerId, pokemonId)` — get current condition
+  - `hasCondition(playerId, pokemonId, condition)` — check if has specific condition
+  - `applyBetweenTurnEffects(playerId, coinFlip?)` — Poison deals 10 dmg/turn; Burn deals 20 dmg + coin flip (heads removes); Paralyzed auto-removed after one turn
+  - `canAttack(playerId, pokemonId)` — returns false for Sleep/Paralyzed
+  - `canRetreat(playerId, pokemonId)` — returns false for Sleep/Paralyzed
+  - `handleConfusion(attackingPlayerId, attackingPokemonId, damage, coinFlip?)` — heads = normal attack, tails = 30 self-damage
+  - All events logged to gameState.turnLog
+- **Extended:** `src/game/ability-system.js` — immunity support
+  - `isImmuneToSpecialConditions(playerId, pokemonId)` — checks for special_condition_immunity effect type
+  - `getImmunePokemons(playerId)` — returns list of Pokémon IDs currently immune
+  - Immunity is condition-aware (e.g. only when is_active)
+- **Updated:** `src/index.js` — StatusConditionSystem wired into createGame(), exported as StatusConditionSystem + SPECIAL_CONDITIONS
+- **Tests:** `tests/rules/status-condition-immunity.test.js` — 42 tests
+  - SPECIAL_CONDITIONS exports five standard conditions
+  - applyCondition: Poisoned, Sleep, Paralyzed, Confused, Burned applied correctly
+  - Unknown condition is rejected
+  - New condition replaces existing condition
+  - Condition can be applied to Pokémon on bench
+  - Missing Pokémon returns applied:false
+  - Arceus ex with immunity ability cannot be conditioned
+  - Immunity is per-Pokémon: opponent can still be conditioned
+  - Immunity is per-Pokémon: teammate without ability can still be conditioned
+  - Immunity is removed when ability is removed
+  - isImmuneToSpecialConditions returns true when ability is registered
+  - getImmunePokemons returns list of immune Pokémon IDs for a player
+  - Immunity condition (e.g. is_active) only applies when condition met
+  - Blocked condition is logged with detail:immune
+  - Applied condition is logged with type:condition_applied
+  - Removed condition is logged with type:condition_removed
+  - Poisoned: deals 10 damage per between-turn
+  - Burned: deals 20 damage per between-turn, removed on coin flip heads
+  - Paralyzed: auto-removed after one between-turn
+  - Condition damage cannot reduce HP below 0
+  - canAttack returns false when Asleep or Paralyzed
+  - canRetreat returns false when Asleep or Paralyzed
+  - handleConfusion: heads → attack proceeds normally, tails → 30 self damage
+- All 200+ tests across the full suite pass (including new status-condition-immunity tests)
+- **Learnings:** StatusConditionSystem delegates immunity to AbilitySystem via `isImmuneToSpecialConditions()` — keeps concerns separated. Coin flip is injected for deterministic testing. SPECIAL_CONDITIONS canonical values are lowercase strings ('poisoned', 'asleep', etc.). Status conditions are mutually exclusive (new replaces old).
+
+---
+
+## 2026-02-18 - GAP-004: [Crítico][C1] Habilidades de movimiento de energía (Vaporeon (Wash Out))
+
+- **Implemented:** `src/game/activated-ability-system.js` — new ActivatedAbilitySystem class
+  - `registerAbility(playerId, pokemonId, abilityDef)` — registers an activatable ability for a Pokémon
+  - `removeAbilities(playerId, pokemonId)` — cleanup when Pokémon are removed or board is reset
+  - `removeAllAbilitiesForPlayer(playerId)` — remove all abilities for a player
+  - `activateAbility(abilityId, playerId, params)` — main API to trigger ability effects
+  - `canUseAbility(abilityId, playerId)` — validates usage limits, ownership, and conditions
+  - Usage limit tracking: `unlimited`, `once_per_turn`, `per_pokemon_once`
+  - `resetUsageForNewTurn()` — called at turn start to reset usage counters
+  - Effect type `move_energy`: moves energy from source to destination with support for:
+    - Source/destination targets: `active`, `bench`, `any`, or explicit Pokémon ID
+    - Count control: move N energy at once
+    - Energy type filtering: only move specific energy types
+    - Automatic limit adjustment: only moves available energy when requesting more than exists
+  - Condition checking: leverages AbilitySystem.evaluateCondition() for pre-activation validation
+  - All events logged to gameState.turnLog (ability_activated, ability_activation_failed)
+- **Updated:** `src/index.js` — ActivatedAbilitySystem wired into createGame() with abilitySystem injected, exported
+- **Tests:** `tests/rules/activated-abilities.test.js` — 18 tests
+  - ActivatedAbilitySystem is exported from index
+  - Register and retrieve activated ability
+  - Move 1 energy from bench to active
+  - Move 2 energy from bench to active
+  - Unlimited usage: can activate multiple times per turn
+  - Once per turn: cannot activate twice in same turn
+  - Once per turn: can activate again after turn change
+  - Per Pokemon once: same Pokemon cannot activate twice
+  - Cannot activate opponent's ability
+  - Move energy from active to bench
+  - Move only water energy when type specified
+  - Cannot activate ability when condition is not met
+  - Remove abilities for a specific Pokemon
+  - Remove all abilities for a player
+  - Cannot move energy when source has no energy
+  - Cannot activate non-existent ability
+  - Move energy using explicit Pokemon IDs
+  - Move only available energy when requesting more than exists
+- All 280+ tests across the full suite pass (including new activated-abilities tests)
+- **Learnings:** ActivatedAbilitySystem extends the ability framework with explicit invocation. Usage tracking is per-ability and resets via resetUsageForNewTurn(). move_energy effect uses `.slice()` to create a copy of the energy array before filtering to avoid reference issues. Ability effects are extensible via the `effect.type` switch pattern.
+
+---
+
+## 2026-02-18 - GAP-005: [Crítico][C1] Habilidades triggered por KO (Pyukumuku (Innards Out))
+
+- **Implemented:** `src/game/ko-trigger-system.js` — new KoTriggerSystem class
+  - `registerAbility(playerId, pokemonId, abilityDef)` — register KO-triggered ability
+  - `removeAbilities(playerId, pokemonId)` — cleanup when Pokémon is KO'd
+  - `removeAllAbilitiesForPlayer(playerId)` — board reset
+  - `handleKnockout(koEvent)` — main entry point called by AttackSystem when a Pokémon is KO'd
+  - Effect type `damage_to_attacker`: deals X damage to the attacking Pokémon (Innards Out)
+  - Effect type `move_energy_on_ko`: moves energy of specific type to benched Pokémon (Offload Pass)
+  - Only triggers when: (1) KO was caused by attack damage (not Poison/Burn), (2) KO'd Pokémon was in Active Spot
+  - All events logged to gameState.turnLog
+- **Updated:** `src/game/attack-system.js` — integrated KoTriggerSystem
+  - Constructor now accepts optional `koTriggerSystem` parameter
+  - After applying damage and detecting KO, calls `koTriggerSystem.handleKnockout()`
+  - KO trigger results are included in attack result
+- **Updated:** `src/index.js` — KoTriggerSystem wired into createGame(), exported
+- **Tests:** `tests/rules/ko-triggered-abilities.test.js` — 12 tests
+  - Register and retrieve KO-triggered abilities
+  - Pyukumuku Innards Out: deals 50 damage to attacker on KO, can also KO the attacker
+  - Passimian ex Offload Pass: moves Fighting energy to bench, respects 4 energy limit
+  - KO trigger only works when in Active Spot (not on bench)
+  - Remove abilities and removeAllAbilitiesForPlayer
+  - Offload Pass with no benched Pokémon (fails gracefully)
+  - Offload Pass respects 4 energy limit per Pokémon
+  - Turn log contains KO trigger events
+  - Multiple KO-triggered abilities on same Pokémon
+  - Offload Pass only moves specified energy type
+- All 280+ tests across the full suite pass (including new ko-triggered-abilities tests)
+- **Learnings:** KoTriggerSystem follows the same registration/removal pattern as AbilitySystem; KO triggers are invoked after damage is applied but before the attack completes; effect execution uses a switch pattern on `effect.type` similar to ActivatedAbilitySystem; energy movement respects Pocket's 4 energy per Pokémon limit
+
+---
+
+## 2026-02-18 - GAP-006: [Importante][C1] Prevención de daño de Pokémon ex (Oricorio (Safeguard))
+
+- **Implemented:** Extended `src/game/ability-system.js` — damage prevention support
+  - `preventDamage(attackingPlayerId, attackingPokemonId, defendingPlayerId, defendingPokemonId)` — checks if damage should be prevented
+  - Effect type `damage_prevention`: prevents all damage from attacks matching criteria
+  - Effect criteria: `preventFrom: 'pokemon_ex'` (prevents only from Pokémon ex), `preventFrom: 'all'` (prevents all damage)
+  - `_matchesPreventionCriteria(attacker, effect)` — checks if attacker matches prevention criteria
+  - `_isPokemonEx(pokemon)` — checks if Pokémon has 'ex' in its name (case-sensitive match)
+  - Damage prevention is condition-aware (e.g. only when is_active)
+  - Prevention takes precedence over damage reduction
+- **Updated:** `src/game/attack-system.js` — integrated damage prevention
+  - Added `damagePrevented` field to attack result
+  - Before applying damage, check `abilitySystem.preventDamage()`
+  - If prevented, finalDamage is 0 and no HP is deducted
+  - `damagePrevented` flag included in turn log events
+- **Tests:** `tests/rules/damage-prevention.test.js` — 20 tests
+  - AbilitySystem has preventDamage method
+  - preventDamage returns false with no abilities
+  - Oricorio Safeguard prevents damage from Pokémon ex
+  - Oricorio Safeguard does NOT prevent damage from non-ex Pokémon
+  - AttackSystem applies damage prevention
+  - AttackSystem does NOT prevent damage from non-ex attacker
+  - Damage prevention respects is_active condition
+  - Damage prevention does not apply when condition not met
+  - Multiple Pokémon ex attackers are prevented
+  - Mega Pokémon ex are prevented
+  - Damage prevention takes precedence over reduction
+  - Damage prevention only applies to defending side
+  - removeAbilities removes damage prevention
+  - Turn log includes damage prevention events
+  - preventFrom: 'all' prevents all damage
+  - Unknown preventFrom does not prevent damage (safe default)
+  - No preventFrom field prevents all damage
+  - calculateDamage does not check prevention (preview only)
+  - removeAllAbilitiesForPlayer removes damage prevention
+  - Case-sensitive ex matching in Pokémon names
+- All 280+ tests across the full suite pass (including new damage-prevention tests)
+- **Learnings:** Damage prevention is checked BEFORE damage modifiers (bonus/reduction) in AttackSystem; prevention uses case-sensitive matching for 'ex' in Pokémon names (must be lowercase 'ex'); `calculateDamage()` is a preview/dry-run and does NOT check prevention, which is intentional for UI previews; Pokémon ex are identified by checking if the name contains 'ex' string; prevention only applies to the defending Pokémon's abilities (attacker's abilities cannot prevent damage to themselves)
+
+---
+
+## 2026-02-18 - GAP-008: [Importante][C1] Switch desde Banca a Activo (Solgaleo ex (Rising Road))
+- Extended ActivatedAbilitySystem (src/game/activated-ability-system.js) with switch support:
+  - Constructor now accepts optional `statusConditionSystem` parameter
+  - `_executeSwitchPokemon(ability, playerId, params)` — switches bench Pokemon with active Pokemon
+  - Validates that ability Pokemon is on bench and has an active Pokemon to switch with
+  - Cleans all special conditions from both Pokemon during switch (baseline TCG behavior)
+  - Effect type `switch_pokemon`: no additional configuration needed beyond effect type
+  - All events logged to gameState.turnLog with details: fromPokemonId, toPokemonId, conditionsRemoved
+- Updated ActivatedAbilitySystem JSDoc to document switch_pokemon effect type
+- Wired StatusConditionSystem into ActivatedAbilitySystem in src/index.js (constructor parameter)
+- Tests: tests/rules/switch-from-bench.test.js — 16 tests covering:
+  - Basic switch from bench to active
+  - Switch cleans special conditions from Pokemon moving to bench
+  - Switch cleans special conditions from Pokemon moving to active
+  - Switch cleans all special condition types (Poison, Burn, Sleep, Paralyze, Confuse)
+  - Cannot switch if Pokemon is not on bench
+  - Cannot switch if no active Pokemon
+  - Once per turn usage limit works
+  - Once per turn can be used again after turn reset
+  - Condition validation prevents activation when not met
+  - Cannot activate opponent's ability
+  - Switch with multiple Pokemon on bench finds the correct one
+  - Turn log contains switch event
+  - Remove abilities cleans up switch ability
+  - Switch cleans conditions and logs them
+- All 290+ tests across the full suite pass (including new switch-from-bench tests)
+- **Learnings:** Switch abilities follow the same pattern as other activated abilities with usage limits; special condition cleaning during switch follows TCG baseline (all conditions removed on both Pokemon); need to manually switch Pokemon back in tests when testing once-per-turn reset; switch effect requires both statusConditionSystem and gameState to be properly wired for condition cleaning
+
+---
+
+## 2026-02-18 - GAP-009: [Importante][C1] Auto-aplicación de Special Condition (Komala (Comatose))
+- Extended AbilitySystem (src/game/ability-system.js) with on-Energy-attach trigger support:
+  - `triggerOnEnergyAttach(playerId, pokemonId, energy)` — finds and executes abilities triggered by energy attachment
+  - Effect type `on_energy_attach`: triggers when energy is attached to the Pokémon
+  - Effect can specify `applyCondition` to auto-apply special conditions (e.g., 'asleep')
+  - Condition support: leverages AbilitySystem.evaluateCondition() for pre-trigger validation
+- Modified EnergySystem (src/game/energy-system.js) to actually attach energy and trigger abilities:
+  - Constructor now accepts optional `abilitySystem` and `statusConditionSystem` parameters
+  - `attachEnergy(playerId, targetPokemonId)` — now actually attaches energy to Pokemon's energy array
+  - Added `_findPokemon(playerId, pokemonId)` helper to locate Pokemon in active or bench
+  - Energy attachment process: (1) check canAttach(), (2) find Pokemon, (3) remove energy from zone, (4) attach to Pokemon, (5) trigger abilities, (6) apply conditions if specified
+  - Only removes energy from zone after successfully finding and attaching to Pokemon (fixes edge case)
+  - Integrates with StatusConditionSystem.applyCondition() for applying special conditions
+- Updated createGame() in src/index.js to wire abilitySystem and statusConditionSystem into energySystem
+- Updated EnergySystem JSDoc to document GAP-009 and on-Energy-attach triggers
+- Fixed tests/rules/first-turn-energy-block.test.js to set up active Pokemon for all tests (required after changes to EnergySystem)
+- Tests: tests/rules/on-energy-attach-abilities.test.js — 14 tests covering:
+  - Komala Comatose applies Asleep when energy attached to active Pokemon
+  - Komala Comatose does NOT trigger when on bench (is_active condition)
+  - Multiple energy attachments each trigger the ability
+  - Energy actually attaches to Pokemon's energy array
+  - Energy attachment works with bench Pokemon
+  - Energy attachment fails gracefully for non-existent Pokemon
+  - First turn restriction still blocks energy attachment
+  - Energy attachment and condition application logged correctly in turnLog
+  - Pokemon already Asleep — condition stays same on re-attach
+  - Pokemon immune to special conditions blocks Comatose (immunity)
+  - No ability — energy attaches normally without triggers
+  - triggerOnEnergyAttach returns empty array when no abilities registered
+  - triggerOnEnergyAttach returns empty for non-matching abilities
+  - Multiple Pokemon with on_energy_attach abilities trigger independently
+- All 300+ tests across the full suite pass (including new on-energy-attach tests)
+- **Learnings:** On-Energy-attach triggers are a new effect type in AbilitySystem that execute immediately after energy is successfully attached to a Pokemon. The trigger flow is: find Pokemon → remove energy from zone → attach to Pokemon → trigger abilities → apply conditions. This pattern allows Pokemon to auto-apply conditions to themselves when receiving energy (e.g., Komala Comatose making itself Asleep). The trigger integrates with StatusConditionSystem which checks immunity before applying conditions, so immune Pokemon won't be affected even by their own on_energy_attach abilities. EnergySystem._findPokemon() is a helper that searches both active and bench for a Pokemon by ID, similar to other systems' internal helper methods.
+
+---
+
+## 2026-02-18 - GAP-010: [Importante][C1] Reducción de daño al oponente (Luxray Intimidating Fang)
+- **Extended:** `src/game/ability-system.js` — opponent damage reduction support
+  - `getOpponentDamageReduction(attackingPlayerId)` — calculates total opponent damage reduction from defender's abilities
+  - Effect type `opponent_damage_reduction`: reduces damage dealt by opponent (debuff)
+  - Modified `applyDamageModifiers()` to include opponent damage reduction in final damage calculation
+  - Damage formula: `baseDamage + bonus - reduction - opponentReduction`
+  - Integration with existing condition system (is_active, has_energy_count, etc.)
+- **Updated:** `src/game/attack-system.js` — integrated opponent damage reduction
+  - Added `opponentReductionApplied` field to attack result
+  - Modified damage calculation flow to apply opponent damage reduction after defender reduction
+  - Turn log includes opponent damage reduction information
+- **Tests:** `tests/rules/opponent-damage-reduction.test.js` — 14 tests
+  - Basic opponent damage reduction (Intimidating Fang -20)
+  - No reduction when ability not registered
+  - is_active condition: only applies when Pokémon is active
+  - Stacking multiple opponent damage reductions (additive)
+  - Integration with defender damage reduction (both apply)
+  - Integration with attacker damage bonus (bonus applies before reductions)
+  - Damage floor at 0 (cannot go negative)
+  - KO detection works correctly with reduced damage
+  - getOpponentDamageReduction method returns correct value
+  - Ability removal (removeAbilities) clears opponent reduction
+  - calculateDamage preview includes opponent reduction
+  - Turn log includes opponentReductionApplied field
+  - has_energy_count condition support
+  - Both players can have opponent damage reduction abilities
+- All 300+ tests across the full suite pass (including new opponent-damage-reduction tests)
+- **Learnings:** Opponent damage reduction is the inverse of damage reduction — instead of reducing what the defender receives, it reduces what the attacker deals. This is implemented as a separate effect type `opponent_damage_reduction` and checked against the defender's abilities (the player being attacked). The damage modifier order is: base → +bonus (attacker) → -reduction (defender) → -opponentReduction (defender debuff). Both `opponent_damage_reduction` and `damage_reduction` are player-side effects that can coexist and stack additively.
+
+
+## 2026-02-18 - GAP-011: [Crítico][C2] Sistema completo de ataques
+- **Implemented:** Extended `src/game/attack-system.js` — energy cost validation and weakness calculation
+  - `canAffordEnergyCost(pokemon, energyCost)` — validates energy requirements before attack
+    - Supports specific energy types (fire, water, grass, electric, psychic, fighting)
+    - Supports colorless energy that can be satisfied by any energy type
+    - Returns detailed failure reasons: `no_energy`, `missing_specific_energy`, `insufficient_total_energy`
+    - Energy cost format: array of type strings, e.g., ['fire', 'fire', 'colorless']
+  - `calculateWeakness(attacker, defender)` — calculates weakness damage to add
+    - Adds +20 damage when defender has weakness to attacker's type (Pocket TCG rules)
+    - Supports multiple weakness formats: string ('fire'), array (['fire', 'ice']), or object ({ type: 'fire', multiplier: 2 })
+    - Case-sensitive type matching
+  - Modified `executeAttack(attackingPlayerId, attack)` — integrated both features
+    - Validates energy costs before executing attack (throws error if cannot afford)
+    - Applies weakness (+20) AFTER damage modifiers (bonus, reduction, opponentReduction)
+    - Damage formula: `baseDamage + bonus - reduction - opponentReduction + weakness`
+    - Logs energy cost failures with reason to `turnLog`
+    - Logs weakness application in attack result and `turnLog`
+    - Returns `weaknessApplied` and `energyCostPaid` fields in result
+  - Modified `calculateDamage(attackerId, defenderId, baseDamage)` — includes weakness in dry-run
+    - Returns `weaknessApplied` in result
+    - Added `opponentReductionApplied` to result (was missing)
+    - Returns complete modifier breakdown: `baseDamage`, `bonusApplied`, `reductionApplied`, `opponentReductionApplied`, `weaknessApplied`, `finalDamage`
+- **Tests:** `tests/rules/complete-attack-system.test.js` — 61 tests covering:
+  - Energy cost validation: exact matches, missing specific energy, colorless flexibility, total energy insufficient, mixed costs, edge cases
+  - Weakness calculation: no weakness, string/array/object formats, matching/non-matching types, case sensitivity, null defender, no attacker type
+  - executeAttack integration: no cost, affordable cost, insufficient cost (error), weakness applied, no weakness, weakness + reduction, weakness + bonus, weakness + prevention, KO from weakness
+  - Full integration: energy cost + weakness + all modifiers + pre-KO survival + KO triggers
+  - Edge cases: zero base damage + weakness, high damage + weakness, multiple weakness types, dry-run with weakness, empty cost, case sensitivity
+- All 340+ tests across full suite pass (including 61 new complete-attack-system tests)
+- **Learnings:** Energy cost validation follows TCG pattern: specific types must match exactly, colorless can use any energy. Weakness in Pocket TCG is simplified (+20 flat, not 2x multiplier) and is applied AFTER damage modifiers (consistent with research documentation). Energy costs are validated before any damage calculation; if validation fails, attack throws error and logs failure. The `calculateDamage()` method is a preview/dry-run that includes weakness but does NOT check energy costs or damage prevention (intentional for UI previews). Energy cost format is flexible: array of strings, empty array = no cost, undefined = no cost.
+
+
+
+## 2026-02-18 - GAP-012: [Importante][C2] Daño escalado por Energía adjunta (Celebi ex)
+- **Implemented:** Extended `src/game/attack-system.js` — damage scaling based on attached energy
+  - `calculateDamageScaling(pokemon, damageScaling)` — calculates additional damage based on attached energy
+    - Simple format: `damageScaling: number` — adds N damage per energy attached
+    - Object format: `damageScaling: { perEnergy: number, energyType?: string }` — N damage per energy, optionally filtered by type
+    - If `energyType` is specified, only counts energy of that type
+    - If Pokémon has no energy, returns 0
+  - Modified `executeAttack(attackingPlayerId, attack)` — applies damageScaling before modifiers
+    - damageScaling is calculated and added to baseDamage before ability modifiers (bonus/reduction)
+    - Damage formula: `(baseDamage + damageScaling) + bonus - reduction - opponentReduction + weakness`
+    - Returns `damageScaling` field in attack result
+  - Modified `calculateDamage(attackerId, defenderId, baseDamage)` — includes damageScaling in dry-run
+    - Passes through `attack.damageScaling` if present on attacker's active attack
+- **Tests:** `tests/rules/damage-scaling-by-energy.test.js` — 35 tests covering:
+  - calculateDamageScaling: simple number format, object format, energyType filter, no energy, no damageScaling
+  - executeAttack: basic scaling, different scaling values, energyType filter, colorless energy, 0 energy count
+  - Integration: damageScaling + bonus, + reduction, + weakness, + damage prevention, + energy cost validation
+  - Edge cases: 0 base damage, large energy count (10), energy update after calculation, multiple different attacks
+  - calculateDamage dry-run: includes damageScaling, no attack = 0 scaling
+  - Event logging: result includes damageScaling field, all new result fields present
+- All 375+ tests across full suite pass (including 35 new damage-scaling tests)
+- **Learnings:** damageScaling is an attack-level property (not an ability), applied before damage modifiers; this means bonuses and reductions apply on top of the scaled total. The energyType filter enables type-specific scaling patterns. Energy counting uses `pokemon.energy` array where each element has a `type` field.

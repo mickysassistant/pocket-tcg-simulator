@@ -1,0 +1,268 @@
+[
+  {
+    "id": "B1a-011",
+    "name": "Charmander",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Bite",
+        "damage": 40,
+        "energyCost": [
+          "R",
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1a-011-2",
+    "name": "Charmander",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Bite",
+        "damage": 40,
+        "energyCost": [
+          "R",
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1a-012",
+    "name": "Charmeleon",
+    "supertype": "Pokémon",
+    "hp": 80,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Steady Firebreathing",
+        "damage": 50,
+        "energyCost": [
+          "R",
+          "R",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Ignition",
+        "effect": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may take a [R] Energy from your Energy Zone and attach it to your Active [R] Pokémon.",
+        "rawInfo": "Ability:\nIgnition"
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1a-012-2",
+    "name": "Charmeleon",
+    "supertype": "Pokémon",
+    "hp": 80,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Steady Firebreathing",
+        "damage": 50,
+        "energyCost": [
+          "R",
+          "R",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Ignition",
+        "effect": "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may take a [R] Energy from your Energy Zone and attach it to your Active [R] Pokémon.",
+        "rawInfo": "Ability:\nIgnition"
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1a-014",
+    "name": "Mega Charizard Y ex",
+    "supertype": "Pokémon",
+    "hp": 220,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Crimson Dive",
+        "damage": 250,
+        "energyCost": [
+          "R",
+          "R",
+          "R",
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B1a-013",
+    "name": "Charizard",
+    "supertype": "Pokémon",
+    "hp": 150,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Inferno Onrush",
+        "damage": 150,
+        "energyCost": [
+          "R",
+          "R",
+          "R",
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A4a-010",
+    "name": "Entei ex",
+    "supertype": "Pokémon",
+    "hp": 140,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Blazing Beatdown",
+        "damage": 0,
+        "energyCost": [
+          "R",
+          "R"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Legendary Pulse",
+        "effect": "At the end of your turn, if this Pokémon is in the Active Spot, draw a card.",
+        "rawInfo": "Ability:\nLegendary Pulse"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4a-010-2",
+    "name": "Entei ex",
+    "supertype": "Pokémon",
+    "hp": 140,
+    "types": [
+      "Fire"
+    ],
+    "attacks": [
+      {
+        "name": "Blazing Beatdown",
+        "damage": 0,
+        "energyCost": [
+          "R",
+          "R"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Legendary Pulse",
+        "effect": "At the end of your turn, if this Pokémon is in the Active Spot, draw a card.",
+        "rawInfo": "Ability:\nLegendary Pulse"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-223",
+    "name": "May",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-223-2",
+    "name": "May",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-348",
+    "name": "Lillie",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-217",
+    "name": "Flame Patch",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B1-217-2",
+    "name": "Flame Patch",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-145",
+    "name": "Lucky Ice Pop",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-147",
+    "name": "Protective Poncho",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  },
+  {
+    "id": "B2-147-2",
+    "name": "Protective Poncho",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  }
+]

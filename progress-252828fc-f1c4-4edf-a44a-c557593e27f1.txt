@@ -1,0 +1,17 @@
+# Progress Log
+Run: 252828fc-f1c4-4edf-a44a-c557593e27f1
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19
+
+## Codebase Patterns
+- Testing uses custom assertion helpers (assert, assertEqual, assertDeepEqual) and runTest function
+- Tests are run directly with `node <test-file>.js` (not using a test framework)
+- Game state has `banque` (bench) array for each player
+- AttackSystem.executeAttack currently only targets the opponent's active Pokémon
+- Energy costs use format: ['type1', 'type2', ...] with colorless being flexible
+- Weakness adds +20 damage in Pocket TCG (not 2x like physical TCG)
+- Damage modifiers flow: base → bonus → reduction → opponent reduction → weakness → final
+- All game state mutations go through the GameState class methods
+- Turn logging is done via gameState.turnLog.push({type, ...})
+
+---

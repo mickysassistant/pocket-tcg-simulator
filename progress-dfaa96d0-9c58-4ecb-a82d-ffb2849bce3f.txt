@@ -1,0 +1,492 @@
+# Progress Log
+Run: dfaa96d0-9c58-4ecb-a82d-ffb2849bce3f
+Task: RULE-LOCKED MICRO-STORY RUN (must register stories in Antfarm DB). REPO: /home/deckie/.openclaw/workspace/pocket-tcg-simulator BRANCH: main SOURCE_DOCS: /home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs Planner MUST output valid STORIES_JSON (exact contract) so 'step stories <run-id>' shows entries immediately after plan. 8-20 stories, IDs R001..R0NN, one rule per story, first-turn draw fix as dedicated story (going first DOES draw). Developer one story per cycle only. Deliver docs/RULES_ALIGNMENT_REPORT.md and per-story tests.
+Started: 2026-02-16T19:52:00+01:00
+
+## Codebase Patterns
+- Project is a static HTML/JS simulator with no build system
+- No test framework currently exists - tests are simple Node.js scripts that run with `node <test-file>`
+- Source documentation for Pocket TCG rules is located at /home/deckie/.openclaw/workspace/pocket-tcg-pocket-research/docs/
+- Main code directory structure is minimal (no src/ directory exists yet)
+- Only `npm run serve` script available for serving static files
+- No type checking - plain JavaScript project
+- Game engine uses CommonJS module system (require/module.exports)
+- Tests use custom assertion functions, no testing framework
+
+---
+
+## 2026-02-16 19:52 - R001: Create machine-readable rule lock manifest for execution tracking
+- Created docs/rule-lock-manifest.json with entries for all 10 planned stories (R001-R010)
+- Each manifest entry contains: storyId, ruleName, sourceDocPath, codeTargets, and testTargets
+- Created tests/rule-lock-manifest.test.js with 11 validation tests covering:
+  - Manifest file existence and JSON validity
+  - Required top-level properties
+  - Rule entry field validation
+  - Story ID format validation
+  - Status value validation
+  - Array type validation for codeTargets and testTargets
+  - Expected story ID presence (R001-R010)
+  - R001 completion status
+  - Run ID verification
+- Manifest JSON validates with node -e "JSON.parse(...)"
+- All 11 tests pass
+- Files created:
+  - docs/rule-lock-manifest.json (3,880 bytes)
+  - tests/rule-lock-manifest.test.js (5,120 bytes)
+- **Learnings:**
+  - This project has minimal structure - essentially empty with only README and completion docs
+  - Need to create src/ directory structure as stories are implemented
+  - Tests are simple Node.js scripts, not using any framework like Jest or Mocha
+  - Source docs are in a separate research repository
+  - Rule mapping will be updated as stories progress (status field from planned → completed)
+
+---
+
+## 2026-02-16 20:04 - R002: Fix opening-turn draw rule so player going first DOES draw
+- Created src/ directory structure with game engine components
+- Implemented core game state (src/game/game-state.js):
+  - Player state management (deck, hand, banque, activePokemon, energyZone)
+  - Turn tracking (currentPlayer, turnNumber, phase, turnLog)
+  - Initial setup with 5-card hands for both players
+  - Card drawing with hand limit enforcement (10 cards max)
+  - Turn management (startTurn, endTurn, getCurrentTurnInfo)
+- Implemented turn manager (src/game/turn-manager.js):
+  - ProcessTurnStart method handles opening-turn draw rule
+  - RULE-LOCKED BEHAVIOR: Player going first (player1 on turn 0) DOES draw 1 card
+  - No special case to skip draw on opening turn
+  - Includes clear log message confirming draw happened
+  - isOpeningTurn method to identify opening turn
+- Implemented draw system (src/game/draw-system.js):
+  - drawCards method with hand limit and empty deck handling
+  - canDraw method to check if draw is possible
+  - getHandSize and getDeckSize methods for querying state
+  - Hand limit: 10 cards maximum
+  - Empty deck: No automatic loss, logs failed draw
+- Created main entry point (src/index.js):
+  - Exports GameState, TurnManager, DrawSystem classes
+  - createGame factory function for easy game instantiation
+- Created comprehensive test suite (tests/rules/opening-turn-draw.test.js):
+  - 10 tests covering all acceptance criteria:
+    1. Opening turn draws exactly 1 card
+    2. No "skip draw" message in logs
+    3. Non-opening turns also draw 1 card
+    4. Player2 draws on their first turn
+    5. Hand limit enforced at 10 cards
+    6. Drawing works with non-empty deck
+    7. Consistent behavior across multiple games
+    8. Turn manager correctly identifies opening turn
+    9. Hand limit enforced on non-opening turns
+    10. Empty deck handling (no automatic loss)
+  - All 10 tests pass
+- Updated docs/rule-lock-manifest.json to mark R002 as completed
+- Files created/modified:
+  - src/game/game-state.js (3,564 bytes)
+  - src/game/turn-manager.js (2,059 bytes)
+  - src/game/draw-system.js (3,230 bytes)
+  - src/index.js (776 bytes)
+  - tests/rules/opening-turn-draw.test.js (10,761 bytes)
+  - docs/rule-lock-manifest.json (updated R002 status to completed)
+  - progress-dfaa96d0-9c58-4ecb-a82d-ffb2849bce3f.txt (created)
+- **Learnings:**
+  - Game engine is being built from scratch - no existing codebase to follow
+  - Using CommonJS modules (require/module.exports) since no build system
+  - Tests use custom assertion functions for simplicity
+  - Rule-locking means implementing specific behavior even if it differs from documented Game8 rules
+  - Opening-turn draw rule: First player DOES draw (rule-locked requirement)
+- **Acceptance Criteria Met:**
+  ✓ Starting turn 0 for player1 draws exactly 1 card when deck and hand capacity allow
+  ✓ No start-turn log message claims that opening turn skips draw
+  ✓ Existing non-opening turn draw behavior remains unchanged
+  ✓ Tests for opening-turn draw behavior pass (10/10)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 20:18 - R003: Keep first-turn manual energy attachment blocked for player going first
+- Created src/game/energy-system.js implementing first-turn energy attachment restriction
+- Rule: Player going first (player1 on turn 0) CANNOT attach energy from Energy Zone on first turn
+- Implemented canAttachEnergy() method with validation reason 'first_turn_restriction'
+- Implemented attachEnergy() method that respects the restriction
+- Updated src/index.js to include energySystem in game creation
+- Created tests/rules/first-turn-energy-block.test.js with 10 comprehensive tests covering:
+  - AC1: Player1 on turn 0 - energy attachment rejected with validation reason
+  - AC2: Player2 first turn - energy attachment allowed
+  - AC3: Player1 turn 2 - energy attachment allowed
+  - AC3: Later turns - attachment behavior unchanged
+  - First-turn restriction only blocks player1 on turn 0
+  - Energy attachment respects Energy Zone availability
+  - canAttachEnergy validation method correct
+  - Restriction decoupled from draw logic (verifies independence from R002)
+  - Multiple first-turn attempts all blocked
+  - Energy system correctly identifies first turn
+- All 10 tests pass
+- Verified R002 tests still pass (no regressions)
+- Updated docs/rule-lock-manifest.json status for R003 to "completed"
+- Files created:
+  - src/game/energy-system.js (3,676 bytes)
+  - tests/rules/first-turn-energy-block.test.js (12,859 bytes)
+- Files modified:
+  - src/index.js (added energySystem export)
+  - docs/rule-lock-manifest.json (R003 status → completed)
+- **Learnings:**
+  - Restriction is completely independent of opening-turn draw rule (R002)
+  - Validation logic is cleanly separated in canAttachEnergy() method
+  - Energy system follows same pattern as other game systems (constructor + methods)
+  - Test pattern: create test game, add test data, verify behavior, check logs
+
+---
+
+## 2026-02-16 20:32 - R004: Enforce hand-limit draw behavior at 10 cards without discarding drawn card
+- Verified existing draw system implementation correctly enforces 10-card hand limit
+- Hand limit behavior:
+  - When hand size is 10, draw attempts are blocked completely
+  - Deck, hand, and discard (banque) sizes remain unchanged
+  - Clear log entry records draw was skipped due to hand_limit
+  - When hand size is 9, draw succeeds and hand reaches 10
+  - Drawing multiple cards at hand size 9: draws to 10 then blocks remaining
+- Both GameState.drawCards() and DrawSystem.drawCards() have consistent behavior
+- Created comprehensive test suite (tests/rules/hand-limit-draw.test.js) with 17 tests covering:
+  - AC1: Draw at hand size 10 leaves deck, hand, and discard unchanged (4 tests)
+  - AC2: Draw log entry clearly records hand limit blocking (3 tests)
+  - AC3: Draw at hand size 9 succeeds and hand reaches 10 (4 tests)
+  - Additional tests: turn draw, effect-based draw, canDraw method, consistency (6 tests)
+- All 17 tests pass
+- Verified no regressions in R002 and R003 tests
+- Updated tests/rule-lock-manifest.test.js to reflect R002, R003 completed status
+- Updated docs/rule-lock-manifest.json to mark R004 as completed
+- Files created:
+  - tests/rules/hand-limit-draw.test.js (13,554 bytes)
+- Files modified:
+  - docs/rule-lock-manifest.json (R004 status → completed, codeTargets updated)
+  - tests/rule-lock-manifest.test.js (updated status checks for R002, R003)
+- **Learnings:**
+  - Hand limit enforcement is already correctly implemented in draw system
+  - The "without discarding" in story title clarifies that no card moves to discard (unlike some TCGs)
+  - Both draw methods (GameState and DrawSystem) are aligned and consistent
+  - Test coverage should verify state changes (deck, hand, discard) not just final counts
+- **Acceptance Criteria Met:**
+  ✓ When hand size is 10, draw attempts leave deck, hand, and discard sizes unchanged
+  ✓ Draw log entry clearly records that draw was skipped due to hand limit
+  ✓ When hand size is 9, draw succeeds and hand reaches 10
+  ✓ Tests for hand-limit draw behavior pass (17/17)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 20:42 - R005: Enforce no deck-out loss when draw is impossible from empty deck
+- Created src/game/deck-manager.js to centralize deck-related operations
+- Confirmed and enhanced empty-deck handling across game systems
+- Deck manager provides consistent API for deck operations:
+  - isDeckEmpty(): Check if deck is empty
+  - getDeckSize(): Get current deck size
+  - canDraw(): Check if draw is possible
+  - shouldDeckOutCauseLoss(): Always returns false (no deck-out loss in Pocket TCG)
+  - getDrawBlockReason(): Get reason for draw blocking
+  - getDeckInfo(): Get complete deck state information
+- Key rule implementation: Empty deck does NOT cause automatic loss
+  - Draw attempts from empty deck simply skip drawing without triggering defeat
+  - Game state remains playable after empty-deck draw attempts
+  - Log captures empty-deck no-draw outcome with clear reason 'deck_empty'
+  - Both GameState.drawCards() and DrawSystem.drawCards() have consistent empty-deck behavior
+- Updated src/index.js to export DeckManager class
+- Created comprehensive test suite (tests/rules/deck-out-no-loss.test.js) with 22 tests covering:
+  - AC1: Empty deck draw does not throw error or set winner (3 tests)
+  - AC2: Game state remains playable after empty-deck draw attempts (4 tests)
+  - AC3: Log captures empty-deck no-draw outcome (3 tests)
+  - Regression: Start-turn draw with empty deck (1 test)
+  - Regression: Effect-driven draw from empty deck (1 test)
+  - Regression: Empty deck on consecutive turns (1 test)
+  - DeckManager API tests (7 tests)
+  - Consistency: Both draw methods handle empty deck (1 test)
+  - Isolation: Player1 empty deck does not affect player2 (1 test)
+- All 22 tests pass
+- Verified no regressions in R002, R003, R004 tests (all existing tests pass)
+- Updated docs/rule-lock-manifest.json to mark R005 as completed
+- Updated tests/rule-lock-manifest.test.js to reflect R005 completed status
+- Files created:
+  - src/game/deck-manager.js (4,246 bytes)
+  - tests/rules/deck-out-no-loss.test.js (14,762 bytes)
+- Files modified:
+  - src/index.js (added DeckManager export)
+  - docs/rule-lock-manifest.json (R005 status → completed)
+  - tests/rule-lock-manifest.test.js (updated status checks for R005)
+- **Learnings:**
+  - Pocket TCG has NO deck-out loss rule (key difference from traditional TCGs)
+  - Empty deck handling is already implemented in draw system from R002
+  - Deck manager centralizes deck logic and provides consistent API across game systems
+  - Deck manager's shouldDeckOutCauseLoss() explicitly documents the no-loss behavior
+  - Test coverage should include both start-turn and effect-driven draws from empty deck
+  - Log entries should include clear messages about no automatic loss for transparency
+- **Acceptance Criteria Met:**
+  ✓ A draw attempt from an empty deck does not set winner and does not throw
+  ✓ Game state remains playable after empty-deck draw attempts
+  ✓ Log captures empty-deck no-draw outcome
+  ✓ Tests for empty-deck no-loss behavior pass (22/22)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 21:00 - R006: Align turn-limit resolution rule to locked behavior at max turns
+- Created src/game/win-condition.js implementing turn-limit win condition checking
+- Rule: When turn limit is reached, game ends in DRAW (no winner)
+  - PvP battles: max 30 turns
+  - Solo battles: max 50 turns
+  - Turn 30 IS played (check happens after turn completion)
+  - Turn counter counts total turns (each player action is one turn)
+- Updated turn tracking in src/game/game-state.js:
+  - Changed turnNumber to increment after EVERY turn (not just player1 turns)
+  - Updated getCurrentTurnInfo to correctly identify opening turn (turnNumber === 0)
+  - This ensures turn counter matches total turns played, not completed rounds
+- Updated src/game/turn-manager.js:
+  - Integrated WinCondition into TurnManager constructor
+  - Modified endTurn() to check win condition after each turn completes
+  - Returns win condition result when game ends, null otherwise
+- Updated src/index.js:
+  - Added WinCondition to exports
+  - Modified createGame() to accept turnLimit parameter (default 30)
+  - Exposes winCondition via turnManager.winCondition in game instance
+- Created comprehensive test suite (tests/rules/turn-limit-resolution.test.js) with 19 tests covering:
+  - AC1: At configured turn limit, game ends in DRAW (3 tests)
+    * PvP mode (30 turns): draw detected at turn 30
+    * Solo mode (50 turns): draw detected at turn 50
+    * endTurn returns win condition at turn limit
+  - AC2: Before turn limit, no premature winner declared (7 tests)
+    * No win condition at turn 29 (before limit)
+    * Win condition detected at turn 30 (at limit)
+    * Early turns (0-10): no win condition
+    * Mid-game turns (10-20): no win condition
+    * Late turns (20-29): no win condition
+    * endTurn returns null before turn limit
+  - AC3: Beyond turn limit, result remains stable/deterministic (3 tests)
+    * Turns 30+ consistently return DRAW
+    * Multiple checkWinCondition calls return identical results
+    * Turn limit boundary behavior verified
+  - Additional tests: getTurnLimit, setTurnLimit, isTurnLimitReached, default limit, turn logging (6 tests)
+- All 19 tests pass
+- Updated tests/rules/deck-out-no-loss.test.js to reflect new turn tracking behavior:
+  - Fixed AC2.3: Turn number should be 1 after one turn (not 0)
+  - Fixed Regression.3: Turn number should be 4 after 4 turns (not 2)
+- Updated tests/rule-lock-manifest.test.js to reflect R006 completed status
+- Updated docs/rule-lock-manifest.json to mark R006 as completed
+- Verified no regressions in R002, R003, R004, R005 tests (all existing tests pass)
+- Files created:
+  - src/game/win-condition.js (2,566 bytes)
+  - tests/rules/turn-limit-resolution.test.js (13,577 bytes)
+- Files modified:
+  - src/game/game-state.js (turn tracking updated)
+  - src/game/turn-manager.js (win condition integration)
+  - src/index.js (WinCondition export and turnLimit parameter)
+  - tests/rules/deck-out-no-loss.test.js (turn tracking fixes)
+  - tests/rule-lock-manifest.test.js (R006 status update)
+  - docs/rule-lock-manifest.json (R006 status → completed, codeTargets updated)
+- **Learnings:**
+  - Turn limit is checked AFTER turn completion, not before
+  - Turn counter should track TOTAL turns (each player action), not rounds
+  - Win condition check happens in endTurn(), returns result to caller
+  - WinCondition system is separate from GameState, provides clean API for win checking
+  - Turn limit causes DRAW (no winner), not a win for either player
+  - Source doc "turn 30 IS played" means check happens after turn 30 completes
+  - Changed turn tracking from round-based to turn-based (breaking change)
+  - All affected tests updated to reflect correct turn counting
+- **Acceptance Criteria Met:**
+  ✓ At configured turn limit, winner or draw outcome matches locked rule (draw at turn 30/50)
+  ✓ Before turn limit, no premature turn-limit winner is declared
+  ✓ Beyond turn limit, result remains stable and deterministic
+  ✓ Tests for turn-limit resolution pass (19/19)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 21:05 - R007: Correct first-turn evolution restriction to only block global opening turn
+- Created src/game/evolution-system.js implementing evolution validation and execution
+- Rule: Evolution is blocked on global opening turn (turn 0), but allowed on turn 1+ for both players
+- Implemented canEvolve() method with validation for:
+  - opening_turn_restriction: Blocked on turn 0
+  - played_this_turn: Cannot evolve Pokemon played this turn
+  - already_evolved: Cannot evolve same Pokemon twice in one turn
+- Implemented evolve() method that respects validation rules
+- Implemented resetTurnTracking() to clear turn-specific flags (playedThisTurn, evolvedThisTurn)
+- Updated src/game/turn-manager.js to accept evolutionSystem parameter and reset tracking at turn start
+- Updated src/index.js to include evolutionSystem in game creation and exports
+- Created comprehensive test suite (tests/rules/first-turn-evolution.test.js) with 20 tests covering:
+  - AC1: Evolution rejected on global opening turn (5 tests)
+    * Player1 cannot evolve on turn 0
+    * Global opening turn is only turn 0, not player2's first turn
+    * canEvolve returns false on turn 0
+    * isOpeningTurn correctly identifies turn 0
+    * Multiple evolution attempts on turn 0 all blocked
+  - AC2: Evolution eligibility on subsequent follows per-Pokemon timing constraints (5 tests)
+    * Player1 can evolve on turn 2 (after opening turn)
+    * Player2 can evolve on their first turn (turn 1)
+    * Cannot evolve Pokemon played this turn
+    * Cannot evolve same Pokemon twice in one turn
+    * Multiple different Pokemon can evolve in same turn
+  - AC3: No contradictory turn-boundary logic (3 tests)
+    * canEvolve and evolve use same boundary rule
+    * Turn boundary consistent across multiple games
+    * Engine helper isOpeningTurn matches turn tracking
+  - Regression tests: Turn 0 vs turn 1 behavior (4 tests)
+    * Turn 0 blocks both players, turn 1 allows player2
+    * Turn 2 allows player1 evolution
+    * playedThisTurn flag resets each turn
+    * evolvedThisTurn tracking resets each turn
+  - Additional tests: Edge cases and consistency (3 tests)
+    * Evolution logs contain correct information
+    * Active and bench Pokemon can both evolve
+    * canEvolve returns correct reasons for different failures
+- All 20 tests pass
+- Verified no regressions in R002, R003, R004, R005, R006 tests (all existing tests pass)
+- Updated docs/rule-lock-manifest.json to mark R007 as completed
+- Updated tests/rule-lock-manifest.test.js to reflect R007 completed status
+- Files created:
+  - src/game/evolution-system.js (6,527 bytes)
+  - tests/rules/first-turn-evolution.test.js (22,695 bytes)
+- Files modified:
+  - src/game/turn-manager.js (added evolutionSystem parameter and reset tracking)
+  - src/index.js (added EvolutionSystem export and integration)
+  - docs/rule-lock-manifest.json (R007 status → completed)
+  - tests/rule-lock-manifest.test.js (updated status checks for R007)
+- **Learnings:**
+  - Global opening turn is only turn 0 (player1's first turn), not player2's first turn
+  - Player2 can evolve on turn 1 (their first turn) because it's not the global opening turn
+  - Evolution system needs to track two turn-specific flags: playedThisTurn (per Pokemon) and evolvedThisTurn (global Set)
+  - Turn tracking must be reset at the START of each player's turn, not at the end
+  - Evolution is independent of first-turn energy attachment rule (different players' first turns are affected differently)
+- **Acceptance Criteria Met:**
+  ✓ Evolution is rejected on global opening turn per rule lock (turn 0)
+  ✓ Evolution eligibility on subsequent turns follows existing per-Pokemon timing constraints
+  ✓ No contradictory turn-boundary logic remains between move and engine validation paths
+  ✓ Tests for evolution first-turn restriction pass (20/20)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 21:24 - R008: Lock Supporter first-turn allowance for player going first
+- Created src/game/supporter-system.js implementing Supporter card validation and execution
+- Rule: Supporters CAN be used on the first turn (player1's turn 0) - different from some Items (e.g., Rare Candy) which have first-turn restrictions
+- Implemented canPlaySupporter() method with validation for:
+  - already_played: Cannot play more than one Supporter per turn
+  - external_blocker: Supports external blockers (opponent passive lock, etc.)
+  - No first-turn restriction for Supporters (turn 0 allows play)
+- Implemented playSupporter() method that respects validation rules
+- Implemented addExternalBlocker()/removeExternalBlocker() for external blocker management
+- Implemented resetTurnTracking() to clear supporterPlayedThisTurn flag each turn
+- Updated src/game/turn-manager.js to accept supporterSystem parameter and reset tracking at turn start
+- Updated src/index.js to include supporterSystem in game creation and exports
+- Created comprehensive test suite (tests/rules/supporter-first-turn-allowance.test.js) with 18 tests covering:
+  - AC1: Player1 can play Supporter on turn 0 (5 tests)
+    * Player1 can play a Supporter on turn 0
+    * canPlaySupporter returns allowed on turn 0 for player1
+    * Supporter play on turn 0 logs correctly
+    * Player2 can also play a Supporter on their first turn (turn 1)
+    * Turn 0 is identified correctly (no first-turn blocker for Supporters)
+  - AC2: Once-per-turn limit (5 tests)
+    * Cannot play a second Supporter in the same turn
+    * canPlaySupporter returns blocked after one Supporter played
+    * Once-per-turn limit resets at the start of the next turn
+    * Player1 can play a Supporter on turn 2 (after player2's turn)
+    * hasSupporterBeenPlayedThisTurn returns correct status
+  - AC3: External blocker behavior (6 tests)
+    * External blocker can prevent Supporter play
+    * External blocker is checked before once-per-turn limit
+    * External blocker can be removed
+    * Conditional external blocker (only blocks certain Supporters)
+    * Multiple external blockers can coexist
+    * External blocker logs correctly when blocking
+  - Additional tests (2 tests)
+    * Supporter behavior is independent from energy attachment (R003)
+    * Supporter behavior is independent from evolution (R007)
+- All 18 tests pass
+- Verified no regressions in R002, R003, R007 tests (all existing tests pass)
+- Updated docs/rule-lock-manifest.json to mark R008 as completed
+- Updated tests/rule-lock-manifest.test.js to reflect R008 completed status
+- Files created:
+  - src/game/supporter-system.js (4,537 bytes)
+  - tests/rules/supporter-first-turn-allowance.test.js (16,106 bytes)
+- Files modified:
+  - src/game/turn-manager.js (added supporterSystem parameter and reset tracking)
+  - src/index.js (added SupporterSystem export and integration)
+  - docs/rule-lock-manifest.json (R008 status → completed)
+  - tests/rule-lock-manifest.test.js (updated status checks for R008)
+- **Learnings:**
+  - Supporters CAN be used on the first turn (player1's turn 0), unlike some Items like Rare Candy which have first-turn restrictions
+  - Supporter once-per-turn limit is independent of turn number - applies to every turn
+  - External blocker system allows for flexible restriction handling (opponent passive locks, type restrictions, etc.)
+  - External blockers are checked BEFORE the once-per-turn limit, allowing for more granular control
+  - Supporter system follows same pattern as other game systems (constructor + canX/playX methods)
+  - Validation returns { allowed, reason } format consistent with other systems
+- **Acceptance Criteria Met:**
+  ✓ On turn 0, player1 can play one valid Supporter if no other blocker applies
+  ✓ Supporter once-per-turn limit still applies after the first Supporter is played
+  ✓ Existing blocker behavior (for example opponent passive lock) is preserved
+  ✓ Tests for first-turn Supporter allowance pass (18/18)
+  ✓ Typecheck passes (N/A - plain JavaScript project)
+
+---
+
+## 2026-02-16 23:15 - R010: Add integration regression suite for rule-locked micro-story set
+- Created tests/integration/regression-suite.test.js with 25 comprehensive tests covering:
+  - R002: Opening-turn draw (3 tests)
+    * Player1 draws 1 card on opening turn (turn 0)
+    * Player2 draws 1 card on their first turn (turn 1)
+    * Opening turn does not skip draw (no skip message in logs)
+  - R003: First-turn energy attachment block (3 tests)
+    * Player1 cannot attach energy on turn 0 (opening turn)
+    * Player2 can attach energy on their first turn (turn 1)
+    * Player1 can attach energy on turn 2 (after opening turn)
+  - R004: Hand-limit draw behavior (3 tests)
+    * Draw at hand size 10 leaves hand unchanged (deck unchanged)
+    * Draw log entry records hand limit blocking
+    * Draw at hand size 9 succeeds and hand reaches 10
+  - R005: No deck-out loss (3 tests)
+    * Draw from empty deck does not set winner or throw
+    * Game state remains playable after empty-deck draw attempts
+    * Log captures empty-deck no-draw outcome
+  - R006: Turn-limit resolution (3 tests)
+    * At configured turn limit, game ends in DRAW (no winner)
+    * Before turn limit, no premature winner declared
+    * Beyond turn limit, result remains stable/deterministic
+  - R007: First-turn evolution restriction (3 tests)
+    * Evolution rejected on global opening turn (turn 0)
+    * Player1 can evolve on turn 2 (after opening turn)
+    * Player2 can evolve on their first turn (turn 1)
+  - R008: Supporter first-turn allowance (3 tests)
+    * Player1 can play Supporter on turn 0 (opening turn)
+    * Once-per-turn limit still applies
+    * Once-per-turn limit resets at start of next turn
+  - Cross-story integration tests (4 tests)
+    * R002+R003: Opening turn draw + first-turn energy block work together
+    * R004+R005: Hand limit checked before deck out
+    * R007+R008: Evolution blocked but Supporter allowed on opening turn
+    * R002+R003+R004+R005+R006+R007+R008: All rules work together over multiple turns
+- All 25 integration tests pass
+- Created TESTING.md documentation with:
+  - Test structure explanation
+  - Commands to run all tests and individual test suites
+  - Integration regression suite invocation
+  - Test coverage breakdown by story
+  - Debugging guidance
+- Updated tests/rule-lock-manifest.test.js to reflect R009 completed status (added to completed stories list)
+- Updated docs/rule-lock-manifest.json to mark R010 as completed
+- Fixed infinite loop bug in INT4 integration test (deck size was too small to test both hand limit and deck out)
+- Fixed while loop condition to check deck emptiness when filling hand
+- Verified no regressions in all existing tests (R001-R009)
+- Files created:
+  - tests/integration/regression-suite.test.js (10,403 bytes)
+  - TESTING.md (4,403 bytes)
+- Files modified:
+  - docs/rule-lock-manifest.json (R010 status → completed, testTargets updated)
+  - tests/rule-lock-manifest.test.js (added R009 to completed stories list)
+- **Learnings:**
+  - Integration tests are crucial for catching regressions when rules interact
+  - Test names with story IDs (e.g., "[R003] AC1 - ...") make it easy to identify which rule regressed
+  - Cross-story tests verify rules don't interfere with each other in unexpected ways
+  - When testing multiple scenarios that consume resources (cards, deck size), ensure sufficient initial state
+  - Testing documentation should include quick reference commands for common workflows
+  - Integration suite provides safety net for future changes
+- **Acceptance Criteria Met:**
+  ✓ Integration test suite exists and includes cases for R002, R003, R004, R005, R006, R007, and R008
+  ✓ Integration test output clearly indicates failing story ID when a rule regresses
+  ✓ Project test documentation includes the command to run this integration suite (TESTING.md)
+  ✓ Tests for rule-locked integration suite pass (25/25)
+  ✓ Typecheck passes (N/A - plain JavaScript project)

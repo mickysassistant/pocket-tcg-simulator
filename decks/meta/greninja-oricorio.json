@@ -1,0 +1,269 @@
+[
+  {
+    "id": "B1-071",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Water Drip",
+        "damage": 20,
+        "energyCost": [
+          "W"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-071-2",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Water Drip",
+        "damage": 20,
+        "energyCost": [
+          "W"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A1-089",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A1-089-2",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A3-066",
+    "name": "Oricorio",
+    "supertype": "Pokémon",
+    "hp": 70,
+    "types": [
+      "Lightning"
+    ],
+    "attacks": [
+      {
+        "name": "Zzzap",
+        "damage": 50,
+        "energyCost": [
+          "L",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Safeguard",
+        "effect": "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex.",
+        "rawInfo": "Ability:\nSafeguard"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A3-066-2",
+    "name": "Oricorio",
+    "supertype": "Pokémon",
+    "hp": 70,
+    "types": [
+      "Lightning"
+    ],
+    "attacks": [
+      {
+        "name": "Zzzap",
+        "damage": 50,
+        "energyCost": [
+          "L",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Safeguard",
+        "effect": "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex.",
+        "rawInfo": "Ability:\nSafeguard"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4-066",
+    "name": "Pichu",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Lightning"
+    ],
+    "attacks": [
+      {
+        "name": "0 Crackly Toss",
+        "damage": 0,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4-066-2",
+    "name": "Pichu",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Lightning"
+    ],
+    "attacks": [
+      {
+        "name": "0 Crackly Toss",
+        "damage": 0,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B2-127",
+    "name": "Mega Kangaskhan ex",
+    "supertype": "Pokémon",
+    "hp": 180,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Double-Punching Family",
+        "damage": 80,
+        "energyCost": [
+          "C",
+          "C",
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326-2",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1a-069",
+    "name": "Serena",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A3-149",
+    "name": "Ilima",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314-2",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  }
+]
