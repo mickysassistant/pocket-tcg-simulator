@@ -19,6 +19,7 @@
  * GAP-019: [Importante][C2] Bonus por "energía extra" adjunta (Blastoise)
  * GAP-020: [Importante][C2] Switch del atacante (Magikarp)
  * GAP-021: [Importante][C2] Forzar switch del oponente (Grapploct)
+ * GAP-022: [Importante][C2] Descartar Pokémon de propia Banca para bonus de daño (Gyarados)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -843,6 +844,126 @@ class AttackSystem {
   }
 
   // ---------------------------------------------------------------------------
+  // Sacrifice from Banca for Damage Bonus (GAP-022)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Sacrifice a Pokémon from the attacker's Banca to gain a damage bonus.
+   *
+   * Sacrifice format: { pokemonId: string, damageBonus: number }
+   * - pokemonId: ID of the Benched Pokémon to sacrifice (required)
+   * - damageBonus: Amount of extra damage to add (required)
+   *
+   * When a Pokémon is sacrificed:
+   * - The Benched Pokémon is removed from play (not discarded, but put in Lost Zone)
+   * - All energy attached to the sacrificed Pokémon is lost
+   * - The attacker gains the specified damage bonus for this attack
+   * - The sacrificed Pokémon is considered KO'd (affects KO triggers)
+   *
+   * Real-card examples (GAP-022):
+   * - Gyarados: Sacrifices a Benched Pokémon to gain damage bonus
+   *
+   * Mechanics:
+   * - The sacrifice happens BEFORE the attack's damage calculation
+   * - The damage bonus is added to the attack's base damage
+   * - The sacrificed Pokémon is removed from the Banca array (slot becomes null)
+   * - KO triggers fire for the sacrificed Pokémon
+   * - The sacrificed Pokémon is not placed in the discard pile (it's "lost")
+   *
+   * @param {string} attackingPlayerId - 'player1' or 'player2'
+   * @param {Object} sacrificeConfig - Sacrifice configuration
+   * @returns {Object} Result with success status and details
+   */
+  applySacrificeFromBanque(attackingPlayerId, sacrificeConfig) {
+    if (!sacrificeConfig) {
+      return {
+        success: false,
+        reason: 'no_config',
+        message: 'No sacrifice configuration provided'
+      };
+    }
+
+    if (!sacrificeConfig.pokemonId) {
+      return {
+        success: false,
+        reason: 'no_pokemon_id',
+        message: 'Sacrifice configuration must include pokemonId'
+      };
+    }
+
+    if (sacrificeConfig.damageBonus === undefined || sacrificeConfig.damageBonus === null) {
+      return {
+        success: false,
+        reason: 'no_damage_bonus',
+        message: 'Sacrifice configuration must include damageBonus'
+      };
+    }
+
+    const player = this.gameState.players[attackingPlayerId];
+    const banque = player.banque || [];
+
+    // Find the Pokémon to sacrifice
+    const benchIndex = banque.findIndex(p => p && p.id === sacrificeConfig.pokemonId);
+
+    if (benchIndex === -1) {
+      return {
+        success: false,
+        reason: 'pokemon_not_found',
+        message: `Pokémon with id ${sacrificeConfig.pokemonId} not found on bench`
+      };
+    }
+
+    const sacrificedPokemon = banque[benchIndex];
+
+    // Check if Pokémon is already KO'd
+    if (sacrificedPokemon.currentHp !== undefined && sacrificedPokemon.currentHp <= 0) {
+      return {
+        success: false,
+        reason: 'pokemon_already_ko',
+        message: 'Pokémon on bench is already KO\'d, cannot sacrifice'
+      };
+    }
+
+    // Remove the Pokémon from the bench
+    player.banque[benchIndex] = null;
+
+    // Handle KO-triggered abilities for the sacrificed Pokémon
+    let koTriggerResults = [];
+    if (this.koTriggerSystem) {
+      koTriggerResults = this.koTriggerSystem.handleKnockout({
+        playerId: attackingPlayerId,
+        pokemonId: sacrificedPokemon.id,
+        attackingPlayerId: attackingPlayerId,
+        attackingPokemonId: null, // Self-sacrifice
+        wasActive: false, // It was on the bench
+        source: 'sacrifice'
+      });
+    }
+
+    // Log the sacrifice event
+    this.gameState.turnLog.push({
+      type: 'sacrifice_from_banque',
+      player: attackingPlayerId,
+      pokemonId: sacrificedPokemon.id,
+      pokemonName: sacrificedPokemon.name,
+      damageBonus: sacrificeConfig.damageBonus,
+      koTriggerResults
+    });
+
+    return {
+      success: true,
+      damageBonus: sacrificeConfig.damageBonus,
+      details: {
+        pokemonId: sacrificedPokemon.id,
+        pokemonName: sacrificedPokemon.name,
+        hp: sacrificedPokemon.hp,
+        benchIndex,
+        koTriggerResults
+      }
+    };
+  }
+
+  // ---------------------------------------------------------------------------
   // Recoil Damage Calculation (GAP-013)
   // ---------------------------------------------------------------------------
 
@@ -1170,6 +1291,16 @@ class AttackSystem {
     // since energy is consumed at the end of the turn in Pocket TCG)
     energyCostPaid = true;
 
+    // Apply sacrifice from Banque for damage bonus (GAP-022)
+    let sacrificeResult = null;
+    let sacrificeBonus = 0;
+    if (attack.sacrificeFromBanque) {
+      sacrificeResult = this.applySacrificeFromBanque(attackingPlayerId, attack.sacrificeFromBanque);
+      if (sacrificeResult.success) {
+        sacrificeBonus = sacrificeResult.damageBonus;
+      }
+    }
+
     // Calculate base damage including halveHp (GAP-018), damageScaling (GAP-012), benchScaling (GAP-017), and extraEnergyBonus (GAP-019)
     let baseDamage = attack.damage || 0;
     let damageScaling = 0;
@@ -1210,11 +1341,11 @@ class AttackSystem {
 
     if (!damagePrevented) {
       // Apply all damage modifiers (bonus from attacker abilities + reduction from defender abilities + opponent reduction from defender's debuff abilities)
-      // Note: baseDamage includes damageScaling, benchScaling, and extraEnergyBonus here
+      // Note: baseDamage includes damageScaling, benchScaling, extraEnergyBonus, and sacrificeBonus here
       const modifierResult = this.abilitySystem.applyDamageModifiers(
         attackingPlayerId,
         defendingPlayerId,
-        baseDamage + damageScaling + benchScaling + extraEnergyBonus
+        baseDamage + damageScaling + benchScaling + extraEnergyBonus + sacrificeBonus
       );
 
       let damageAfterModifiers = modifierResult.finalDamage;
@@ -1363,6 +1494,7 @@ class AttackSystem {
       damageScaling,
       benchScaling,
       extraEnergyBonus,
+      sacrificeBonus, // GAP-022: Damage bonus from sacrificing Benched Pokémon
       halveHpApplied,
       bonusApplied,
       reductionApplied,
@@ -1383,6 +1515,7 @@ class AttackSystem {
       temporaryEffectResult,
       forcedOpponentSwitchResult, // GAP-021: Result of forced opponent switch
       postAttackSwitchResult, // GAP-020: Result of post-attack switch
+      sacrificeResult, // GAP-022: Result of sacrifice from Banca
       targetLocation: effectiveTarget.location, // 'active' or 'banque' (GAP-015)
       spreadDamageResults // GAP-016: Results of spread damage to Benched Pokémon
     };
