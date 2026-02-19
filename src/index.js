@@ -34,7 +34,7 @@ function createGame(player1Deck, player2Deck, turnLimit = 30) {
   const statusConditionSystem = new StatusConditionSystem(gameState, abilitySystem);
   const temporaryEffectsSystem = new TemporaryEffectsSystem(gameState);
   const energySystem = new EnergySystem(gameState, abilitySystem, statusConditionSystem);
-  const attackSystem = new AttackSystem(gameState, abilitySystem, koTriggerSystem, temporaryEffectsSystem);
+  const attackSystem = new AttackSystem(gameState, abilitySystem, koTriggerSystem, temporaryEffectsSystem, statusConditionSystem);
   const activatedAbilitySystem = new ActivatedAbilitySystem(gameState, abilitySystem, statusConditionSystem);
   const deckManager = new DeckManager(gameState);
 

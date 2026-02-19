@@ -1,0 +1,256 @@
+[
+  {
+    "id": "B1-103",
+    "name": "Duskull",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Ambush",
+        "damage": 0,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-104",
+    "name": "Dusclops",
+    "supertype": "Pokémon",
+    "hp": 90,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Will-O-Wisp",
+        "damage": 30,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1-105",
+    "name": "Dusknoir",
+    "supertype": "Pokémon",
+    "hp": 150,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Hammer In",
+        "damage": 80,
+        "energyCost": [
+          "P",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Fade into Darkness",
+        "effect": "When this Pokémon is Knocked Out, flip a coin. If heads, your opponent can't get any points for it.",
+        "rawInfo": "Ability:\nFade into Darkness"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B2-067",
+    "name": "Litwick",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Mumble",
+        "damage": 20,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B2-068",
+    "name": "Lampent",
+    "supertype": "Pokémon",
+    "hp": 80,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Petty Grudge",
+        "damage": 30,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B2-069",
+    "name": "Chandelure",
+    "supertype": "Pokémon",
+    "hp": 140,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Past Friends 60x",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B2-071",
+    "name": "Pumpkaboo",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Ram",
+        "damage": 20,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B2-072",
+    "name": "Gourgeist",
+    "supertype": "Pokémon",
+    "hp": 110,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Soul Shot",
+        "damage": 70,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B2-070",
+    "name": "Meloetta",
+    "supertype": "Pokémon",
+    "hp": 70,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Psyshot",
+        "damage": 50,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Strange Singing",
+        "effect": "At the beginning of your turn, if this Pokémon is in the Active Spot, put a random [P] Pokémon from your deck into your hand.",
+        "rawInfo": "Ability:\nStrange Singing"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-338",
+    "name": "Sabrina",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-348",
+    "name": "Lillie",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-223",
+    "name": "May",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-226",
+    "name": "Lisia",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B2-150",
+    "name": "Sightseer",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-320",
+    "name": "Giant Cape",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  },
+  {
+    "id": "B2-155",
+    "name": "Peculiar Plaza",
+    "supertype": "Trainer",
+    "subtype": "Stadium"
+  }
+]

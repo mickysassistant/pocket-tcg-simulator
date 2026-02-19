@@ -1,0 +1,231 @@
+[
+  {
+    "id": "B1-196",
+    "name": "Swablu",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Sing",
+        "damage": 0,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-196-2",
+    "name": "Swablu",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Sing",
+        "damage": 0,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-102",
+    "name": "Mega Altaria ex",
+    "supertype": "Pokémon",
+    "hp": 190,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Mega Harmony",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1-102-2",
+    "name": "Mega Altaria ex",
+    "supertype": "Pokémon",
+    "hp": 190,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Mega Harmony",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1-109",
+    "name": "Chingling",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "0 Jingly Noise",
+        "damage": 10,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-109-2",
+    "name": "Chingling",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "0 Jingly Noise",
+        "damage": 10,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-106",
+    "name": "Jirachi",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Star Drop",
+        "damage": 0,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A3-080",
+    "name": "Comfey",
+    "supertype": "Pokémon",
+    "hp": 70,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Spinning Attack",
+        "damage": 30,
+        "energyCost": [
+          "P",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Flower Shield",
+        "effect": "Each of your Pokémon that has any [P] Energy attached recovers from all Special Conditions and can't be affected by any Special Conditions.",
+        "rawInfo": "Ability:\nFlower Shield"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326-2",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-226",
+    "name": "Lisia",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-226-2",
+    "name": "Lisia",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-344",
+    "name": "Mars",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "red-card",
+    "name": "Red Card",
+    "supertype": "Trainer"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-145",
+    "name": "Lucky Ice Pop",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-153",
+    "name": "Training Area",
+    "supertype": "Trainer",
+    "subtype": "Stadium"
+  }
+]

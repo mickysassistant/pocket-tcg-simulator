@@ -17,6 +17,7 @@
  * GAP-017: [Importante][C2] Daño escalado por Pokémon en Banca (Cinccino)
  * GAP-018: [Importante][C2] Halve HP (Bidoof)
  * GAP-019: [Importante][C2] Bonus por "energía extra" adjunta (Blastoise)
+ * GAP-020: [Importante][C2] Switch del atacante (Magikarp)
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -159,12 +160,14 @@ class AttackSystem {
    * @param {Object} abilitySystem - AbilitySystem instance
    * @param {Object} koTriggerSystem - KoTriggerSystem instance (optional)
    * @param {Object} temporaryEffectsSystem - TemporaryEffectsSystem instance (optional, GAP-014)
+   * @param {Object} statusConditionSystem - StatusConditionSystem instance (optional, GAP-020)
    */
-  constructor(gameState, abilitySystem, koTriggerSystem = null, temporaryEffectsSystem = null) {
+  constructor(gameState, abilitySystem, koTriggerSystem = null, temporaryEffectsSystem = null, statusConditionSystem = null) {
     this.gameState = gameState;
     this.abilitySystem = abilitySystem;
     this.koTriggerSystem = koTriggerSystem;
     this.temporaryEffectsSystem = temporaryEffectsSystem;
+    this.statusConditionSystem = statusConditionSystem;
   }
 
   // ---------------------------------------------------------------------------
@@ -498,6 +501,149 @@ class AttackSystem {
     }
 
     return 0;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Post-Attack Switch (GAP-020)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Switch the attacking Pokémon with a Benched Pokémon after the attack.
+   *
+   * Post-attack switch format:
+   * - { to: 'bench' } - Switch with any Benched Pokémon (player chooses)
+   * - { to: 'bench', pokemonId: string } - Switch with specific Benched Pokémon
+   *
+   * When a Pokémon switches:
+   * - The attacking Pokémon moves to the Banca
+   * - The chosen Benched Pokémon becomes the Active Pokémon
+   * - All special conditions on both Pokémon are removed (GAP-020: "con limpieza de estados")
+   *
+   * Real-card examples (GAP-020):
+   * - Magikarp: Attacks, then switches with a Benched Pokémon
+   * - Cosmog: Similar mechanic - switch after attacking
+   *
+   * Switch mechanics:
+   * - The switch happens AFTER all other attack effects (damage, recoil, spread, temporary effects)
+   * - If the attacker is KO'd (by its own recoil or other effects), no switch occurs
+   * - If the target Benched Pokémon is KO'd, it cannot be switched to
+   * - Switching clears all special conditions from both Pokémon (poison, burn, sleep, paralyzed, confused)
+   *
+   * @param {string} attackingPlayerId - 'player1' or 'player2'
+   * @param {Object} attacker - The attacking Pokémon
+   * @param {Object} postAttackSwitchConfig - Post-attack switch configuration
+   * @returns {Object} Result with success status and details
+   */
+  applyPostAttackSwitch(attackingPlayerId, attacker, postAttackSwitchConfig) {
+    if (!postAttackSwitchConfig) {
+      return {
+        success: false,
+        reason: 'no_config',
+        message: 'No post-attack switch configuration provided'
+      };
+    }
+
+    // Check if attacker was KO'd (can't switch if dead)
+    if (attacker.currentHp <= 0) {
+      return {
+        success: false,
+        reason: 'attacker_ko',
+        message: 'Attacking Pokémon was KO\'d, cannot switch'
+      };
+    }
+
+    const player = this.gameState.players[attackingPlayerId];
+    const banque = player.banque || [];
+
+    // Determine target Pokémon
+    let targetPokemon = null;
+    let targetIndex = -1;
+
+    if (postAttackSwitchConfig.pokemonId) {
+      // Switch with specific Pokémon
+      targetIndex = banque.findIndex(p => p && p.id === postAttackSwitchConfig.pokemonId);
+      if (targetIndex === -1) {
+        return {
+          success: false,
+          reason: 'target_not_found',
+          message: `Target Pokémon with id ${postAttackSwitchConfig.pokemonId} not found on bench`
+        };
+      }
+      targetPokemon = banque[targetIndex];
+    } else {
+      // Switch with first available Pokémon on bench
+      targetIndex = banque.findIndex(p => p && p.currentHp > 0);
+      if (targetIndex === -1) {
+        return {
+          success: false,
+          reason: 'no_valid_targets',
+          message: 'No valid Pokémon to switch to on bench'
+        };
+      }
+      targetPokemon = banque[targetIndex];
+    }
+
+    // Check if target is KO'd
+    if (targetPokemon.currentHp <= 0) {
+      return {
+        success: false,
+        reason: 'target_ko',
+        message: 'Target Pokémon on bench is KO\'d, cannot switch'
+      };
+    }
+
+    // Track conditions that are removed (for logging and GAP-020 requirement)
+    const conditionsRemoved = [];
+
+    // Clean special conditions from the Pokémon moving to bench
+    if (this.statusConditionSystem) {
+      const attackerCondition = this.statusConditionSystem.getCondition(attackingPlayerId, attacker.id);
+      if (attackerCondition) {
+        this.statusConditionSystem.removeCondition(attackingPlayerId, attacker.id);
+        conditionsRemoved.push({ pokemonId: attacker.id, pokemonName: attacker.name, condition: attackerCondition });
+      }
+
+      const targetCondition = this.statusConditionSystem.getCondition(attackingPlayerId, targetPokemon.id);
+      if (targetCondition) {
+        this.statusConditionSystem.removeCondition(attackingPlayerId, targetPokemon.id);
+        conditionsRemoved.push({ pokemonId: targetPokemon.id, pokemonName: targetPokemon.name, condition: targetCondition });
+      }
+    } else if (attacker.specialCondition) {
+      // Fallback if statusConditionSystem is not available
+      conditionsRemoved.push({ pokemonId: attacker.id, pokemonName: attacker.name, condition: attacker.specialCondition });
+      attacker.specialCondition = null;
+      if (targetPokemon.specialCondition) {
+        conditionsRemoved.push({ pokemonId: targetPokemon.id, pokemonName: targetPokemon.name, condition: targetPokemon.specialCondition });
+        targetPokemon.specialCondition = null;
+      }
+    }
+
+    // Perform the switch
+    const oldActive = attacker;
+    player.activePokemon = targetPokemon;
+    player.banque[targetIndex] = oldActive;
+
+    // Log the switch event
+    this.gameState.turnLog.push({
+      type: 'post_attack_switch',
+      player: attackingPlayerId,
+      fromPokemonId: oldActive.id,
+      fromPokemonName: oldActive.name,
+      toPokemonId: targetPokemon.id,
+      toPokemonName: targetPokemon.name,
+      conditionsRemoved
+    });
+
+    return {
+      success: true,
+      details: {
+        fromPokemonId: oldActive.id,
+        fromPokemonName: oldActive.name,
+        toPokemonId: targetPokemon.id,
+        toPokemonName: targetPokemon.name,
+        conditionsRemoved
+      }
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -1048,6 +1194,14 @@ class AttackSystem {
       );
     }
 
+    // Apply post-attack switch (GAP-020)
+    // e.g. Magikarp, Cosmog: switch with a Benched Pokémon after attacking
+    let postAttackSwitchResult = null;
+    if (attack.postAttackSwitch) {
+      // applyPostAttackSwitch will handle the KO'd attacker case internally
+      postAttackSwitchResult = this.applyPostAttackSwitch(attackingPlayerId, attacker, attack.postAttackSwitch);
+    }
+
     const result = {
       baseDamage,
       damageScaling,
@@ -1071,6 +1225,7 @@ class AttackSystem {
       attackerIsKO,
       attackerHpAfter: attacker.currentHp,
       temporaryEffectResult,
+      postAttackSwitchResult, // GAP-020: Result of post-attack switch
       targetLocation: effectiveTarget.location, // 'active' or 'banque' (GAP-015)
       spreadDamageResults // GAP-016: Results of spread damage to Benched Pokémon
     };
