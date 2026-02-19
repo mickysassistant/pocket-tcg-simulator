@@ -13,6 +13,7 @@
  * GAP-013: [Importante][C2] Auto-daño (recoil) (Arcanine)
  * GAP-014: [Importante][C2] Efectos temporales sobre el defensor (Vulpix Tail Whip)
  * GAP-015: [Importante][C2] Snipe (Luxray) - Selección de target (Active/Banca)
+ * GAP-016: [Importante][C2] Spread damage (Raichu (Gigashock))
  *
  * Supported damage modifier effects:
  * - damage_bonus (attacker side): adds extra damage to outgoing attacks
@@ -61,12 +62,25 @@
  *   - duration: number — turns the effect lasts (default: 1)
  * - Temporary effects are cleared when the target Pokémon switches out or evolves
  *
+ * Supported spread damage (GAP-016):
+ * - spreadDamage (attack level): deals damage to multiple opponent Pokémon
+ *   - spreadDamage: { amount: number, target: 'banque' | 'all' }
+ *   - target: 'banque' - damage to each Benched Pokémon only (Raichu Gigashock)
+ *   - target: 'all' - damage to all opponent's Pokémon (Active + Banque)
+ * - Each target's damage is calculated independently (modifiers, weakness, etc.)
+ * - KO triggers fire for each target that is KO'd
+ *
  * Real-card examples of recoilDamage (GAP-013):
  * - Arcanine (Heat Tackle): "This Pokémon also does 20 damage to itself."
  * - Arcanine ex (Inferno Onrush): "This Pokémon also does 30 damage to itself."
  * - Rampardos (Head Smash): "This Pokémon also does 30 damage to itself."
  * - Vespiquen (Reckless Charge): "This Pokémon also does 20 damage to itself."
  * - Conditional: "If your opponent's Pokémon is KO'd, this Pokémon also does 50 damage to itself."
+ *
+ * Real-card examples of spreadDamage (GAP-016):
+ * - Raichu (Gigashock): "This attack also does 20 damage to each of your opponent's Benched Pokémon."
+ * - Palkia ex (Dimensional Storm): "This attack also does 20 damage to each of your opponent's Benched Pokémon."
+ * - Alolan Ninetales (Frost Breath): "This attack also does 10 damage to each of your opponent's Benched Pokémon."
  *
  * Attack execution flow:
  * 1. Validate energy costs (GAP-011) - check if attacker has enough energy
@@ -83,7 +97,8 @@
  * 12. Determine if the defending Pokémon is knocked out (HP <= 0)
  * 13. Handle KO-triggered abilities (GAP-005) if KO'd
  * 14. Apply recoil damage to attacker (GAP-013) - self-damage after attacking
- * 15. Log the attack event
+ * 15. Apply spread damage to Benched Pokémon (GAP-016) - if attack has spreadDamage config
+ * 16. Log the attack event
  */
 
 class AttackSystem {
@@ -342,6 +357,151 @@ class AttackSystem {
     }
 
     return 0;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Spread Damage Calculation (GAP-016)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Apply spread damage to opponent's Benched Pokémon.
+   *
+   * Spread damage format: { amount: number, target: 'banque' | 'all' }
+   * - target: 'banque' - damage to each Benched Pokémon only (Raichu Gigashock)
+   * - target: 'all' - damage to all opponent's Pokémon (Active + Banque)
+   *
+   * Each target's damage is calculated independently:
+   * - Damage modifiers apply to each target separately
+   * - Weakness applies to each target separately
+   * - KO triggers fire for each target that is KO'd
+   *
+   * @param {string} attackingPlayerId - 'player1' or 'player2'
+   * @param {Object} attacker - Attacking Pokémon
+   * @param {Object} spreadDamageConfig - Spread damage config
+   * @returns {Array} Array of spread damage results for each target
+   */
+  applySpreadDamage(attackingPlayerId, attacker, spreadDamageConfig) {
+    const results = [];
+
+    if (!spreadDamageConfig || spreadDamageConfig.amount === undefined || spreadDamageConfig.amount === null) {
+      return results;
+    }
+
+    const targetMode = spreadDamageConfig.target || 'banque';
+    const amount = spreadDamageConfig.amount;
+    const defendingPlayerId = attackingPlayerId === 'player1' ? 'player2' : 'player1';
+
+    // Determine which Pokémon to target
+    let targets = [];
+    const defendingPlayer = this.gameState.players[defendingPlayerId];
+
+    if (targetMode === 'banque') {
+      // Target only Benched Pokémon
+      targets = defendingPlayer.banque || [];
+    } else if (targetMode === 'all') {
+      // Target all Pokémon (Active + Banque)
+      targets = [defendingPlayer.activePokemon, ...(defendingPlayer.banque || [])];
+    } else {
+      throw new Error(`Invalid spread damage target: ${targetMode}`);
+    }
+
+    // Apply damage to each target
+    targets.forEach(target => {
+      if (!target || target.currentHp <= 0) {
+        // Skip non-existent or already KO'd Pokémon
+        return;
+      }
+
+      // Initialize currentHp if not set
+      if (target.currentHp === undefined || target.currentHp === null) {
+        target.currentHp = target.hp || 0;
+      }
+
+      // Check if damage should be prevented for this target
+      const damagePrevented = this.abilitySystem.preventDamage(
+        attackingPlayerId,
+        attacker.id,
+        defendingPlayerId,
+        target.id
+      );
+
+      let finalDamage = 0;
+      let weaknessApplied = 0;
+      let bonusApplied = 0;
+      let reductionApplied = 0;
+
+      if (!damagePrevented) {
+        // Apply damage modifiers for this target
+        const modifierResult = this.abilitySystem.applyDamageModifiers(
+          attackingPlayerId,
+          defendingPlayerId,
+          amount
+        );
+
+        let damageAfterModifiers = modifierResult.finalDamage;
+        bonusApplied = modifierResult.bonusApplied;
+        reductionApplied = modifierResult.reductionApplied;
+
+        // Apply weakness for this target
+        weaknessApplied = this.calculateWeakness(attacker, target);
+        damageAfterModifiers += weaknessApplied;
+
+        finalDamage = Math.max(0, damageAfterModifiers);
+      }
+
+      // Apply damage to target's HP
+      const hpBefore = target.currentHp;
+      target.currentHp = Math.max(0, target.currentHp - finalDamage);
+      const isKO = target.currentHp <= 0;
+
+      // Handle KO-triggered abilities if this target is KO'd
+      let koTriggerResults = [];
+      if (isKO && this.koTriggerSystem) {
+        const wasActive = (target === defendingPlayer.activePokemon);
+        koTriggerResults = this.koTriggerSystem.handleKnockout({
+          playerId: defendingPlayerId,
+          pokemonId: target.id,
+          attackingPlayerId: attackingPlayerId,
+          attackingPokemonId: attacker.id,
+          wasActive: wasActive,
+          source: 'spread_damage'
+        });
+      }
+
+      // Record result for this target
+      results.push({
+        pokemonId: target.id,
+        pokemonName: target.name,
+        location: (target === defendingPlayer.activePokemon) ? 'active' : 'banque',
+        hpBefore,
+        hpAfter: target.currentHp,
+        damage: finalDamage,
+        isKO,
+        damagePrevented,
+        weaknessApplied,
+        bonusApplied,
+        reductionApplied,
+        koTriggerResults
+      });
+
+      // Log spread damage event
+      this.gameState.turnLog.push({
+        type: 'spread_damage',
+        attackingPlayer: attackingPlayerId,
+        defendingPlayer: defendingPlayerId,
+        attackerId: attacker.id,
+        attackerName: attacker.name,
+        targetId: target.id,
+        targetName: target.name,
+        targetLocation: (target === defendingPlayer.activePokemon) ? 'active' : 'banque',
+        damage: finalDamage,
+        isKO,
+        damagePrevented,
+        weaknessApplied
+      });
+    });
+
+    return results;
   }
 
   // ---------------------------------------------------------------------------
@@ -607,6 +767,13 @@ class AttackSystem {
       }
     }
 
+    // Apply spread damage to Benched Pokémon (GAP-016)
+    // e.g. Raichu (Gigashock): "This attack also does 20 damage to each of your opponent's Benched Pokémon."
+    let spreadDamageResults = [];
+    if (attack.spreadDamage) {
+      spreadDamageResults = this.applySpreadDamage(attackingPlayerId, attacker, attack.spreadDamage);
+    }
+
     // Apply temporary defender effect (GAP-014)
     // e.g. Vulpix (Tail Whip): "Your opponent's Active Pokémon can't attack next turn."
     let temporaryEffectResult = null;
@@ -645,7 +812,8 @@ class AttackSystem {
       attackerIsKO,
       attackerHpAfter: attacker.currentHp,
       temporaryEffectResult,
-      targetLocation: effectiveTarget.location // 'active' or 'banque' (GAP-015)
+      targetLocation: effectiveTarget.location, // 'active' or 'banque' (GAP-015)
+      spreadDamageResults // GAP-016: Results of spread damage to Benched Pokémon
     };
 
     // Log the attack event (before pre_ko_survival log for proper order)
