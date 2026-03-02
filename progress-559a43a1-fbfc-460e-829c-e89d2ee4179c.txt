@@ -1,0 +1,55 @@
+# Progress Log
+Run: 559a43a1-fbfc-460e-829c-e89d2ee4179c
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19
+
+## Codebase Patterns
+- **Project Structure**: Pure JavaScript/Node.js simulator for Pocket TCG
+- **Testing**: Uses custom test runner with `assert()` functions, not a testing framework
+- **Test naming convention**: tests are organized by feature in `tests/rules/` directory
+- **Ability System**: Use `abilitySystem.registerAbility(playerId, pokemonId, abilityDefinition)` to register abilities
+- **Attack System**: Attack effects are properties on the attack object (e.g., `halveHp: true`, `recoilDamage: 20`)
+- **Damage Modifiers**: Damage modifiers (bonus, reduction, weakness) are applied to the base damage, including halveHp damage
+- **Test file pattern**: Each gap/story has its own test file named like `gap-XXX-feature-name.test.js`
+- **Game State**: Pokémon HP is tracked with both `hp` (max) and `currentHp` (remaining)
+
+---
+
+## 2026-02-19 - GAP-018: [Importante][C2] Halve HP (Bidoof)
+
+### What was implemented
+- Added `halveHp` attack effect to attack-system.js
+- When `halveHp: true` is set on an attack, damage is calculated as `Math.floor(defender.currentHp / 2)`
+- Damage modifiers (bonus, reduction, weakness) still apply to the halved damage
+- Damage scaling and bench scaling are ignored when `halveHp` is true
+- Result object now includes `halveHpApplied` boolean flag
+
+### Files changed
+- `src/game/attack-system.js`: Added halveHp calculation logic, updated documentation
+- `tests/rules/halve-hp-super-fang.test.js`: Created comprehensive test suite (110 test cases)
+
+### Tests written
+- Basic halve HP behavior (60 HP → 30 damage)
+- Rounding down for odd HP values (61 HP → 30, 59 HP → 29)
+- Edge cases (1 HP remaining → 0 damage)
+- Multiple applications work correctly (80 → 40 → 20 → 10)
+- Ignores base damage property when halveHp is true
+- Ignores damageScaling and benchScaling when halveHp is true
+- Damage bonus adds to halved damage
+- Damage reduction subtracts from halved damage
+- Weakness adds to halved damage
+- Combined modifiers work correctly (bonus + reduction + weakness)
+- Damage modifiers cannot reduce damage below 0
+- Can KO if halved damage >= remaining HP
+- With weakness, can KO Pokémon
+- With bonus, can KO Pokémon
+- Works correctly when currentHp is undefined/null (initializes from hp)
+
+### Learnings
+- Attack effects are boolean or object properties on the attack definition
+- The attack execution flow is well-structured with clear steps for different effects
+- Tests should cover edge cases like 1 HP, 2 HP, and odd HP values
+- Damage modifiers (bonus, reduction, weakness) apply AFTER halving, not before
+- The halveHp effect replaces normal damage calculation (base, scaling) but doesn't bypass modifiers
+
+---

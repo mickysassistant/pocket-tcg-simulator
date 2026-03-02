@@ -1,0 +1,266 @@
+[
+  {
+    "id": "A1-087",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Flop",
+        "damage": 10,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A1-087-2",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Flop",
+        "damage": 10,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A1-089",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A1-089-2",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B1-196",
+    "name": "Swablu",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Sing",
+        "damage": 0,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-196-2",
+    "name": "Swablu",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Sing",
+        "damage": 0,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-102",
+    "name": "Mega Altaria ex",
+    "supertype": "Pokémon",
+    "hp": 190,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Mega Harmony",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1-102-2",
+    "name": "Mega Altaria ex",
+    "supertype": "Pokémon",
+    "hp": 190,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Mega Harmony",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1-109",
+    "name": "Chingling",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "0 Jingly Noise",
+        "damage": 10,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-109-2",
+    "name": "Chingling",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "0 Jingly Noise",
+        "damage": 10,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326-2",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-344",
+    "name": "Mars",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-226",
+    "name": "Lisia",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314-2",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  }
+]

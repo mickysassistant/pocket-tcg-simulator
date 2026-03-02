@@ -1,0 +1,274 @@
+[
+  {
+    "id": "B1-184",
+    "name": "Eevee",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Stampede",
+        "damage": 10,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Boosted Evolution",
+        "effect": "As long as this Pokémon is in the Active Spot, it can evolve during your first turn or the turn you play it.",
+        "rawInfo": "Ability:\nBoosted Evolution"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-184-2",
+    "name": "Eevee",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Stampede",
+        "damage": 10,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Boosted Evolution",
+        "effect": "As long as this Pokémon is in the Active Spot, it can evolve during your first turn or the turn you play it.",
+        "rawInfo": "Ability:\nBoosted Evolution"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A2a-010",
+    "name": "Leafeon ex",
+    "supertype": "Pokémon",
+    "hp": 140,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Solar Beam",
+        "damage": 70,
+        "energyCost": [
+          "G",
+          "C",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Forest Breath",
+        "effect": "Once during your turn, if this Pokémon is in the Active Spot, you may take a [G] Energy from your Energy Zone and attach it to 1 of your [G] Pokémon.",
+        "rawInfo": "Ability:\nForest Breath"
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "A2a-010-2",
+    "name": "Leafeon ex",
+    "supertype": "Pokémon",
+    "hp": 140,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Solar Beam",
+        "damage": 70,
+        "energyCost": [
+          "G",
+          "C",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Forest Breath",
+        "effect": "Once during your turn, if this Pokémon is in the Active Spot, you may take a [G] Energy from your Energy Zone and attach it to 1 of your [G] Pokémon.",
+        "rawInfo": "Ability:\nForest Breath"
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "A3b-002",
+    "name": "Leafeon",
+    "supertype": "Pokémon",
+    "hp": 90,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Leaf Blast",
+        "damage": 0,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B2-017",
+    "name": "Teal Mask Ogerpon ex",
+    "supertype": "Pokémon",
+    "hp": 130,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Energized Leaves 60x",
+        "damage": 0,
+        "energyCost": [
+          "G",
+          "G"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Soothing Wind",
+        "effect": "Each of your Pokémon that has any Energy attached recovers from all Special Conditions and can't be affected by any Special Conditions.",
+        "rawInfo": "Ability:\nSoothing Wind"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B2-017-2",
+    "name": "Teal Mask Ogerpon ex",
+    "supertype": "Pokémon",
+    "hp": 130,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Energized Leaves 60x",
+        "damage": 0,
+        "energyCost": [
+          "G",
+          "G"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Soothing Wind",
+        "effect": "Each of your Pokémon that has any Energy attached recovers from all Special Conditions and can't be affected by any Special Conditions.",
+        "rawInfo": "Ability:\nSoothing Wind"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A3a-007",
+    "name": "Pheromosa",
+    "supertype": "Pokémon",
+    "hp": 70,
+    "types": [
+      "Grass"
+    ],
+    "attacks": [
+      {
+        "name": "Jump Blues",
+        "damage": 20,
+        "energyCost": [
+          "G"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-328",
+    "name": "Erika",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-328-2",
+    "name": "Erika",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-338",
+    "name": "Sabrina",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A3-151",
+    "name": "Guzma",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-324",
+    "name": "Leaf Cape",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  },
+  {
+    "id": "A4b-324-2",
+    "name": "Leaf Cape",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  }
+]

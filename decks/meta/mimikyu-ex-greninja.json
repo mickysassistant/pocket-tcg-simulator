@@ -1,0 +1,268 @@
+[
+  {
+    "id": "A1-087",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Flop",
+        "damage": 10,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A1-087-2",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Flop",
+        "damage": 10,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A1-088",
+    "name": "Frogadier",
+    "supertype": "Pokémon",
+    "hp": 80,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Water Drip",
+        "damage": 30,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "A1-089",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A1-089-2",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B2-073",
+    "name": "Mimikyu ex",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Claw Slash",
+        "damage": 70,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Disguise",
+        "effect": "When this Pokémon is first damaged by an attack after coming into play, prevent that damage.",
+        "rawInfo": "Ability:\nDisguise"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B2-073-2",
+    "name": "Mimikyu ex",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Claw Slash",
+        "damage": 70,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Disguise",
+        "effect": "When this Pokémon is first damaged by an attack after coming into play, prevent that damage.",
+        "rawInfo": "Ability:\nDisguise"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A2b-035",
+    "name": "Giratina ex",
+    "supertype": "Pokémon",
+    "hp": 150,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Chaotic Impact",
+        "damage": 130,
+        "energyCost": [
+          "P",
+          "P",
+          "P",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Broken-Space Bellow",
+        "effect": "Once during your turn, you may take a [P] Energy from your Energy Zone and attach it to this Pokémon. If you use this Ability, your turn ends.",
+        "rawInfo": "Ability:\nBroken-Space Bellow"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326-2",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225-2",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-322",
+    "name": "Rocky Helmet",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  },
+  {
+    "id": "A4b-322-2",
+    "name": "Rocky Helmet",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  },
+  {
+    "id": "B2-155",
+    "name": "Peculiar Plaza",
+    "supertype": "Trainer",
+    "subtype": "Stadium"
+  }
+]

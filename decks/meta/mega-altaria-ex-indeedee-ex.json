@@ -1,0 +1,255 @@
+[
+  {
+    "id": "B1-196",
+    "name": "Swablu",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Sing",
+        "damage": 0,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-196-2",
+    "name": "Swablu",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Colorless"
+    ],
+    "attacks": [
+      {
+        "name": "Sing",
+        "damage": 0,
+        "energyCost": [
+          "C"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-102",
+    "name": "Mega Altaria ex",
+    "supertype": "Pokémon",
+    "hp": 190,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Mega Harmony",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1-102-2",
+    "name": "Mega Altaria ex",
+    "supertype": "Pokémon",
+    "hp": 190,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Mega Harmony",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Stage 1"
+  },
+  {
+    "id": "B1-071",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Water Drip",
+        "damage": 20,
+        "energyCost": [
+          "W"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A1-089",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B1-109",
+    "name": "Chingling",
+    "supertype": "Pokémon",
+    "hp": 30,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "0 Jingly Noise",
+        "damage": 10,
+        "energyCost": []
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-121",
+    "name": "Indeedee ex",
+    "supertype": "Pokémon",
+    "hp": 130,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Psychic",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Watch Over",
+        "effect": "Once during your turn, you may heal 20 damage from your Active Pokémon.",
+        "rawInfo": "Ability:\nWatch Over"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-106",
+    "name": "Jirachi",
+    "supertype": "Pokémon",
+    "hp": 50,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Star Drop",
+        "damage": 0,
+        "energyCost": [
+          "P"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "B1-225",
+    "name": "Copycat",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A3-151",
+    "name": "Guzma",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-145",
+    "name": "Lucky Ice Pop",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "B2-145-2",
+    "name": "Lucky Ice Pop",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-322",
+    "name": "Rocky Helmet",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  }
+]

@@ -1,0 +1,86 @@
+# Progress Log
+Run: 0a0b3aee-cd4a-4cb6-9c3b-8d250672232e
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19
+
+## Codebase Patterns
+
+### Testing Framework
+- Tests use a custom assertion framework (assert, assertEqual, assertDeepEqual)
+- Test utilities: createGame(), setActive(), addEnergy()
+- Run tests with: `for test in tests/rules/*.test.js; do node "$test" || exit 1; done`
+
+### Project Structure
+- Main game logic in `src/game/`
+- Tests in `tests/rules/` and `tests/integration/`
+- Main entry point: `src/index.js`
+
+### Attack System Pattern
+- AttackSystem in `src/game/attack-system.js` handles attack execution
+- Damage modifiers flow: base → scaling → modifiers → weakness → final
+- Attack config supports: damageScaling, benchScaling, extraEnergyBonus
+- Result includes: baseDamage, damageScaling, benchScaling, extraEnergyBonus, bonusApplied, reductionApplied, weaknessApplied, finalDamage
+
+### Energy Cost Pattern
+- Energy costs are arrays of energy type strings
+- Colorless energy can be satisfied by any energy type
+- Specific types require exact match
+
+### Ability System Pattern
+- AbilitySystem handles passive abilities and damage modifiers
+- Supports: damage_bonus, damage_reduction, damage_prevention, opponent_damage_reduction
+- Register abilities with `abilitySystem.registerAbility()`
+
+### Extra Energy Bonus Pattern (GAP-019)
+- Extra energy = total attached energy - energy cost
+- Two modes: perExtraEnergy (scales) or threshold+bonusAmount (fixed)
+- energyType filter: optional, counts only specific energy type
+- When halveHp is true, extraEnergyBonus is skipped (set to 0)
+- Integrates with damageScaling and benchScaling
+
+---
+
+## 2026-02-19 - GAP-019: [Importante][C2] Bonus por "energía extra" adjunta (Blastoise)
+
+### What was implemented
+- Added `calculateExtraEnergyBonus()` method to AttackSystem
+- Calculates bonus damage based on energy beyond the attack cost
+- Supports two modes:
+  - **perExtraEnergy**: damage scales with extra energy count (e.g., Blastoise: 30 per extra [W])
+  - **threshold + bonusAmount**: fixed bonus if extra energy >= threshold (e.g., Lapras: +50 if >=2 extra [W])
+- Energy type filtering via `energyType` property (optional)
+- Integrated into `executeAttack()` damage calculation flow
+- Added `extraEnergyBonus` to attack result object
+- Added `extraEnergyBonus` to `calculateDamage()` dry-run method
+
+### Files changed
+- `src/game/attack-system.js`: Added calculateExtraEnergyBonus method, integrated into executeAttack
+- `tests/rules/extra-energy-bonus.test.js`: 40 comprehensive unit tests
+- `progress-0a0b3aee-cd4a-4cb6-9c3b-8d250672232e.txt`: Created progress log
+
+### Real-card examples covered
+- **Blastoise** (Hydro Pump): "This attack does 30 more damage for each extra [W] Energy attached."
+- **Lapras** (Hydro Pump): "If this Pokémon has at least 2 extra [W] Energy attached, this attack does 50 more damage."
+- **Dhelmise** (Energy Whip): "This attack does 20 more damage for each extra [G] Energy attached."
+- **Electivire** (Exciting Voltage): "If this Pokémon has at least 3 extra [L] Energy attached, this attack does 90 more damage."
+
+### Tests written
+40 tests covering:
+- Method existence and basic behavior (no config, no energy)
+- Per-extra energy mode with different extra counts
+- Threshold mode with met/unmet threshold conditions
+- Energy type filtering (specific types vs all energy)
+- Edge cases (colorless in cost, no cost, zero values)
+- Integration with executeAttack
+- Interaction with other modifiers (bonus, reduction, weakness)
+- Combination with damageScaling and benchScaling
+- Dry-run calculateDamage behavior
+- Logging to turnLog
+
+### Acceptance criteria met
+✅ 1. Implementar validación de coste + extra - calculateExtraEnergyBonus validates energy cost and calculates extra
+✅ 2. Tests unitarios cubren el comportamiento implementado - 40 comprehensive tests
+✅ 3. npm test pasa (excluyendo fallos pre-existentes conocidos) - All 40 new tests pass, all existing tests pass
+✅ 4. npm run check pasa - N/A (Node.js library with no build step)
+
+---

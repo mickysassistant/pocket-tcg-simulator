@@ -1,0 +1,274 @@
+[
+  {
+    "id": "B1-071",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Water Drip",
+        "damage": 20,
+        "energyCost": [
+          "W"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-071-2",
+    "name": "Froakie",
+    "supertype": "Pokémon",
+    "hp": 60,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Water Drip",
+        "damage": 20,
+        "energyCost": [
+          "W"
+        ]
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A1-089",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A1-089-2",
+    "name": "Greninja",
+    "supertype": "Pokémon",
+    "hp": 120,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Mist Slash",
+        "damage": 60,
+        "energyCost": [
+          "W",
+          "C"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Water Shuriken",
+        "effect": "Once during your turn, you may do 20 damage to 1 of your opponent's Pokémon.",
+        "rawInfo": "Ability:\nWater Shuriken"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "B1-073",
+    "name": "Greninja ex",
+    "supertype": "Pokémon",
+    "hp": 170,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Aqua Edge",
+        "damage": 100,
+        "energyCost": [
+          "W",
+          "W"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Shifting Stream",
+        "effect": "Once during your turn, you may switch your Active [W] Pokémon with 1 of your Benched Pokémon.",
+        "rawInfo": "Ability:\nShifting Stream"
+      }
+    ],
+    "subtype": "Stage 2"
+  },
+  {
+    "id": "A4a-020",
+    "name": "Suicune ex",
+    "supertype": "Pokémon",
+    "hp": 140,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Crystal Waltz 20x",
+        "damage": 0,
+        "energyCost": [
+          "W",
+          "W"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Legendary Pulse",
+        "effect": "At the end of your turn, if this Pokémon is in the Active Spot, draw a card.",
+        "rawInfo": "Ability:\nLegendary Pulse"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4a-020-2",
+    "name": "Suicune ex",
+    "supertype": "Pokémon",
+    "hp": 140,
+    "types": [
+      "Water"
+    ],
+    "attacks": [
+      {
+        "name": "Crystal Waltz 20x",
+        "damage": 0,
+        "energyCost": [
+          "W",
+          "W"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Legendary Pulse",
+        "effect": "At the end of your turn, if this Pokémon is in the Active Spot, draw a card.",
+        "rawInfo": "Ability:\nLegendary Pulse"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "B1-121",
+    "name": "Indeedee ex",
+    "supertype": "Pokémon",
+    "hp": 130,
+    "types": [
+      "Psychic"
+    ],
+    "attacks": [
+      {
+        "name": "Psychic",
+        "damage": 0,
+        "energyCost": [
+          "P",
+          "P"
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Watch Over",
+        "effect": "Once during your turn, you may heal 20 damage from your Active Pokémon.",
+        "rawInfo": "Ability:\nWatch Over"
+      }
+    ],
+    "subtype": "Basic"
+  },
+  {
+    "id": "A4b-326",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-326-2",
+    "name": "Cyrus",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-373-2",
+    "name": "Professor's Research",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A3-151",
+    "name": "Guzma",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-330",
+    "name": "Irida",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-344",
+    "name": "Mars",
+    "supertype": "Trainer",
+    "subtype": "Supporter"
+  },
+  {
+    "id": "A4b-314",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-314-2",
+    "name": "Rare Candy",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A2b-111-2",
+    "name": "Poké Ball",
+    "supertype": "Trainer",
+    "subtype": "Item"
+  },
+  {
+    "id": "A4b-320",
+    "name": "Giant Cape",
+    "supertype": "Trainer",
+    "subtype": "Tool"
+  }
+]

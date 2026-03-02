@@ -1,0 +1,55 @@
+# Progress Log
+Run: d4a5fc77-5944-4ba1-8096-748850874e90
+Task: Implementar gaps del simulador TCG Pocket
+Started: 2026-02-19
+
+## Codebase Patterns
+- Testing uses custom assertion helpers (assert, assertEqual, assertDeepEqual) and runTest function
+- Tests are run directly with `node <test-file>.js` (not using a test framework)
+- Game state has `banque` (bench) array for each player
+- AttackSystem.executeAttack can target either active or benched Pokémon (GAP-015)
+- Energy costs use format: ['type1', 'type2', ...] with colorless being flexible
+- Weakness adds +20 damage in Pocket TCG (not 2x like physical TCG)
+- Damage modifiers flow: base → bonus → reduction → opponent reduction → weakness → final
+- All game state mutations go through the GameState class methods
+- Turn logging is done via gameState.turnLog.push({type, ...})
+- KO-triggered abilities (e.g., Pyukumuku Innards Out) only work when the KO'd Pokémon is in the Active Spot, not when benched - this is per card text
+- Temporary defender effects are only applied if the defender survives the attack (is not KO'd)
+- Temporary effects use a Map with `${playerId}:${pokemonId}` keys for storage and isolation
+- Effects have a turnsRemaining counter that decrements on advanceTurn() calls
+- Effects are cleared immediately on switch/evolution via clearEffectsForPokemon()
+
+---
+## 2026-02-19 - GAP-014: [Importante][C2] Efectos temporales sobre el defensor (Vulpix (Tail Whip))
+- Implemented TemporaryEffectsSystem with support for:
+  - `cannot_attack` effect - Pokémon cannot use attacks for the duration
+  - `damage_reduction` effect - Pokémon's attacks deal -N damage for the duration
+  - Coin flip gating - effects can require coin flip heads to apply (e.g., Vulpix Tail Whip)
+  - Duration tracking - effects expire after specified number of turn advances (default: 1)
+  - Automatic cleanup - effects cleared on switch/evolution (clearEffectsForPokemon method)
+  - Turn advancement - advanceTurn() decrements counters and removes expired effects
+- Integrated with AttackSystem:
+  - Attacks can define `temporaryDefenderEffect` property to apply effects to defender
+  - executeAttack checks cannot_attack before allowing Pokémon to attack
+  - executeAttack applies damage_reduction to attacker's outgoing damage
+  - Effects are only applied if defender survives (not KO'd)
+- Added comprehensive test coverage (78 tests):
+  - TemporaryEffectsSystem standalone functionality
+  - Coin flip gate behavior (heads/tails)
+  - Effect expiration via advanceTurn()
+  - Effect clearing on switch/evolution
+  - Multiple effects stacking
+  - AttackSystem integration (cannot_attack blocking)
+  - AttackSystem integration (damage_reduction reducing damage)
+  - Full scenarios: Vulpix Tail Whip, Mr. Mime Barrier Attack, Clefable Moonblast
+- Exported TemporaryEffectsSystem and TEMPORARY_EFFECT_TYPES constants from index.js
+- All existing tests continue to pass (no regressions)
+- **Files changed:** src/game/temporary-effects-system.js (new), src/game/attack-system.js, src/index.js, tests/rules/temporary-defender-effects.test.js (new)
+- **Learnings:**
+  - Temporary effects use the same pattern as status conditions - stored per Pokémon, cleared on switch/evolution
+  - The Map key pattern `${playerId}:${pokemonId}` is reusable for any per-Pokémon state tracking
+  - Coin flip functions should be optional parameters for testability (deterministic flips in tests)
+  - Effects should have metadata (sourceName, duration) for logging and debugging
+  - The attack execution flow should validate blockers (cannot_attack) before calculating damage
+  - Damage modifiers need to be checked at different points: incoming (defender side) and outgoing (attacker side)
+---
